@@ -369,7 +369,7 @@ code, kbd, pre, .num { font-family: var(--font-mono); }
   color: var(--ink-soft);
   font: 500 0.82rem/1 var(--font-ui);
   cursor: pointer;
-  transition: all 120ms var(--ease);
+  transition: background-color 120ms var(--ease), border-color 120ms var(--ease), color 120ms var(--ease);
 }
 .folder-tab:hover {
   border-color: var(--rule-strong);
@@ -1059,7 +1059,7 @@ code, kbd, pre, .num { font-family: var(--font-mono); }
   font-family: var(--font-mono);
   font-size: 0.72rem;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
 }
 .level-pill:hover {
   background: var(--sunk);
@@ -1357,7 +1357,6 @@ code, kbd, pre, .num { font-family: var(--font-mono); }
 .explain-spot { position: relative; z-index: 35; border-radius: var(--radius); background: var(--surface); scroll-margin: 96px 0 168px;
   box-shadow: 0 0 0 6px var(--surface), 0 0 0 8px var(--accent), 0 0 0 100vmax var(--scrim); transition: box-shadow 260ms var(--ease), transform 260ms var(--ease); }
 .explain-pop { animation: explain-pop 420ms var(--ease); }
-.fx-pulse { animation: explain-pop 420ms var(--ease), explain-pulse 1400ms var(--ease) 420ms 2; }
 .fx-zoom { transform: scale(1.02); transform-origin: center; }  /* 1% per side stays inside the page padding: no horizontal scroll */
 .fx-underline::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 3px; border-radius: 2px; background: var(--gold);
   transform-origin: left; animation: explain-underline 900ms var(--ease) both; }
@@ -1367,7 +1366,6 @@ code, kbd, pre, .num { font-family: var(--font-mono); }
 .explain-spot g.node.fx-node-seen :is(rect, polygon, circle, ellipse, path) { stroke: var(--accent) !important; stroke-width: 2.5px !important; }
 ::highlight(explain-phrase) { background-color: var(--gold-tint); color: var(--ink); text-decoration: underline 2px var(--gold); }
 @keyframes explain-pop { 0% { transform: scale(0.985); } 55% { transform: scale(1.012); } 100% { transform: none; } }
-@keyframes explain-pulse { 0%, 100% { outline: 2px solid transparent; outline-offset: 8px; } 50% { outline: 2px solid var(--gold); outline-offset: 12px; } }
 @keyframes explain-underline { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 
 .explain-bar { position: fixed; left: var(--space-3); right: var(--space-3); bottom: var(--space-3); z-index: 55; margin: 0 auto; max-width: 760px;
@@ -1390,7 +1388,7 @@ code, kbd, pre, .num { font-family: var(--font-mono); }
 @keyframes explain-bar-in { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (max-width: 560px) { .explain-bar { left: var(--space-2); right: var(--space-2); bottom: var(--space-2); padding: var(--space-3); } .explain-controls { width: 100%; justify-content: space-between; } }
 @media (prefers-reduced-motion: reduce) {
-  .explain-spot, .explain-pop, .fx-pulse, .fx-underline::after, .explain-bar { animation: none !important; }
+  .explain-spot, .explain-pop, .fx-underline::after, .explain-bar { animation: none !important; }
   .fx-zoom { transform: none; }
 }
 /* == /explain == */

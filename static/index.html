@@ -261,49 +261,20 @@
 
     <!-- Deep Griffin Green Sidebar (#0b3b2c) -->
     <nav id="appSidebar" class="sidebar" aria-label="Student Class Timetable">
-      <!-- Search in Directory -->
+      <!-- Search in Directory + Filters Button -->
       <div class="sidebar-search">
-        <label for="searchInput" class="visually-hidden">Search clubs and events</label>
-        <input id="searchInput" class="input" type="search" placeholder="Search events..." oninput="handleSearchInput()" />
-      </div>
-
-      <!-- Class Schedule Manager -->
-      <div class="sidebar-classes">
-        <div class="sidebar-classes-head">
-          <h3>Your classes</h3>
-          <button type="button" class="btn btn-quiet btn-sm" onclick="clearAllClasses()" style="color: var(--side-muted); border-color: var(--side-field-line); font-size: 0.72rem; min-height: 22px; padding: 0 6px;">Clear All</button>
-        </div>
-
-        <!-- Add Class Form -->
-        <form id="classForm" onsubmit="submitClass(event)" style="display: flex; flex-direction: column; gap: var(--space-2);">
-          <div class="field">
-            <input type="text" id="courseName" class="input" style="min-height: 30px; font-size: 0.82rem;" required placeholder="e.g. CSCI 241: Data Structures">
-          </div>
-          <div class="folder-pill-row" id="dayPills" role="group" aria-label="Days of class">
-            <label class="folder-pill"><input type="checkbox" name="days" value="0" checked><span>M</span></label>
-            <label class="folder-pill"><input type="checkbox" name="days" value="1"><span>T</span></label>
-            <label class="folder-pill"><input type="checkbox" name="days" value="2" checked><span>W</span></label>
-            <label class="folder-pill"><input type="checkbox" name="days" value="3"><span>R</span></label>
-            <label class="folder-pill"><input type="checkbox" name="days" value="4" checked><span>F</span></label>
-            <label class="folder-pill"><input type="checkbox" name="days" value="5"><span>S</span></label>
-            <label class="folder-pill"><input type="checkbox" name="days" value="6"><span>U</span></label>
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-            <input type="time" id="classStart" class="input" style="min-height: 30px; font-size: 0.82rem;" value="14:00" required>
-            <input type="time" id="classEnd" class="input" style="min-height: 30px; font-size: 0.82rem;" value="15:15" required>
-          </div>
-          <input type="text" id="classLoc" class="input" style="min-height: 30px; font-size: 0.82rem;" placeholder="Location (e.g. Jones 301)">
-          <button type="submit" class="btn btn-gold btn-sm" style="font-weight: 600; width: 100%;">+ Add Class</button>
-        </form>
-
-        <!-- Enrolled Classes List -->
-        <div id="classList" style="margin-top: var(--space-2);">
-          <!-- Dynamic classes loaded here -->
+        <div style="display: flex; gap: var(--space-2); align-items: center;">
+          <label for="searchInput" class="visually-hidden">Search clubs and events</label>
+          <input id="searchInput" class="input" type="search" placeholder="Search events..." oninput="handleSearchInput()" style="flex: 1;" />
+          <button type="button" class="btn btn-quiet btn-sm" id="toggleFiltersBtn" onclick="toggleSidebarFilters()" title="Toggle directory filters" style="color: var(--side-ink); border-color: var(--side-field-line); min-height: var(--control-h); padding: 0 var(--space-3); gap: 4px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+            <span>Filters</span>
+          </button>
         </div>
       </div>
 
-      <!-- Quick Filters (visible in Directory mode) -->
-      <div id="sidebarFiltersSection" class="sidebar-group">
+      <!-- Collapsible Filters Section (Clean & uncluttered) -->
+      <div id="sidebarFiltersSection" class="sidebar-group" style="display: none; border-bottom: 1px solid var(--side-field-line); padding-bottom: var(--space-3);">
         <h3>Filters</h3>
         <div class="folder-pill-row" style="margin-bottom: var(--space-3);">
           <button type="button" class="folder-pill active" id="dayPillAll" onclick="setQuickDayFilter('')">All</button>
@@ -330,6 +301,49 @@
           <input type="checkbox" id="hideConflictsFilter" onchange="loadEvents()" style="cursor: pointer;">
           <span>Hide my class conflicts</span>
         </label>
+      </div>
+
+      <!-- Class Schedule Manager (Compact & Collapsible) -->
+      <div class="sidebar-classes">
+        <div class="sidebar-classes-head">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <h3>Your classes</h3>
+            <span id="classCountBadge" class="chip" style="font-size: 0.72rem; padding: 1px 6px; background: var(--side-field); color: var(--side-muted); border-color: var(--side-field-line);">0</span>
+          </div>
+          <div style="display: flex; gap: 4px;">
+            <button type="button" id="toggleAddClassBtn" class="btn btn-quiet btn-sm" onclick="toggleAddClassForm()" style="color: var(--side-ink); border-color: var(--side-field-line); font-size: 0.72rem; min-height: 22px; padding: 0 6px;">+ Add</button>
+            <button type="button" class="btn btn-quiet btn-sm" onclick="clearAllClasses()" style="color: var(--side-muted); border-color: var(--side-field-line); font-size: 0.72rem; min-height: 22px; padding: 0 6px;">Clear</button>
+          </div>
+        </div>
+
+        <!-- Collapsible Add Class Form -->
+        <div id="classAddFormWrap" style="display: none; padding-top: var(--space-2); border-top: 1px dashed var(--side-field-line);">
+          <form id="classForm" onsubmit="submitClass(event)" style="display: flex; flex-direction: column; gap: var(--space-2);">
+            <div class="field">
+              <input type="text" id="courseName" class="input" style="min-height: 30px; font-size: 0.82rem;" required placeholder="e.g. CSCI 241: Data Structures">
+            </div>
+            <div class="folder-pill-row" id="dayPills" role="group" aria-label="Days of class">
+              <label class="folder-pill"><input type="checkbox" name="days" value="0" checked><span>M</span></label>
+              <label class="folder-pill"><input type="checkbox" name="days" value="1"><span>T</span></label>
+              <label class="folder-pill"><input type="checkbox" name="days" value="2" checked><span>W</span></label>
+              <label class="folder-pill"><input type="checkbox" name="days" value="3"><span>R</span></label>
+              <label class="folder-pill"><input type="checkbox" name="days" value="4" checked><span>F</span></label>
+              <label class="folder-pill"><input type="checkbox" name="days" value="5"><span>S</span></label>
+              <label class="folder-pill"><input type="checkbox" name="days" value="6"><span>U</span></label>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+              <input type="time" id="classStart" class="input" style="min-height: 30px; font-size: 0.82rem;" value="14:00" required>
+              <input type="time" id="classEnd" class="input" style="min-height: 30px; font-size: 0.82rem;" value="15:15" required>
+            </div>
+            <input type="text" id="classLoc" class="input" style="min-height: 30px; font-size: 0.82rem;" placeholder="Location (e.g. Jones 301)">
+            <button type="submit" class="btn btn-gold btn-sm" style="font-weight: 600; width: 100%;">Save to Schedule</button>
+          </form>
+        </div>
+
+        <!-- Enrolled Classes List -->
+        <div id="classList" style="max-height: 280px; overflow-y: auto; margin-top: var(--space-1);">
+          <!-- Dynamic classes loaded here -->
+        </div>
       </div>
     </nav>
 
@@ -572,6 +586,27 @@
       const target = document.getElementById(targetId);
       if (target) target.classList.add("active");
       loadEvents();
+    }
+
+    function toggleSidebarFilters() {
+      const section = document.getElementById("sidebarFiltersSection");
+      const btn = document.getElementById("toggleFiltersBtn");
+      const isHidden = section.style.display === "none";
+      section.style.display = isHidden ? "block" : "none";
+      if (btn) {
+        btn.classList.toggle("btn-gold", isHidden);
+        btn.classList.toggle("btn-quiet", !isHidden);
+      }
+    }
+
+    function toggleAddClassForm() {
+      const formWrap = document.getElementById("classAddFormWrap");
+      const btn = document.getElementById("toggleAddClassBtn");
+      const isHidden = formWrap.style.display === "none";
+      formWrap.style.display = isHidden ? "block" : "none";
+      if (btn) {
+        btn.textContent = isHidden ? "Close" : "+ Add";
+      }
     }
 
     function handleSearchInput() {
@@ -851,6 +886,9 @@
       try {
         const res = await fetch("/api/classes");
         const classes = await res.json();
+        const badge = document.getElementById("classCountBadge");
+        if (badge) badge.textContent = classes.length;
+
         const container = document.getElementById("classList");
         if (!classes.length) {
           container.innerHTML = `<div style="font-size: 0.8rem; color: var(--side-muted); text-align: center; padding: 10px 0;">No classes added.</div>`;
@@ -1311,6 +1349,9 @@
         document.querySelectorAll("#dayPills input").forEach(input => {
           input.checked = ["0", "2", "4"].includes(input.value);
         });
+        document.getElementById("classAddFormWrap").style.display = "none";
+        const addBtn = document.getElementById("toggleAddClassBtn");
+        if (addBtn) addBtn.textContent = "+ Add";
         await loadAll();
       } catch (err) {
         alert("Network error submitting class");
