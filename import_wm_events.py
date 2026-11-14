@@ -1,0 +1,236 @@
+#!/usr/bin/env python3
+"""Import public W&M iCalendar feeds into ``schedule.db``.
+
+Live discovery starts at https://events.wm.edu/search/all_calendars, follows
+calendar pages on that host, and imports only same-host ICS/export links. The
+directory's live markup and feed availability must be verified at run time;
+this tool reports every skipped source and never treats a failed fetch as an
+empty successful calendar. Use ``--file SLUG=PATH`` to import saved feeds.
+"""
+
+from __future__ import annotations
+
+import argparse
+from html.parser import HTMLParser
+import os
+from pathlib import Path
+import re
+import sqlite3
+import sys
+import time
+from urllib.error import HTTPError, URLError
+from urllib.parse import urljoin, urlparse
+from urllib.request import HTTPRedirectHandler, Request, build_opener
+
+from wm_data import ICalendarError, ensure_schema, import_calendar
+
+HOST = "events.wm.edu"
+DIRECTORY = f"https://{HOST}/search/all_calendars"
+MAX_BYTES = 15 * 1024 * 1024
+USER_AGENT = "WMEventsLocalImporter/1.0 (public calendar feed importer)"
+
+
+class SameHostRedirects(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        parsed = urlparse(newurl)
+        try:
+            safe_port = parsed.port in (None, 443)
+        except ValueError:
+            safe_port = False
+        if parsed.scheme != "https" or parsed.hostname != HOST or not safe_port:
+            raise URLError("refused redirect away from events.wm.edu HTTPS")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+class Links(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.links: list[dict[str, str]] = []
+        self._current: dict[str, str] | None = None
+
+    def handle_starttag(self, tag, attrs):
+        attrs = dict(attrs)
+        if tag.lower() == "a" and attrs.get("href"):
+            self._current = {key: value or "" for key, value in attrs.items()}
+            self._current["text"] = ""
+            self.links.append(self._current)
+        elif self._current is not None and tag.lower() == "img":
+            self._current["text"] += " " + attrs.get("alt", "")
+
+    def handle_data(self, data):
+        if self._current is not None:
+            self._current["text"] += data
+
+    def handle_endtag(self, tag):
+        if tag.lower() == "a":
+            self._current = None
+
+
+def _same_host_https(url: str) -> bool:
+    parsed = urlparse(url)
+    try:
+        allowed_port = parsed.port in (None, 443)
+    except ValueError:
+        return False
+    return (
+        parsed.scheme == "https"
+        and parsed.hostname == HOST
+        and parsed.username is None
+        and allowed_port
+    )
+
+
+def _get(url: str, delay: float) -> tuple[bytes, str]:
+    if not _same_host_https(url):
+        raise ValueError(f"refused non-W&M HTTPS URL: {url}")
+    if delay:
+        time.sleep(delay)
+    req = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,text/calendar,*/*"})
+    with build_opener(SameHostRedirects()).open(req, timeout=20) as response:
+        final_url = response.geturl()
+        if not _same_host_https(final_url):
+            raise ValueError(f"refused final URL outside events.wm.edu: {final_url}")
+        data = response.read(MAX_BYTES + 1)
+        if len(data) > MAX_BYTES:
+            raise ValueError(f"response exceeded {MAX_BYTES} bytes")
+        return data, response.headers.get_content_type()
+
+
+def _decode(data: bytes) -> str:
+    return data.decode("utf-8-sig", errors="strict")
+
+
+def _calendar_pages(html: str, base: str) -> list[tuple[str, str, str]]:
+    parser = Links()
+    parser.feed(html)
+    pages: dict[str, tuple[str, str, str]] = {}
+    for link in parser.links:
+        url = urljoin(base, link["href"])
+        if not _same_host_https(url):
+            continue
+        path_parts = [part for part in urlparse(url).path.split("/") if part]
+        # Directory links point to canonical homepages at
+        # /calendar/upcoming/<slug>. This excludes month views, event detail
+        # pages, search routes, and arbitrary URLs containing "calendar".
+        if len(path_parts) != 3 or [part.lower() for part in path_parts[:2]] != ["calendar", "upcoming"]:
+            continue
+        slug = path_parts[2]
+        title = (link.get("text", "") or link.get("title", "")).strip()
+        if not title:
+            title = slug.replace("_", " ").replace("-", " ").title()
+        pages.setdefault(url, (slug, title, url))
+    return list(pages.values())
+
+
+def _feed_links(html: str, base: str) -> list[str]:
+    parser = Links()
+    parser.feed(html)
+    found: list[str] = []
+    for link in parser.links:
+        url = urljoin(base, link["href"])
+        if not _same_host_https(url):
+            continue
+        searchable = " ".join((link.get(k, "") for k in ("href", "text", "title", "aria-label"))).lower()
+        if re.search(r"(?:\.ics(?:$|[?#])|ical|i-calendar|export)", searchable):
+            if url not in found:
+                found.append(url)
+    return found
+
+
+def discover_and_import(conn: sqlite3.Connection, delay: float = 1.0) -> tuple[int, int]:
+    """Attempt public directory discovery; return (successful feeds, failures)."""
+    successes = failures = 0
+    try:
+        directory_data, _ = _get(DIRECTORY, delay)
+        pages = _calendar_pages(_decode(directory_data), DIRECTORY)
+        if not pages:
+            print(f"UNRECOGNIZED: no same-host calendar page links found at {DIRECTORY}", file=sys.stderr)
+            return 0, 1
+    except Exception as exc:
+        print(f"INACCESSIBLE: directory {DIRECTORY}: {exc}", file=sys.stderr)
+        return 0, 1
+
+    print(f"Discovered {len(pages)} candidate calendar pages from {DIRECTORY}.")
+    for slug, name, page_url in pages:
+        try:
+            page_data, _ = _get(page_url, delay)
+            feeds = _feed_links(_decode(page_data), page_url)
+            if not feeds:
+                failures += 1
+                print(f"UNRECOGNIZED: no same-host ICS/export link on {page_url}", file=sys.stderr)
+                continue
+            # One calendar membership represents one canonical ICS feed. If
+            # multiple export links are present, use the first discovered link
+            # and report the rest instead of repeatedly replacing membership.
+            feed_url = feeds[0]
+            if len(feeds) > 1:
+                print(f"NOTE: {slug} exposes {len(feeds)} export links; using {feed_url}", file=sys.stderr)
+            try:
+                feed_data, _ = _get(feed_url, delay)
+                result = import_calendar(conn, slug, name, _decode(feed_data))
+                successes += 1
+                print(f"IMPORTED {slug}: {result['seen']} events ({feed_url})")
+            except Exception as exc:
+                failures += 1
+                print(f"INACCESSIBLE/UNRECOGNIZED: {slug} feed {feed_url}: {exc}", file=sys.stderr)
+        except Exception as exc:
+            failures += 1
+            print(f"INACCESSIBLE: calendar page {page_url}: {exc}", file=sys.stderr)
+    return successes, failures
+
+
+def _database_path(value: str | None) -> Path:
+    if value:
+        return Path(value).expanduser()
+    content_dir = os.environ.get("SCIEDU_CONTENT_DIR")
+    return Path(content_dir).expanduser() / "schedule.db" if content_dir else Path(__file__).resolve().parent / "schedule.db"
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Import W&M calendar ICS feeds. Live mode only covers discovered, accessible same-host feeds; use --file for saved .ics files.",
+        epilog="Examples: python import_wm_events.py --discover; python import_wm_events.py --file student-life=events.ics --db schedule.db",
+    )
+    parser.add_argument("--discover", action="store_true", help="crawl events.wm.edu/search/all_calendars and accessible same-host ICS/export links")
+    parser.add_argument("--file", action="append", default=[], metavar="SLUG=PATH", help="import a previously downloaded local .ics file; repeatable")
+    parser.add_argument("--db", help="SQLite path (default: SCIEDU_CONTENT_DIR/schedule.db or project schedule.db)")
+    parser.add_argument("--delay", type=float, default=1.0, help="minimum seconds between live requests (default: 1.0)")
+    args = parser.parse_args(argv)
+    if not args.discover and not args.file:
+        parser.error("choose --discover and/or at least one --file SLUG=PATH")
+    if args.delay < 0:
+        parser.error("--delay must be non-negative")
+
+    db_path = _database_path(args.db)
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(db_path)
+    conn.execute("PRAGMA foreign_keys = ON")
+    ensure_schema(conn)
+    successes = failures = 0
+    for item in args.file:
+        slug, separator, filename = item.partition("=")
+        if not separator or not slug.strip() or not filename:
+            print(f"INVALID --file value {item!r}; expected SLUG=PATH", file=sys.stderr)
+            failures += 1
+            continue
+        path = Path(filename).expanduser()
+        try:
+            content = _decode(path.read_bytes())
+            count = import_calendar(conn, slug.strip(), slug.strip(), content)
+            successes += 1
+            print(f"IMPORTED {slug.strip()}: {count['seen']} events from {path}")
+        except (OSError, UnicodeError, ICalendarError, sqlite3.Error, ValueError) as exc:
+            failures += 1
+            print(f"INACCESSIBLE/UNRECOGNIZED: {path}: {exc}", file=sys.stderr)
+    if args.discover:
+        live_successes, live_failures = discover_and_import(conn, args.delay)
+        successes += live_successes
+        failures += live_failures
+    conn.commit()
+    conn.close()
+    print(f"Completed with {successes} feed imports and {failures} source failures; this is not a claim of complete W&M calendar coverage.")
+    return 0 if successes and not failures else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
