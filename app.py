@@ -232,6 +232,83 @@ def get_events(
     return enriched
 
 
+@app.get("/api/now-and-next")
+def get_now_and_next(
+    sim_day: Optional[int] = Query(None, ge=0, le=6),
+    sim_time: Optional[str] = Query(None, pattern=r"^([01]\d|2[0-3]):([0-5]\d)$"),
+):
+    now = datetime.now()
+    current_day = sim_day if sim_day is not None else now.weekday()
+    current_time = sim_time if sim_time else now.strftime("%H:%M")
+    curr_mins = time_to_minutes(current_time)
+
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        "SELECT * FROM user_classes WHERE day_of_week = ? ORDER BY start_time ASC",
+        (current_day,),
+    )
+    classes = [dict(r) for r in cur.fetchall()]
+
+    active_class = None
+    next_class = None
+    for cl in classes:
+        cl_start = time_to_minutes(cl["start_time"])
+        cl_end = time_to_minutes(cl["end_time"])
+        if cl_start <= curr_mins <= cl_end:
+            active_class = cl
+            break
+        elif cl_start > curr_mins and next_class is None:
+            next_class = cl
+
+    cur.execute(
+        "SELECT * FROM club_events WHERE day_of_week = ? ORDER BY start_time ASC",
+        (current_day,),
+    )
+    events = [dict(r) for r in cur.fetchall()]
+    conn.close()
+
+    happening_now = []
+    starting_soon = []
+    upcoming_today = []
+
+    for ev in events:
+        ev_start = time_to_minutes(ev["start_time"])
+        ev_end = time_to_minutes(ev["end_time"])
+
+        conflict_course = None
+        for cl in classes:
+            if ev["start_time"] < cl["end_time"] and ev["end_time"] > cl["start_time"]:
+                conflict_course = cl["course_name"]
+                break
+        ev["has_conflict"] = conflict_course is not None
+        ev["conflicting_course"] = conflict_course
+
+        if ev_start <= curr_mins <= ev_end:
+            ev["minutes_remaining"] = ev_end - curr_mins
+            happening_now.append(ev)
+        elif 0 < (ev_start - curr_mins) <= 180:
+            ev["starts_in_minutes"] = ev_start - curr_mins
+            starting_soon.append(ev)
+        elif ev_start > curr_mins:
+            ev["starts_in_minutes"] = ev_start - curr_mins
+            upcoming_today.append(ev)
+
+    days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    return {
+        "current_day": current_day,
+        "current_day_name": days_of_week[current_day],
+        "current_time": current_time,
+        "is_simulated": sim_day is not None or sim_time is not None,
+        "active_class": active_class,
+        "next_class": next_class,
+        "happening_now": happening_now,
+        "starting_soon": starting_soon,
+        "upcoming_today": upcoming_today,
+    }
+
+
 @app.get("/api/wm-events")
 def get_wm_events(
     start_date: Optional[date] = None,
@@ -488,19 +565,19 @@ def check_creator_conflicts(
 
     if loc_clash:
         status_code = "ROOM_CLASH"
-        advice = f"Room collision: {clash_event_title} is already booked in {location.strip()} during this slot."
+        advice = f"{clash_event_title} already uses this room at that time."
     elif class_count == 0 and event_count == 0:
         status_code = "CLEAR"
-        advice = "Optimal time slot: zero student class conflicts and zero competing club events."
+        advice = "No class or club event conflicts found."
     elif class_count > 0 and event_count == 0:
         status_code = "CLASS_OVERLAP"
-        advice = f"Caution: {class_count} registered student class(es) overlap with this time window."
+        advice = "Your class schedule overlaps this time."
     elif class_count == 0 and event_count > 0:
         status_code = "CLUB_OVERLAP"
-        advice = f"Caution: {event_count} other club event(s) already scheduled during this slot."
+        advice = "Another club event overlaps this time."
     else:
         status_code = "HEAVY_OVERLAP"
-        advice = f"High conflict window: {class_count} student class(es) and {event_count} competing club event(s) overlap."
+        advice = "Classes and club events overlap this time."
 
     return {
         "day": day,

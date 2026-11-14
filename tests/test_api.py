@@ -157,6 +157,17 @@ class TestCampusScheduleAPI(unittest.TestCase):
         conn.commit()
         conn.close()
 
+    def test_07_now_and_next_endpoint(self):
+        # Monday 17:15 should have Linux Kernel Workshop happening now (17:00-18:30)
+        res = client.get("/api/now-and-next?sim_day=0&sim_time=17:15")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["current_day_name"], "Monday")
+        self.assertEqual(data["current_time"], "17:15")
+        self.assertGreaterEqual(len(data["happening_now"]), 1)
+        now_titles = [e["title"] for e in data["happening_now"]]
+        self.assertTrue(any("Kernel" in t for t in now_titles))
+
 
 if __name__ == "__main__":
     unittest.main()

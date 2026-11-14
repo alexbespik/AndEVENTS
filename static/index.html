@@ -4,1426 +4,634 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0b3b2c" />
-  <title>&amp;.events — Campus Schedule &amp; Planning Engine</title>
-  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
-  <link rel="alternate icon" href="/favicon.svg" />
   <script>
-    // Apply saved theme before first paint (no light flash)
+    // Apply saved theme before first paint (prevents light flash in dark mode)
     try {
       var t = localStorage.getItem('andedu_lab_theme');
-      if (t === 'light' || t === 'dark') {
-        document.documentElement.dataset.theme = t;
-      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.documentElement.dataset.theme = 'dark';
-      }
+      if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
     } catch (e) {}
   </script>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <title>&amp;.events</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/lab.css" />
   <style>
-    /* &.edu — design system (engineering & academic schedule edition) */
-    :root {
-      color-scheme: light;
-      --font-display: 'Libre Caslon Text', Georgia, serif;
-      --font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      --font-mono: 'IBM Plex Mono', monospace;
-
-      /* Frame & Deep Griffin Green */
-      --brand: #0b0f0d;
-      --brand-strong: #000000;
-      --brand-ink: #ffffff;
-      --brand-ink-soft: #c4ccc7;
-      --brand-hover: rgba(255, 255, 255, 0.08);
-      --brand-control-bg: rgba(255, 255, 255, 0.05);
-      --brand-control-line: rgba(255, 255, 255, 0.2);
-      --brand-line: rgba(201, 162, 74, 0.45);
-      --side-bg: #0b3b2c;
-      --side-ink: #ffffff;
-      --side-muted: #b3c9bd;
-      --side-hover: rgba(255, 255, 255, 0.08);
-      --side-hover-strong: rgba(255, 255, 255, 0.12);
-      --side-hover-soft: rgba(255, 255, 255, 0.1);
-      --side-active: #155540;
-      --side-field: rgba(243, 241, 234, 0.08);
-      --side-field-line: rgba(243, 241, 234, 0.24);
-
-      /* Interactive Green */
-      --accent: #0e4a37;
-      --accent-hover: #093526;
-      --accent-press: #062519;
-      --accent-tint: #e2ebe5;
-      --accent-tint-2: #c6d8cd;
-      --on-accent: #ffffff;
-
-      /* Caslon Gold */
-      --gold: #c9a24a;
-      --gold-text: #6f5114;
-      --gold-tint: #f7eed6;
-      --gold-rule: #d9bf7c;
-      --on-gold: #0b0f0d;
-
-      /* Stone Neutrals */
-      --paper: #f1f0ea;
-      --surface: #ffffff;
-      --sunk: #e9e7df;
-      --code-bg: #f4f3ee;
-      --ink: #0b0f0d;
-      --ink-soft: #2b3430;
-      --muted: #4f5953;
-      --rule: #cbc7b9;
-      --rule-strong: #8f8a7c;
-
-      /* Status */
-      --ok: #0e4a37;
-      --ok-tint: #e2ebe5;
-      --ok-ink: #082f22;
-      --bad: #9a2b2b;
-      --bad-tint: #f6e6e3;
-      --bad-ink: #6b1b1b;
-      --bad-rule: #dca8a1;
-      --info: #215a7d;
-      --info-tint: #e4edf4;
-
-      --radius-sm: 3px;
-      --radius-md: 6px;
-      --radius-lg: 8px;
-      --grid: rgba(11, 15, 13, 0.035);
-      --shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-      --shadow-raised: 0 8px 24px rgba(0, 0, 0, 0.12);
-      --control-h: 36px;
-      --ease: cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    /* Dark Mode (Default System or Dataset) */
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) {
-        color-scheme: dark;
-        --brand: #000000;
-        --brand-strong: #000000;
-        --brand-ink: #ffffff;
-        --brand-ink-soft: #b9c2bd;
-        --brand-hover: rgba(230, 235, 231, 0.07);
-        --brand-line: rgba(224, 187, 98, 0.4);
-        --side-bg: #07140f;
-        --side-ink: #f2f5f3;
-        --side-muted: #8ea49a;
-        --side-hover: rgba(230, 235, 231, 0.05);
-        --side-active: #163428;
-        --side-field: rgba(230, 235, 231, 0.06);
-        --side-field-line: rgba(230, 235, 231, 0.18);
-        --accent: #5aae8b;
-        --accent-hover: #6fbf9c;
-        --accent-press: #4a9a79;
-        --accent-tint: #142a21;
-        --accent-tint-2: #1f3d30;
-        --on-accent: #06140e;
-        --gold: #e0bb62;
-        --gold-text: #e8c877;
-        --gold-tint: #2a2416;
-        --gold-rule: #5b4b2b;
-        --on-gold: #17110a;
-        --paper: #050806;
-        --surface: #0e1411;
-        --sunk: #090e0b;
-        --code-bg: #0b110e;
-        --ink: #f4f7f5;
-        --ink-soft: #cfd9d3;
-        --muted: #9eada5;
-        --rule: #2b3b34;
-        --rule-strong: #4a5f55;
-        --ok: #5fb390;
-        --ok-tint: #142a21;
-        --ok-ink: #bfe3d2;
-        --bad: #e27f72;
-        --bad-tint: #2c1714;
-        --bad-ink: #f3bdb4;
-        --bad-rule: #5a2b25;
-        --info: #7fb0d1;
-        --info-tint: #13212a;
-        --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-        --shadow-raised: 0 10px 28px rgba(0, 0, 0, 0.55);
-        --grid: rgba(230, 235, 231, 0.035);
-      }
-    }
-
-    :root[data-theme="dark"] {
-      color-scheme: dark;
-      --brand: #000000;
-      --brand-strong: #000000;
-      --brand-ink: #ffffff;
-      --brand-ink-soft: #b9c2bd;
-      --brand-hover: rgba(230, 235, 231, 0.07);
-      --brand-line: rgba(224, 187, 98, 0.4);
-      --side-bg: #07140f;
-      --side-ink: #f2f5f3;
-      --side-muted: #8ea49a;
-      --side-hover: rgba(230, 235, 231, 0.05);
-      --side-active: #163428;
-      --side-field: rgba(230, 235, 231, 0.06);
-      --side-field-line: rgba(230, 235, 231, 0.18);
-      --accent: #5aae8b;
-      --accent-hover: #6fbf9c;
-      --accent-press: #4a9a79;
-      --accent-tint: #142a21;
-      --accent-tint-2: #1f3d30;
-      --on-accent: #06140e;
-      --gold: #e0bb62;
-      --gold-text: #e8c877;
-      --gold-tint: #2a2416;
-      --gold-rule: #5b4b2b;
-      --on-gold: #17110a;
-      --paper: #050806;
-      --surface: #0e1411;
-      --sunk: #090e0b;
-      --code-bg: #0b110e;
-      --ink: #f4f7f5;
-      --ink-soft: #cfd9d3;
-      --muted: #9eada5;
-      --rule: #2b3b34;
-      --rule-strong: #4a5f55;
-      --ok: #5fb390;
-      --ok-tint: #142a21;
-      --ok-ink: #bfe3d2;
-      --bad: #e27f72;
-      --bad-tint: #2c1714;
-      --bad-ink: #f3bdb4;
-      --bad-rule: #5a2b25;
-      --info: #7fb0d1;
-      --info-tint: #13212a;
-      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-      --shadow-raised: 0 10px 28px rgba(0, 0, 0, 0.55);
-      --grid: rgba(230, 235, 231, 0.035);
-    }
-
-    *, *::before, *::after { box-sizing: border-box; }
-    html, body { margin: 0; min-height: 100%; overflow-x: clip; }
-    body {
-      background-color: var(--paper);
-      background-image:
-        linear-gradient(to right, var(--grid) 1px, transparent 1px),
-        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
-      background-size: 24px 24px;
-      color: var(--ink);
-      font-family: var(--font-body);
-      font-size: 15px;
-      line-height: 1.5;
-      -webkit-font-smoothing: antialiased;
-    }
-    :where(button, a, input, select, textarea, [tabindex]):focus-visible {
-      outline: 2px solid var(--gold);
-      outline-offset: 2px;
-    }
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        scroll-behavior: auto !important;
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-      }
-    }
-
-    /* Masthead Navigation */
-    .masthead {
-      background: var(--brand);
-      color: var(--brand-ink);
-      border-bottom: 1px solid var(--brand-line);
-      position: sticky;
-      top: 0;
-      z-index: 40;
-    }
-    .masthead-inner {
-      max-width: 1360px;
-      margin: 0 auto;
-      padding: 10px 20px;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-    .brand-wrap {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .brand-mark {
-      font-family: var(--font-display);
-      font-size: 24px;
-      font-weight: 700;
-      color: var(--gold);
-      line-height: 1;
-      user-select: none;
-    }
-    .brand-title {
-      font-family: var(--font-mono);
-      font-size: 14px;
-      font-weight: 600;
-      letter-spacing: -0.01em;
-      color: var(--brand-ink);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .brand-tag {
-      font-size: 10px;
-      font-weight: 600;
-      padding: 2px 6px;
-      border-radius: var(--radius-sm);
-      background: var(--accent-tint);
-      color: var(--accent);
-      border: 1px solid var(--accent);
-    }
-
-    /* Mode Navigation Tabs in Masthead */
-    .nav-modes {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      background: var(--brand-control-bg);
-      border: 1px solid var(--brand-line);
-      border-radius: var(--radius-sm);
-      padding: 3px;
-    }
-    .nav-tab {
-      background: transparent;
-      border: 1px solid transparent;
-      color: var(--brand-ink-soft);
-      font-family: var(--font-mono);
-      font-size: 12px;
-      font-weight: 600;
-      padding: 4px 12px;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      user-select: none;
-      transition: background-color 120ms var(--ease), border-color 120ms var(--ease), color 120ms var(--ease);
-    }
-    .nav-tab:hover {
-      color: var(--brand-ink);
-      background: var(--brand-hover);
-    }
-    .nav-tab.active {
-      background: var(--gold);
-      color: var(--on-gold);
-      border-color: var(--gold);
-    }
-
-    .masthead-right {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 12px;
-    }
-    .clock-chip {
-      font-family: var(--font-mono);
-      font-size: 13px;
-      font-weight: 600;
-      padding: 4px 10px;
-      border-radius: var(--radius-sm);
-      background: var(--brand-control-bg);
-      border: 1px solid var(--brand-line);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--gold-text);
-      font-variant-numeric: tabular-nums;
-    }
-
-    /* Controls & Buttons */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      min-height: var(--control-h);
-      padding: 0 14px;
-      border: 1px solid transparent;
-      border-radius: var(--radius-sm);
-      font-family: var(--font-mono);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      text-decoration: none;
-      transition: background 120ms var(--ease), border-color 120ms var(--ease), color 120ms var(--ease);
-      user-select: none;
-    }
-    .btn-primary {
-      background: var(--accent);
-      color: var(--on-accent);
-      border-color: var(--accent);
-    }
-    .btn-primary:hover {
-      background: var(--accent-hover);
-      border-color: var(--accent-hover);
-    }
-    .btn-gold {
-      background: var(--gold);
-      color: var(--on-gold);
-      border-color: var(--gold-rule);
-    }
-    .btn-gold:hover {
-      filter: brightness(0.92);
-    }
-    .btn-quiet {
-      background: transparent;
-      color: var(--brand-ink-soft);
-      border-color: var(--brand-control-line);
-    }
-    .btn-quiet:hover {
-      background: var(--brand-hover);
-      color: var(--brand-ink);
-    }
-    .btn-danger-quiet {
-      background: transparent;
-      color: var(--bad);
-      border: 1px solid transparent;
-      padding: 2px 6px;
-      font-size: 11px;
-    }
-    .btn-danger-quiet:hover {
-      background: var(--bad-tint);
-      border-color: var(--bad-rule);
-    }
-
-    /* Form Fields */
-    .field-group {
+    /* Clean, understated extensions adhering strictly to lab.css design tokens */
+    .sidebar-classes {
+      padding: var(--space-4) var(--space-4) var(--space-3);
       display: flex;
       flex-direction: column;
-      gap: 5px;
-    }
-    .field-label {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--side-muted);
-    }
-    .input, .select, .textarea {
-      height: var(--control-h);
-      padding: 0 10px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--rule-strong);
-      background: var(--surface);
-      color: var(--ink);
-      font-family: var(--font-body);
-      font-size: 13px;
-      transition: border-color 120ms var(--ease);
-      outline: none;
-    }
-    .textarea {
-      height: auto;
-      padding: 8px 10px;
-      min-height: 70px;
-      resize: vertical;
-    }
-    .input:focus, .select:focus, .textarea:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 1px var(--accent);
-    }
-    .sidebar .input, .sidebar .select, .sidebar .textarea {
-      background: var(--side-field);
-      border-color: var(--side-field-line);
-      color: var(--side-ink);
-    }
-    .sidebar .input:focus, .sidebar .select:focus, .sidebar .textarea:focus {
-      border-color: var(--gold);
-      box-shadow: 0 0 0 1px var(--gold);
-    }
-
-    /* Main Grid Layout */
-    .app-layout {
-      max-width: 1360px;
-      margin: 0 auto;
-      padding: 24px 20px;
-      display: grid;
-      grid-template-columns: 360px 1fr;
-      gap: 24px;
-      align-items: start;
-    }
-    @media (max-width: 960px) {
-      .app-layout {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* Left Panel: Class Schedule Manager */
-    .sidebar {
-      background: var(--side-bg);
-      color: var(--side-ink);
-      border: 1px solid var(--rule);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      box-shadow: var(--shadow-raised);
-    }
-    .sidebar-header {
-      padding: 18px 20px 14px;
+      gap: var(--space-3);
       border-bottom: 1px solid var(--side-field-line);
     }
-    .sidebar-title {
-      font-family: var(--font-display);
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--side-ink);
-      margin: 0 0 4px 0;
-    }
-    .sidebar-desc {
-      font-size: 12px;
-      color: var(--side-muted);
-      margin: 0;
-    }
-    .sidebar-body {
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    .day-pills-grid {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      gap: 4px;
-    }
-    .day-pill-btn {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 6px 0;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--side-field-line);
-      background: var(--side-field);
-      color: var(--side-muted);
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 600;
-      cursor: pointer;
-      user-select: none;
-      transition: background-color 120ms var(--ease), border-color 120ms var(--ease), color 120ms var(--ease);
-    }
-    .day-pill-btn:hover {
-      background: var(--side-hover-strong);
-      color: var(--side-ink);
-    }
-    .day-pill-btn.active, .day-pill-btn:has(input:checked) {
-      background: var(--gold);
-      color: var(--on-gold);
-      border-color: var(--gold);
-    }
-    .day-pill-btn input {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      margin: 0;
-      opacity: 0;
-    }
-    .day-pill-btn:focus-within {
-      outline: 2px solid var(--gold);
-      outline-offset: 2px;
-    }
-    .wm-events-section {
-      background: var(--surface);
-      border: 1px solid var(--rule);
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow);
-      padding: 16px 18px;
-    }
-    .wm-events-heading {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid var(--rule);
-      margin-bottom: 12px;
-    }
-    .wm-events-heading h3 {
-      margin: 0;
-      color: var(--ink);
-      font-family: var(--font-display);
-      font-size: 18px;
-    }
-    .wm-events-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .wm-event-card {
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-      padding: 12px 14px;
-      background: var(--paper);
-      border: 1px solid var(--rule);
-      border-left: 3px solid var(--accent);
-      border-radius: var(--radius-sm);
-    }
-    .wm-event-meta {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 7px;
-      color: var(--muted);
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-variant-numeric: tabular-nums;
-    }
-    .wm-event-title {
-      margin: 0;
-      color: var(--ink);
-      font-family: var(--font-display);
-      font-size: 16px;
-      line-height: 1.3;
-    }
-    .wm-event-location, .wm-event-description, .wm-event-sources {
-      margin: 0;
-      color: var(--ink-soft);
-      font-size: 13px;
-      overflow-wrap: anywhere;
-    }
-    .wm-event-sources {
-      padding-top: 7px;
-      border-top: 1px solid var(--rule);
-      color: var(--muted);
-      font-size: 11px;
-    }
-    .wm-event-sources a {
-      color: var(--accent);
-      font-family: var(--font-mono);
-      font-weight: 600;
-      text-decoration-thickness: 1px;
-      text-underline-offset: 2px;
-    }
-    .wm-event-sources a:hover { color: var(--accent-hover); }
-    .wm-event-category {
-      display: inline-flex;
-      padding: 2px 7px;
-      border: 1px solid var(--gold-rule);
-      border-radius: var(--radius-sm);
-      background: var(--gold-tint);
-      color: var(--gold-text);
-      font-weight: 700;
-    }
-    .wm-events-status {
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    /* Current Classes Section */
-    .classes-manager {
-      margin-top: 10px;
-      border-top: 1px solid var(--side-field-line);
-      padding-top: 16px;
-    }
-    .classes-manager-head {
+    .sidebar-classes-head {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 12px;
+      gap: var(--space-2);
     }
-    .classes-manager-head h4 {
-      font-family: var(--font-mono);
-      font-size: 12px;
+    .sidebar-classes-head h3 {
+      font-size: 0.8rem;
+      color: var(--side-muted);
       font-weight: 700;
-      color: var(--side-ink);
       margin: 0;
     }
-    .class-item-card {
+    .side-class-card {
       background: var(--side-field);
       border: 1px solid var(--side-field-line);
       border-radius: var(--radius-sm);
-      padding: 8px 10px;
-      margin-bottom: 6px;
+      padding: var(--space-2) var(--space-3);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 8px;
+      gap: var(--space-2);
+      margin-bottom: var(--space-2);
     }
-    .class-item-info {
+    .side-class-info {
       display: flex;
       flex-direction: column;
       gap: 2px;
       min-width: 0;
     }
-    .class-item-name {
-      font-size: 12px;
+    .side-class-title {
       font-weight: 600;
+      font-size: 0.86rem;
       color: var(--side-ink);
-      white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-    }
-    .class-item-meta {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--side-muted);
-      display: flex;
-      gap: 6px;
-      align-items: center;
-    }
-    .delete-btn {
-      background: transparent;
-      border: none;
-      color: var(--side-muted);
-      font-size: 16px;
-      font-weight: 700;
-      cursor: pointer;
-      padding: 2px 6px;
-      line-height: 1;
-      border-radius: var(--radius-sm);
-    }
-    .delete-btn:hover {
-      color: var(--bad);
-      background: var(--side-hover-soft);
-    }
-
-    /* Right Panel Surfaces */
-    .main-surface {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    /* Views: Tab 1 (Directory), Tab 2 (Planner), Tab 3 (Organizer) */
-    .view-container {
-      display: none;
-      flex-direction: column;
-      gap: 20px;
-    }
-    .view-container.active-view {
-      display: flex;
-    }
-
-    /* Overview Header Card */
-    .overview-card {
-      background: var(--surface);
-      border: 1px solid var(--rule);
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow);
-      padding: 16px 20px;
-    }
-    .overview-card-header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      margin-bottom: 8px;
-    }
-    .overview-title {
-      font-family: var(--font-display);
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--ink);
-      margin: 0;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .overview-chip {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 600;
-      padding: 3px 8px;
-      border-radius: var(--radius-sm);
-      background: var(--sunk);
-      color: var(--ink-soft);
-      border: 1px solid var(--rule);
-    }
-
-    /* Filter Toolbar */
-    .filter-panel {
-      background: var(--surface);
-      border: 1px solid var(--rule);
-      border-radius: var(--radius-md);
-      padding: 16px 18px;
-      box-shadow: var(--shadow);
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-    .filter-controls-grid {
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr;
-      gap: 12px;
-    }
-    @media (max-width: 768px) {
-      .filter-controls-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-    .filter-toggles-row {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 20px;
-      padding-top: 8px;
-      border-top: 1px solid var(--rule);
-    }
-    .toggle-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-family: var(--font-mono);
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--ink-soft);
-      cursor: pointer;
-      user-select: none;
-    }
-    .toggle-label input[type="checkbox"] {
-      width: 15px;
-      height: 15px;
-      accent-color: var(--accent);
-      cursor: pointer;
-    }
-
-    /* Events List & Cards */
-    .events-stream {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    .event-card {
-      background: var(--surface);
-      border: 1px solid var(--rule);
-      border-radius: var(--radius-md);
-      padding: 16px 18px;
-      box-shadow: var(--shadow);
-      transition: border-color 120ms var(--ease), box-shadow 120ms var(--ease);
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .event-card:hover {
-      border-color: var(--rule-strong);
-      box-shadow: var(--shadow-raised);
-    }
-    .event-card.has-conflict {
-      border-left: 4px solid var(--gold);
-      background: var(--paper);
-    }
-    .event-card-top {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    .event-meta-row {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 6px;
-    }
-    .time-badge {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 600;
-      padding: 2px 7px;
-      border-radius: var(--radius-sm);
-      background: var(--sunk);
-      color: var(--ink);
-      border: 1px solid var(--rule);
-      font-variant-numeric: tabular-nums;
-    }
-    .category-badge {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      font-weight: 700;
-      padding: 2px 7px;
-      border-radius: var(--radius-sm);
-      background: var(--info-tint);
-      color: var(--info);
-      border: 1px solid var(--info);
-    }
-    .event-title {
-      font-family: var(--font-display);
-      font-size: 17px;
-      font-weight: 700;
-      color: var(--ink);
-      margin: 0;
-    }
-    .event-club-loc {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 3px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .status-badge {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 600;
-      padding: 4px 10px;
-      border-radius: var(--radius-sm);
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
       white-space: nowrap;
     }
-    .status-badge.available {
-      background: var(--ok-tint);
-      color: var(--ok-ink);
-      border: 1px solid var(--ok);
+    .side-class-meta {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--side-muted);
     }
-    .status-badge.conflict {
-      background: var(--gold-tint);
-      color: var(--gold-text);
-      border: 1px solid var(--gold-rule);
+    .folder-pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
     }
-    .event-desc {
-      font-size: 13px;
-      color: var(--ink-soft);
-      line-height: 1.5;
-      padding-top: 8px;
-      border-top: 1px solid var(--rule);
-      margin: 0;
+    .folder-pill {
+      min-height: 26px;
+      padding: 0 8px;
+      font: 500 0.76rem/1 var(--font-mono);
+      border: 1px solid var(--side-field-line);
+      border-radius: var(--radius-sm);
+      background: var(--side-field);
+      color: var(--side-ink);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
-
-    /* Weekly Planner Timetable (Non-Creator View) */
-    .timetable-grid {
+    .folder-pill.active, .folder-pill:has(input:checked) {
+      background: var(--gold);
+      color: var(--on-gold);
+      border-color: var(--gold);
+    }
+    .folder-pill input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+    .live-event-card {
+      padding: var(--space-4) var(--space-5);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 1px 0 var(--rule);
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: var(--space-2);
+      transition: border-color 120ms var(--ease);
     }
-    .day-schedule-section {
-      background: var(--surface);
-      border: 1px solid var(--rule);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-      box-shadow: var(--shadow);
+    .live-event-card:hover {
+      border-color: var(--ink);
     }
-    .day-section-header {
-      background: var(--sunk);
-      padding: 10px 16px;
-      border-bottom: 1px solid var(--rule);
+    .live-event-card.in-session {
+      border-left: 3px solid var(--ok);
+    }
+    .live-event-card.starts-soon {
+      border-left: 3px solid var(--gold);
+    }
+    .live-event-card.has-conflict {
+      opacity: 0.82;
+      border-left: 3px solid var(--rule-strong);
+    }
+    .live-event-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--space-3);
+      flex-wrap: wrap;
+    }
+    .live-event-title {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--ink);
+      margin: 0;
+    }
+    .live-event-meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-2) var(--space-3);
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .status-note {
+      font-size: 0.82rem;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-1);
+      font-family: var(--font-mono);
+    }
+    .status-note.free {
+      background: var(--ok-tint);
+      border: 1px solid var(--accent-tint-2);
+      color: var(--ok-ink);
+    }
+    .status-note.conflict {
+      background: var(--bad-tint);
+      border: 1px solid var(--bad-rule);
+      color: var(--bad-ink);
+    }
+    .status-note.soon {
+      background: var(--gold-tint);
+      border: 1px solid var(--gold-rule);
+      color: var(--gold-text);
+    }
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--ink);
+      margin: 0 0 var(--space-2) 0;
       display: flex;
       align-items: center;
       justify-content: space-between;
-    }
-    .day-section-title {
-      font-family: var(--font-mono);
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--ink);
-    }
-    .day-section-counts {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--muted);
-    }
-    .day-section-content {
-      padding: 14px 16px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-    }
-    @media (max-width: 768px) {
-      .day-section-content {
-        grid-template-columns: 1fr;
-      }
-    }
-    .column-title {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--muted);
-      margin-bottom: 8px;
-      border-bottom: 1px solid var(--rule);
-      padding-bottom: 4px;
-    }
-    .planner-card {
-      background: var(--paper);
-      border: 1px solid var(--rule);
-      border-radius: var(--radius-sm);
-      padding: 8px 12px;
-      margin-bottom: 8px;
-    }
-    .planner-card.has-conflict {
-      border-left: 3px solid var(--gold);
-      background: var(--gold-tint);
-    }
-    .planner-card:last-child {
-      margin-bottom: 0;
-    }
-
-    /* Event Organizer Lab (Creator View) */
-    .organizer-layout {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      align-items: start;
-    }
-    @media (max-width: 860px) {
-      .organizer-layout {
-        grid-template-columns: 1fr;
-      }
-    }
-    .organizer-panel {
-      background: var(--surface);
-      border: 1px solid var(--rule);
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow);
-      padding: 18px 20px;
-    }
-    .organizer-panel h3 {
-      font-family: var(--font-display);
-      font-size: 17px;
-      font-weight: 700;
-      margin: 0 0 4px 0;
-      color: var(--ink);
-    }
-    .feasibility-box {
-      margin-top: 14px;
-      padding: 12px 14px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--rule);
-      background: var(--paper);
-      font-size: 12px;
-    }
-    .feasibility-box.status-clear {
-      border-color: var(--ok);
-      background: var(--ok-tint);
-      color: var(--ok-ink);
-    }
-    .feasibility-box.status-overlap {
-      border-color: var(--gold-rule);
-      background: var(--gold-tint);
-      color: var(--gold-text);
-    }
-    .feasibility-box.status-clash {
-      border-color: var(--bad-rule);
-      background: var(--bad-tint);
-      color: var(--bad-ink);
-    }
-
-    .empty-state {
-      background: var(--surface);
-      border: 1px dashed var(--rule-strong);
-      border-radius: var(--radius-md);
-      padding: 32px 20px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    /* Mobile Viewport Optimizations (<640px) */
-    @media (max-width: 640px) {
-      .masthead-inner {
-        padding: 10px 12px;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 10px;
-      }
-      .brand-wrap {
-        justify-content: space-between;
-      }
-      .nav-modes {
-        width: 100%;
-        display: flex;
-        justify-content: space-between;
-      }
-      .nav-tab {
-        flex: 1;
-        text-align: center;
-        padding: 6px 2px;
-        font-size: 11px;
-      }
-      .masthead-right {
-        width: 100%;
-        justify-content: space-between;
-      }
-      .clock-chip {
-        font-size: 11px;
-        padding: 3px 6px;
-      }
-      .app-layout {
-        padding: 12px 10px;
-        gap: 16px;
-      }
-      .sidebar-header {
-        padding: 14px 14px 10px;
-      }
-      .sidebar-body {
-        padding: 14px;
-      }
-      .day-pill-btn {
-        min-width: 0;
-        padding: 8px 0;
-        font-size: 11px;
-      }
-      .filter-controls-grid {
-        grid-template-columns: 1fr;
-      }
-      .day-section-content {
-        grid-template-columns: 1fr;
-        padding: 12px;
-      }
-      .organizer-layout {
-        grid-template-columns: 1fr;
-      }
-      .organizer-panel {
-        padding: 14px;
-      }
-      .event-card {
-        padding: 14px;
-      }
     }
   </style>
 </head>
-<body>
-  <!-- Masthead -->
+<body class="app">
+  <!-- Masthead matching AndEDU Navbar.jsx -->
   <header class="masthead">
-    <div class="masthead-inner">
-      <div class="brand-wrap">
-        <span class="brand-mark">&amp;</span>
-        <div class="brand-title">
-          <span>.events</span>
-          <span class="brand-tag">Schedule Engine</span>
-        </div>
+    <button type="button" class="brand" onclick="switchMode('live')" aria-label="&.events live home">
+      <span class="brand-monogram" aria-hidden="true">&amp;</span>
+      <span class="brand-mark">.events</span>
+    </button>
+
+    <button type="button" class="mode only-narrow" id="mobileSidebarToggle" aria-label="Toggle schedule panel" onclick="toggleSidebar()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+      <span>Classes</span>
+    </button>
+
+    <nav class="modes" aria-label="View Modes">
+      <button type="button" class="mode" id="tabLive" aria-pressed="true" onclick="switchMode('live')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        Now &amp; Soon
+      </button>
+      <button type="button" class="mode" id="tabDirectory" aria-pressed="false" onclick="switchMode('directory')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+        Directory
+      </button>
+      <button type="button" class="mode" id="tabPlanner" aria-pressed="false" onclick="switchMode('planner')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        Weekly Planner
+      </button>
+      <button type="button" class="mode" id="tabOrganizer" aria-pressed="false" onclick="switchMode('organizer')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+        Organize
+      </button>
+    </nav>
+
+    <div class="masthead-right">
+      <div id="liveClockChip" class="conn num" style="font-family: var(--font-mono); font-size: 0.82rem;">
+        <span id="liveClockDisplay">--:--:--</span>
+        <span id="liveDayDisplay" style="color: var(--brand-ink-soft); margin-left: 4px;">---</span>
       </div>
 
-      <!-- Mode Navigation Tabs -->
-      <nav class="nav-modes" aria-label="View Modes">
-        <button type="button" class="nav-tab active" id="tabDirectory" onclick="switchMode('directory')">Directory</button>
-        <button type="button" class="nav-tab" id="tabPlanner" onclick="switchMode('planner')">Weekly Planner</button>
-        <button type="button" class="nav-tab" id="tabOrganizer" onclick="switchMode('organizer')">Organizer Lab</button>
-      </nav>
+      <!-- Demo Simulator Controls -->
+      <label class="conn" style="cursor: pointer; font-size: 0.78rem;">
+        <input type="checkbox" id="simToggle" onchange="toggleDemoMode()" style="cursor: pointer;">
+        <span>Preview time</span>
+      </label>
 
-      <div class="masthead-right">
-        <!-- Live 24-hour clock -->
-        <div class="clock-chip">
-          <span id="liveClockDisplay">--:--:--</span>
-          <span id="liveDayDisplay" style="color: var(--brand-ink-soft); font-weight: 400;">---</span>
-        </div>
+      <div id="demoControls" style="display: none; align-items: center; gap: 4px;">
+        <select id="simDay" class="select" style="height: 28px; padding: 0 4px; font-size: 0.75rem; font-family: var(--font-mono); background: var(--brand); color: var(--brand-ink); border-color: var(--brand-line);" onchange="loadAll()">
+          <option value="0">Mon</option>
+          <option value="1">Tue</option>
+          <option value="2">Wed</option>
+          <option value="3">Thu</option>
+          <option value="4">Fri</option>
+          <option value="5">Sat</option>
+          <option value="6">Sun</option>
+        </select>
+        <input type="time" id="simTime" value="17:15" class="input" style="height: 28px; width: 85px; padding: 0 4px; font-size: 0.75rem; font-family: var(--font-mono); background: var(--brand); color: var(--brand-ink); border-color: var(--brand-line);" onchange="loadAll()">
+      </div>
 
-        <!-- Hackathon Demo Override -->
-        <label class="toggle-label" style="color: var(--brand-ink-soft); font-size: 11px;">
-          <input type="checkbox" id="simToggle" onchange="toggleDemoMode()">
-          <span>Demo Override</span>
-        </label>
-
-        <div id="demoControls" style="display: none; align-items: center; gap: 6px;">
-          <select id="simDay" class="select" style="height: 28px; padding: 0 6px; font-size: 11px; font-family: var(--font-mono); background: var(--brand); color: var(--brand-ink); border-color: var(--brand-line);" onchange="loadAll()">
-            <option value="0">Mon</option>
-            <option value="1">Tue</option>
-            <option value="2">Wed</option>
-            <option value="3">Thu</option>
-            <option value="4">Fri</option>
-            <option value="5">Sat</option>
-            <option value="6">Sun</option>
-          </select>
-          <input type="time" id="simTime" value="17:15" class="input" style="height: 28px; padding: 0 6px; font-size: 11px; font-family: var(--font-mono); background: var(--brand); color: var(--brand-ink); border-color: var(--brand-line);" onchange="loadAll()">
-        </div>
-
-        <!-- Theme Toggle Button -->
-        <button type="button" class="btn btn-quiet" onclick="toggleTheme()" title="Toggle Theme" style="padding: 0 8px; min-height: 28px;">
-          <span id="themeIcon">🌓</span>
+      <!-- AndEDU Theme Switcher -->
+      <div class="theme-switch" role="group" aria-label="Color theme">
+        <button type="button" id="themeBtnSystem" title="System theme" onclick="setTheme('system')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          <span class="visually-hidden">System</span>
+        </button>
+        <button type="button" id="themeBtnLight" title="Light theme" onclick="setTheme('light')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          <span class="visually-hidden">Light</span>
+        </button>
+        <button type="button" id="themeBtnDark" title="Dark theme" onclick="setTheme('dark')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          <span class="visually-hidden">Dark</span>
         </button>
       </div>
     </div>
   </header>
 
-  <!-- Main Layout -->
-  <main class="app-layout">
-    <!-- LEFT PANEL: Class Schedule Manager -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <h2 class="sidebar-title">Class Schedule</h2>
-        <p class="sidebar-desc">Enter your weekly lecture timetable to cross-reference with campus events.</p>
+  <!-- Workspace: L-frame (Sidebar + Main) -->
+  <div class="workspace">
+    <!-- Backdrop scrim for mobile drawer -->
+    <div id="sidebarScrim" class="agy-scrim" style="display:none;" onclick="toggleSidebar(false)"></div>
+
+    <!-- Deep Griffin Green Sidebar (#0b3b2c) -->
+    <nav id="appSidebar" class="sidebar" aria-label="Student Class Timetable">
+      <!-- Search in Directory -->
+      <div class="sidebar-search">
+        <label for="searchInput" class="visually-hidden">Search clubs and events</label>
+        <input id="searchInput" class="input" type="search" placeholder="Search events..." oninput="handleSearchInput()" />
       </div>
 
-      <div class="sidebar-body">
-        <form id="classForm" onsubmit="submitClass(event)" style="display: flex; flex-direction: column; gap: 14px;">
-          <div class="field-group">
-            <label class="field-label" for="courseName">Course Name</label>
-            <input type="text" id="courseName" class="input" required placeholder="e.g. CSCI 241: Data Structures">
-          </div>
+      <!-- Class Schedule Manager -->
+      <div class="sidebar-classes">
+        <div class="sidebar-classes-head">
+          <h3>YOUR CLASSES</h3>
+          <button type="button" class="btn btn-quiet btn-sm" onclick="clearAllClasses()" style="color: var(--side-muted); border-color: var(--side-field-line); font-size: 0.72rem; min-height: 22px; padding: 0 6px;">Clear All</button>
+        </div>
 
-          <div class="field-group">
-            <span class="field-label" id="dayPillsLabel">Days of Week</span>
-            <div class="day-pills-grid" id="dayPills" role="group" aria-labelledby="dayPillsLabel">
-              <label class="day-pill-btn"><input type="checkbox" name="days" value="0" aria-label="Monday" checked><span>Mon</span></label>
-              <label class="day-pill-btn"><input type="checkbox" name="days" value="1" aria-label="Tuesday"><span>Tue</span></label>
-              <label class="day-pill-btn"><input type="checkbox" name="days" value="2" aria-label="Wednesday" checked><span>Wed</span></label>
-              <label class="day-pill-btn"><input type="checkbox" name="days" value="3" aria-label="Thursday"><span>Thu</span></label>
-              <label class="day-pill-btn"><input type="checkbox" name="days" value="4" aria-label="Friday" checked><span>Fri</span></label>
-              <label class="day-pill-btn"><input type="checkbox" name="days" value="5" aria-label="Saturday"><span>Sat</span></label>
-              <label class="day-pill-btn"><input type="checkbox" name="days" value="6" aria-label="Sunday"><span>Sun</span></label>
-            </div>
+        <!-- Add Class Form -->
+        <form id="classForm" onsubmit="submitClass(event)" style="display: flex; flex-direction: column; gap: var(--space-2);">
+          <div class="field">
+            <input type="text" id="courseName" class="input" style="min-height: 30px; font-size: 0.82rem;" required placeholder="e.g. CSCI 241: Data Structures">
           </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div class="field-group">
-              <label class="field-label" for="classStart">Start (24h)</label>
-              <input type="time" id="classStart" class="input" required value="14:00" style="font-family: var(--font-mono);">
-            </div>
-            <div class="field-group">
-              <label class="field-label" for="classEnd">End (24h)</label>
-              <input type="time" id="classEnd" class="input" required value="15:15" style="font-family: var(--font-mono);">
-            </div>
+          <div class="folder-pill-row" id="dayPills" role="group" aria-label="Days of class">
+            <label class="folder-pill"><input type="checkbox" name="days" value="0" checked><span>M</span></label>
+            <label class="folder-pill"><input type="checkbox" name="days" value="1"><span>T</span></label>
+            <label class="folder-pill"><input type="checkbox" name="days" value="2" checked><span>W</span></label>
+            <label class="folder-pill"><input type="checkbox" name="days" value="3"><span>R</span></label>
+            <label class="folder-pill"><input type="checkbox" name="days" value="4" checked><span>F</span></label>
+            <label class="folder-pill"><input type="checkbox" name="days" value="5"><span>S</span></label>
+            <label class="folder-pill"><input type="checkbox" name="days" value="6"><span>U</span></label>
           </div>
-
-          <div class="field-group">
-            <label class="field-label" for="classLoc">Location (Optional)</label>
-            <input type="text" id="classLoc" class="input" placeholder="e.g. Jones Hall 301">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+            <input type="time" id="classStart" class="input" style="min-height: 30px; font-size: 0.82rem;" value="14:00" required>
+            <input type="time" id="classEnd" class="input" style="min-height: 30px; font-size: 0.82rem;" value="15:15" required>
           </div>
-
-          <button type="submit" class="btn btn-gold" style="width: 100%; margin-top: 4px;">
-            + Save to Class Schedule
-          </button>
+          <input type="text" id="classLoc" class="input" style="min-height: 30px; font-size: 0.82rem;" placeholder="Location (e.g. Jones 301)">
+          <button type="submit" class="btn btn-gold btn-sm" style="font-weight: 600; width: 100%;">+ Add Class</button>
         </form>
 
-        <!-- Active Classes List -->
-        <div class="classes-manager">
-          <div class="classes-manager-head">
-            <h4>Active Classes</h4>
-            <button type="button" class="btn-danger-quiet" onclick="clearAllClasses()">Clear All</button>
-          </div>
-          <div id="classList"></div>
+        <!-- Enrolled Classes List -->
+        <div id="classList" style="margin-top: var(--space-2);">
+          <!-- Dynamic classes loaded here -->
         </div>
       </div>
-    </aside>
 
-    <!-- RIGHT PANEL: 3 Active Views -->
-    <section class="main-surface">
-      <!-- VIEW 1: Directory & Live Status -->
-      <div id="viewDirectory" class="view-container active-view">
-        <div class="overview-card">
-          <div class="overview-card-header">
-            <h3 class="overview-title">
-              <span>Club Events &amp; Meetings</span>
-            </h3>
-            <span class="overview-chip" id="directoryStatusChip">Active Timetable</span>
-          </div>
-          <p style="margin: 0; color: var(--muted); font-size: 13px;">
-            Complete directory of student organization meetings, workshops, and gatherings across campus.
-          </p>
+      <!-- Quick Filters (visible in Directory mode) -->
+      <div id="sidebarFiltersSection" class="sidebar-group">
+        <h3>DIRECTORY FILTERS</h3>
+        <div class="folder-pill-row" style="margin-bottom: var(--space-3);">
+          <button type="button" class="folder-pill active" id="dayPillAll" onclick="setQuickDayFilter('')">All</button>
+          <button type="button" class="folder-pill" id="dayPill0" onclick="setQuickDayFilter('0')">Mon</button>
+          <button type="button" class="folder-pill" id="dayPill1" onclick="setQuickDayFilter('1')">Tue</button>
+          <button type="button" class="folder-pill" id="dayPill2" onclick="setQuickDayFilter('2')">Wed</button>
+          <button type="button" class="folder-pill" id="dayPill3" onclick="setQuickDayFilter('3')">Thu</button>
+          <button type="button" class="folder-pill" id="dayPill4" onclick="setQuickDayFilter('4')">Fri</button>
+          <button type="button" class="folder-pill" id="dayPill5" onclick="setQuickDayFilter('5')">Sat</button>
+          <button type="button" class="folder-pill" id="dayPill6" onclick="setQuickDayFilter('6')">Sun</button>
         </div>
 
-        <section class="wm-events-section" aria-labelledby="wmEventsTitle">
-          <div class="wm-events-heading">
-            <h3 id="wmEventsTitle">Dated W&amp;M Events</h3>
-            <span class="overview-chip">Public Calendar Stream</span>
-          </div>
-          <div class="wm-events-list" id="wmEventsContainer" aria-live="polite">
-            <p class="wm-events-status">Loading dated W&amp;M events…</p>
-          </div>
-        </section>
+        <select id="categoryFilter" class="select" style="background: var(--side-field); border-color: var(--side-field-line); color: var(--side-ink); margin-bottom: var(--space-2);" onchange="loadEvents()">
+          <option value="ALL">All Categories</option>
+          <option value="Academic">Academic</option>
+          <option value="Technology">Technology</option>
+          <option value="Arts">Arts</option>
+          <option value="Sports">Sports</option>
+          <option value="Social">Social</option>
+          <option value="Service">Service</option>
+        </select>
 
-        <!-- Filter Toolbar for recurring demo events -->
-        <div class="filter-panel">
-          <div class="filter-controls-grid">
-            <div class="field-group">
-              <label class="field-label" for="searchInput">Search Events</label>
-              <input type="text" id="searchInput" class="input" placeholder="Title, club, or hall..." oninput="loadEvents()">
-            </div>
-
-            <div class="field-group">
-              <label class="field-label" for="dayFilter">Day</label>
-              <select id="dayFilter" class="select" onchange="loadEvents()" style="font-family: var(--font-mono);">
-                <option value="">All Days</option>
-                <option value="0">Monday</option>
-                <option value="1">Tuesday</option>
-                <option value="2">Wednesday</option>
-                <option value="3">Thursday</option>
-                <option value="4">Friday</option>
-                <option value="5">Saturday</option>
-                <option value="6">Sunday</option>
-              </select>
-            </div>
-
-            <div class="field-group">
-              <label class="field-label" for="categoryFilter">Category</label>
-              <select id="categoryFilter" class="select" onchange="loadEvents()">
-                <option value="ALL">All Categories</option>
-                <option value="Tech">Tech</option>
-                <option value="Academic">Academic</option>
-                <option value="Sports">Sports</option>
-                <option value="Gaming">Gaming</option>
-                <option value="Social">Social</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="filter-toggles-row">
-            <label class="toggle-label" style="color: var(--ok-ink); font-weight: 700;">
-              <input type="checkbox" id="onlyNowFilter" onchange="loadEvents()">
-              <span>Free / Happening Soon</span>
-            </label>
-
-            <label class="toggle-label">
-              <input type="checkbox" id="hideConflictsFilter" onchange="loadEvents()">
-              <span>Hide Class Conflicts</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Events Stream -->
-        <div class="events-stream" id="eventsContainer"></div>
+        <label class="conn" style="color: var(--side-ink); cursor: pointer; font-size: 0.82rem;">
+          <input type="checkbox" id="hideConflictsFilter" onchange="loadEvents()" style="cursor: pointer;">
+          <span>Hide my class conflicts</span>
+        </label>
       </div>
+    </nav>
 
-      <!-- VIEW 2: Student Weekly Planner (Non-Creator Mode) -->
-      <div id="viewPlanner" class="view-container">
-        <div class="overview-card">
-          <div class="overview-card-header">
-            <h3 class="overview-title">
-              <span>Weekly Academic &amp; Club Planner</span>
-            </h3>
-            <span class="overview-chip" id="weeklyStatsChip">7-Day Matrix</span>
+    <!-- Main Workspace Area with Stone Paper and Faint 32px Grid Background -->
+    <main class="main">
+      <div class="page page-wide">
+        <!-- Page Header with signature Breadcrumbs & Gold Accent Bar -->
+        <div class="page-head">
+          <div>
+            <div class="crumbs"><span id="crumbRoot">events</span> / <span id="currentViewCrumb">live</span></div>
+            <h1 id="pageTitleHeading">Now &amp; Soon</h1>
+            <p id="pageSubtitleText">Events happening now and over the next three hours.</p>
           </div>
-          <p style="margin: 0; color: var(--muted); font-size: 13px;">
-            Plan your week ahead. View club events alongside your class schedule. Overlapping events are highlighted as soft planning notes so you can evaluate trade-offs.
-          </p>
+          <div id="headerActions" class="btn-row">
+            <button type="button" id="notifBtn" class="btn btn-secondary btn-sm" onclick="toggleNotifications()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+              <span id="notifBtnText">Event Notifications</span>
+            </button>
+          </div>
         </div>
 
-        <div class="timetable-grid" id="timetableContainer"></div>
-      </div>
-
-      <!-- VIEW 3: Event Organizer Lab (Creator Planning Mode) -->
-      <div id="viewOrganizer" class="view-container">
-        <div class="overview-card">
-          <div class="overview-card-header">
-            <h3 class="overview-title">
-              <span>Event Organizer Lab &amp; Conflict Inspector</span>
-            </h3>
-            <span class="overview-chip">Planning Tools</span>
+        <!-- VIEW 1: NOW & SOON (Focused, zero-clutter live front page) -->
+        <div id="viewLive" class="stack view-container">
+          <!-- Student Real-Time Status Strip -->
+          <div id="studentStatusBox" class="notice notice-ok">
+            <strong>Your Schedule:</strong> <span id="studentStatusText">Checking schedule...</span>
           </div>
-          <p style="margin: 0; color: var(--muted); font-size: 13px;">
-            For club executives and meeting organizers: test proposed timeslots against registered student class density and competing club meetings before publishing.
-          </p>
+
+          <!-- Section: Happening Right Now -->
+          <div>
+            <div class="section-title">
+              <span>Happening Right Now</span>
+              <span id="nowCountBadge" class="status status-ready">0 In Session</span>
+            </div>
+            <div id="nowEventsContainer" class="stack">
+              <p class="hint">Loading current events…</p>
+            </div>
+          </div>
+
+          <!-- Section: Coming Up Soon (Next 3 Hours) -->
+          <div style="margin-top: var(--space-4);">
+            <div class="section-title">
+              <span>Starting in the next 3 hours</span>
+              <span id="soonCountBadge" class="status status-working">0 upcoming</span>
+            </div>
+            <div id="soonEventsContainer" class="stack">
+              <p class="hint">Loading upcoming events…</p>
+            </div>
+          </div>
         </div>
 
-        <div class="organizer-layout">
-          <!-- Proposal Form & Slot Inspector -->
-          <div class="organizer-panel">
-            <h3>Propose New Club Event</h3>
-            <p style="font-size: 12px; color: var(--muted); margin: 0 0 14px 0;">Slot feasibility updates live as you choose day and time.</p>
+        <!-- VIEW 2: Directory Mode (Searchable full catalog) -->
+        <div id="viewDirectory" class="stack view-container" style="display: none;">
+          <!-- W&M Feeds Section -->
+          <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-3); border-bottom: 1px solid var(--rule); padding-bottom: var(--space-2);">
+              <h2 style="font-family: var(--font-display); font-size: 1.15rem; margin: 0;">William &amp; Mary Campus Calendar</h2>
+              <span class="status status-working" style="font-size: 0.75rem;">Imported events</span>
+            </div>
+            <div id="wmEventsContainer" style="display: flex; flex-direction: column; gap: var(--space-2);">
+              <p class="hint">Loading dated campus events...</p>
+            </div>
+          </div>
 
-            <form id="eventCreateForm" onsubmit="submitClubEvent(event)" style="display: flex; flex-direction: column; gap: 12px;">
-              <div class="field-group">
-                <label class="field-label" for="evTitle">Event Title</label>
-                <input type="text" id="evTitle" class="input" required placeholder="e.g. AI Hardware & Robotics Workshop">
-              </div>
+          <!-- Student Club Events Section -->
+          <div class="panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4); border-bottom: 1px solid var(--rule); padding-bottom: var(--space-2);">
+              <h2 style="font-family: var(--font-display); font-size: 1.15rem; margin: 0;">Club meetings</h2>
+              <span id="clubCountBadge" class="status status-ready" style="font-size: 0.75rem;">Active</span>
+            </div>
+            <div id="eventsContainer" class="stack">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div class="field-group">
-                  <label class="field-label" for="evClub">Club / Host Name</label>
-                  <input type="text" id="evClub" class="input" required placeholder="e.g. Robotics Guild">
+        <!-- VIEW 3: Student Weekly Planner Mode (Matrix) -->
+        <div id="viewPlanner" class="stack view-container" style="display: none;">
+          <div class="notice notice-info">
+            Compare your classes with weekly club meetings. Overlaps are flagged for review.
+          </div>
+          <div id="timetableContainer" class="stack">
+            <!-- Dynamically populated 7-day matrix -->
+          </div>
+        </div>
+
+        <!-- VIEW 4: Event Organizer Lab (Creator Mode) -->
+        <div id="viewOrganizer" class="stack view-container" style="display: none;">
+          <div class="notice notice-ok">
+            Check for class, event, and room conflicts before creating a club event.
+          </div>
+
+          <div class="split">
+            <!-- Left: Propose Event Form -->
+            <div class="panel">
+              <h2 style="margin-bottom: var(--space-4);">Create a club event</h2>
+              <form id="organizerForm" onsubmit="submitClubEvent(event)" class="stack">
+                <div class="field">
+                  <label for="evTitle">Event Title</label>
+                  <input type="text" id="evTitle" class="input" required placeholder="e.g. Python Study Group" oninput="inspectProposedSlot()">
                 </div>
-                <div class="field-group">
-                  <label class="field-label" for="evCategory">Category</label>
-                  <select id="evCategory" class="select">
-                    <option value="Tech">Tech</option>
+
+                <div class="field">
+                  <label for="evClub">Host organization</label>
+                  <input type="text" id="evClub" class="input" required placeholder="e.g. Association for Computing Machinery" oninput="inspectProposedSlot()">
+                </div>
+
+                <div class="field">
+                  <label for="evCategory">Category</label>
+                  <select id="evCategory" class="select" required onchange="inspectProposedSlot()">
+                    <option value="Technology">Technology</option>
                     <option value="Academic">Academic</option>
+                    <option value="Arts">Arts</option>
                     <option value="Sports">Sports</option>
-                    <option value="Gaming">Gaming</option>
                     <option value="Social">Social</option>
-                    <option value="General">General</option>
+                    <option value="Service">Service</option>
                   </select>
                 </div>
-              </div>
 
-              <div class="field-group">
-                <label class="field-label" for="evDay">Day of Week</label>
-                <select id="evDay" class="select" onchange="inspectProposedSlot()" style="font-family: var(--font-mono);">
-                  <option value="0">Monday</option>
-                  <option value="1">Tuesday</option>
-                  <option value="2">Wednesday</option>
-                  <option value="3">Thursday</option>
-                  <option value="4">Friday</option>
-                  <option value="5">Saturday</option>
-                  <option value="6">Sunday</option>
-                </select>
-              </div>
-
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <div class="field-group">
-                  <label class="field-label" for="evStart">Start (24h)</label>
-                  <input type="time" id="evStart" class="input" required value="17:00" onchange="inspectProposedSlot()" style="font-family: var(--font-mono);">
+                <div class="field">
+                  <label for="evDay">Day of Week</label>
+                  <select id="evDay" class="select" required onchange="inspectProposedSlot()">
+                    <option value="0">Monday</option>
+                    <option value="1">Tuesday</option>
+                    <option value="2">Wednesday</option>
+                    <option value="3">Thursday</option>
+                    <option value="4">Friday</option>
+                    <option value="5">Saturday</option>
+                    <option value="6">Sunday</option>
+                  </select>
                 </div>
-                <div class="field-group">
-                  <label class="field-label" for="evEnd">End (24h)</label>
-                  <input type="time" id="evEnd" class="input" required value="18:30" onchange="inspectProposedSlot()" style="font-family: var(--font-mono);">
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3);">
+                  <div class="field">
+                    <label for="evStart">Start Time</label>
+                    <input type="time" id="evStart" class="input" value="17:00" required onchange="inspectProposedSlot()">
+                  </div>
+                  <div class="field">
+                    <label for="evEnd">End Time</label>
+                    <input type="time" id="evEnd" class="input" value="18:30" required onchange="inspectProposedSlot()">
+                  </div>
                 </div>
-              </div>
 
-              <div class="field-group">
-                <label class="field-label" for="evLocation">Location / Room</label>
-                <input type="text" id="evLocation" class="input" required placeholder="e.g. ISC 1127" oninput="inspectProposedSlot()">
-              </div>
+                <div class="field">
+                  <label for="evLocation">Location</label>
+                  <input type="text" id="evLocation" class="input" required placeholder="e.g. ISC 1127" oninput="inspectProposedSlot()">
+                </div>
 
-              <div class="field-group">
-                <label class="field-label" for="evDesc">Description (Optional)</label>
-                <textarea id="evDesc" class="textarea" placeholder="Agenda, equipment needed, prerequisites..."></textarea>
-              </div>
+                <div class="field">
+                  <label for="evDesc">Description</label>
+                  <textarea id="evDesc" class="textarea" style="min-height: 80px;" placeholder="What will participants learn or do?"></textarea>
+                </div>
 
-              <!-- Live Feasibility Inspector Box -->
-              <div id="slotInspectorBox" class="feasibility-box status-clear">
-                <div style="font-family: var(--font-mono); font-weight: 700; margin-bottom: 4px;" id="slotInspectorStatus">
-                  Feasibility: Checking...
+                <button type="submit" class="btn btn-primary" style="font-weight: 600;">Add event</button>
+              </form>
+            </div>
+
+            <!-- Right: Real-time Slot Inspector -->
+            <div class="panel">
+              <h2 style="margin-bottom: var(--space-2);">Schedule check</h2>
+              <p class="hint" style="margin-bottom: var(--space-4);">Checks for class overlaps, other events, and room conflicts.</p>
+
+              <div id="slotInspectorBox" class="notice notice-ok">
+                <div id="slotInspectorStatus" style="font-weight: 700; font-family: var(--font-mono); margin-bottom: 4px;">
+                  Checking schedule…
                 </div>
                 <div id="slotInspectorAdvice" style="margin-bottom: 6px;"></div>
-                <div id="slotInspectorDetails" style="font-family: var(--font-mono); font-size: 11px;"></div>
+                <div id="slotInspectorDetails" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);"></div>
               </div>
 
-              <button type="submit" class="btn btn-primary" style="margin-top: 6px;">
-                + Publish Event to Directory
-              </button>
-            </form>
-          </div>
-
-          <!-- Existing Events Directory with Deletion -->
-          <div class="organizer-panel">
-            <h3>Published Events Management</h3>
-            <p style="font-size: 12px; color: var(--muted); margin: 0 0 14px 0;">All club meetings currently published in the system database.</p>
-            <div id="organizerEventsList" style="display: flex; flex-direction: column; gap: 10px; max-height: 600px; overflow-y: auto;"></div>
+              <div style="margin-top: var(--space-5);">
+                <h3 style="font-size: 1rem; margin-bottom: var(--space-2);">Scheduled club events</h3>
+                <div id="organizerEventsList" class="stack-sm" style="max-height: 360px; overflow-y: auto;">
+                  <!-- Dynamic club events list -->
+                </div>
+              </div>
+            </div>
           </div>
         </div>
+
       </div>
-    </section>
-  </main>
+    </main>
+  </div>
 
   <script>
     const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     const SHORT_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const THEME_KEY = 'andedu_lab_theme';
 
-    function escapeHtml(str) {
-      if (str === null || str === undefined) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+    // Theme Switcher matching AndEDU ThemeSwitch.jsx
+    function getTheme() {
+      try { return localStorage.getItem(THEME_KEY) || 'system'; } catch (e) { return 'system'; }
     }
 
-    function toggleTheme() {
-      const current = document.documentElement.dataset.theme;
-      const next = current === 'dark' ? 'light' : 'dark';
-      document.documentElement.dataset.theme = next;
-      localStorage.setItem('andedu_lab_theme', next);
+    function applyTheme(choice) {
+      const root = document.documentElement;
+      if (choice === 'light' || choice === 'dark') {
+        root.dataset.theme = choice;
+      } else {
+        delete root.dataset.theme;
+      }
+      ['system', 'light', 'dark'].forEach(id => {
+        const btn = document.getElementById('themeBtn' + id.charAt(0).toUpperCase() + id.slice(1));
+        if (btn) btn.setAttribute('aria-pressed', choice === id ? 'true' : 'false');
+      });
+    }
+
+    function setTheme(choice) {
+      applyTheme(choice);
+      try { localStorage.setItem(THEME_KEY, choice); } catch (e) {}
+    }
+
+    applyTheme(getTheme());
+
+    function toggleSidebar(forceState) {
+      const sidebar = document.getElementById("appSidebar");
+      const scrim = document.getElementById("sidebarScrim");
+      const isOpen = forceState !== undefined ? forceState : !sidebar.classList.contains("open");
+      sidebar.classList.toggle("open", isOpen);
+      scrim.style.display = isOpen ? "block" : "none";
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    let activeQuickDay = "";
+    function setQuickDayFilter(dayVal) {
+      activeQuickDay = dayVal;
+      document.querySelectorAll(".folder-pill-row .folder-pill").forEach(btn => {
+        btn.classList.remove("active");
+      });
+      const targetId = dayVal === "" ? "dayPillAll" : `dayPill${dayVal}`;
+      const target = document.getElementById(targetId);
+      if (target) target.classList.add("active");
+      loadEvents();
+    }
+
+    function handleSearchInput() {
+      // If searching while on live view, auto-switch to directory to browse
+      const currentTab = document.querySelector(".modes button[aria-pressed='true']");
+      if (currentTab && currentTab.id === "tabLive" && document.getElementById("searchInput").value.trim()) {
+        switchMode("directory");
+      } else {
+        loadEvents();
+      }
     }
 
     function switchMode(mode) {
-      document.querySelectorAll(".nav-tab").forEach(tab => tab.classList.remove("active"));
-      document.querySelectorAll(".view-container").forEach(view => view.classList.remove("active-view"));
+      const tabLive = document.getElementById("tabLive");
+      const tabDir = document.getElementById("tabDirectory");
+      const tabPlan = document.getElementById("tabPlanner");
+      const tabOrg = document.getElementById("tabOrganizer");
 
-      if (mode === 'planner') {
-        document.getElementById("tabPlanner").classList.add("active");
-        document.getElementById("viewPlanner").classList.add("active-view");
+      const viewLive = document.getElementById("viewLive");
+      const viewDir = document.getElementById("viewDirectory");
+      const viewPlan = document.getElementById("viewPlanner");
+      const viewOrg = document.getElementById("viewOrganizer");
+
+      const crumb = document.getElementById("currentViewCrumb");
+      const heading = document.getElementById("pageTitleHeading");
+      const subtitle = document.getElementById("pageSubtitleText");
+
+      tabLive.setAttribute("aria-pressed", mode === 'live');
+      tabDir.setAttribute("aria-pressed", mode === 'directory');
+      tabPlan.setAttribute("aria-pressed", mode === 'planner');
+      tabOrg.setAttribute("aria-pressed", mode === 'organizer');
+
+      viewLive.style.display = mode === 'live' ? "flex" : "none";
+      viewDir.style.display = mode === 'directory' ? "flex" : "none";
+      viewPlan.style.display = mode === 'planner' ? "flex" : "none";
+      viewOrg.style.display = mode === 'organizer' ? "flex" : "none";
+
+      if (mode === 'live') {
+        crumb.textContent = "live";
+        heading.textContent = "Now & Soon";
+        subtitle.textContent = "Events happening now and over the next three hours.";
+        loadNowAndNext();
+      } else if (mode === 'planner') {
+        crumb.textContent = "week";
+        heading.textContent = "Your week";
+        subtitle.textContent = "See your classes and club meetings by day.";
         loadWeeklyPlanner();
       } else if (mode === 'organizer') {
-        document.getElementById("tabOrganizer").classList.add("active");
-        document.getElementById("viewOrganizer").classList.add("active-view");
+        crumb.textContent = "organize";
+        heading.textContent = "Organize events";
+        subtitle.textContent = "Create club events and check for schedule conflicts.";
         inspectProposedSlot();
         loadOrganizerEvents();
       } else {
-        document.getElementById("tabDirectory").classList.add("active");
-        document.getElementById("viewDirectory").classList.add("active-view");
+        crumb.textContent = "events";
+        heading.textContent = "Campus events";
+        subtitle.textContent = "Browse club meetings and William & Mary events. Add your classes to check for time conflicts.";
         loadEvents();
       }
+      toggleSidebar(false);
     }
 
     function toggleDemoMode() {
@@ -1475,13 +683,177 @@
     setInterval(updateLiveClock, 1000);
     updateLiveClock();
 
+    // Native Browser Notifications
+    let notifsEnabled = false;
+    function updateNotifBtn() {
+      const text = document.getElementById("notifBtnText");
+      if ("Notification" in window && Notification.permission === "granted") {
+        text.textContent = "Notifications Active";
+        notifsEnabled = true;
+      } else {
+        text.textContent = "Enable Notifications";
+        notifsEnabled = false;
+      }
+    }
+
+    async function toggleNotifications() {
+      if (!("Notification" in window)) {
+        alert("This browser does not support desktop notifications.");
+        return;
+      }
+      if (Notification.permission === "granted") {
+        new Notification("&.events", {
+          body: "Event notifications are active. You will be alerted before sessions start.",
+          icon: "/favicon.svg"
+        });
+        updateNotifBtn();
+        return;
+      }
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        new Notification("&.events", {
+          body: "Notifications enabled! We'll alert you 15 minutes before events start.",
+          icon: "/favicon.svg"
+        });
+      }
+      updateNotifBtn();
+    }
+    updateNotifBtn();
+
+    function onNotifyClick(btn) {
+      const { title, location, time } = btn.dataset;
+      scheduleEventAlert(title || "Event", location || "Campus", time || "");
+    }
+
+    function scheduleEventAlert(title, location, timeStr) {
+      if (!("Notification" in window) || Notification.permission !== "granted") {
+        toggleNotifications();
+        return;
+      }
+      alert(`Notification set for ${title} at ${timeStr} in ${location}.`);
+    }
+
+    // LOAD NOW & NEXT (Front page view)
+    async function loadNowAndNext() {
+      try {
+        const state = getSimulatedState();
+        const params = new URLSearchParams();
+        if (state.isSim) {
+          params.set("sim_day", String(state.day));
+          params.set("sim_time", state.time);
+        }
+
+        const res = await fetch(`/api/now-and-next?${params.toString()}`);
+        const data = await res.json();
+
+        // 1. Update Student Status Box
+        const statusBox = document.getElementById("studentStatusBox");
+        const statusText = document.getElementById("studentStatusText");
+        if (data.active_class) {
+          statusBox.className = "notice notice-bad";
+          statusText.textContent = `In class now: ${data.active_class.course_name} (${data.active_class.start_time}–${data.active_class.end_time} in ${data.active_class.location || "TBA"}).`;
+        } else if (data.next_class) {
+          statusBox.className = "notice notice-ok";
+          statusText.textContent = `Free right now. Next class is ${data.next_class.course_name} at ${data.next_class.start_time} in ${data.next_class.location || "TBA"}.`;
+        } else {
+          statusBox.className = "notice notice-ok";
+          statusText.textContent = "Free for the rest of today. No further classes scheduled.";
+        }
+
+        // 2. Render Happening Right Now
+        const nowBadge = document.getElementById("nowCountBadge");
+        const nowContainer = document.getElementById("nowEventsContainer");
+        nowBadge.textContent = `${data.happening_now.length} happening now`;
+
+        if (!data.happening_now.length) {
+          nowContainer.innerHTML = `
+            <div class="panel" style="padding: var(--space-4); text-align: center; color: var(--muted);">
+              No club sessions in progress right now.
+            </div>
+          `;
+        } else {
+          nowContainer.innerHTML = data.happening_now.map(ev => {
+            const conflictNote = ev.has_conflict
+              ? `<span class="status-note conflict">Class Conflict: ${escapeHtml(ev.conflicting_course)}</span>`
+              : `<span class="status-note free">No class conflict</span>`;
+
+            return `
+              <div class="live-event-card in-session ${ev.has_conflict ? 'has-conflict' : ''}">
+                <div class="live-event-head">
+                  <div>
+                    <h3 class="live-event-title">${escapeHtml(ev.title)}</h3>
+                    <div class="live-event-meta" style="margin-top: 4px;">
+                      <span class="chip" style="font-weight: 600;">${escapeHtml(ev.club_name)}</span>
+                      <span class="chip">${escapeHtml(ev.category)}</span>
+                      <span>${escapeHtml(ev.start_time)}–${escapeHtml(ev.end_time)}</span>
+                      <span>Location: ${escapeHtml(ev.location)}</span>
+                    </div>
+                  </div>
+                  <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                    <span class="status status-ready">In Session · ${ev.minutes_remaining}m left</span>
+                    ${conflictNote}
+                  </div>
+                </div>
+                ${ev.description ? `<p style="font-size: 0.92rem; color: var(--ink-soft); margin-top: 4px;">${escapeHtml(ev.description)}</p>` : ""}
+              </div>
+            `;
+          }).join("");
+        }
+
+        // 3. Render Starting Soon
+        const soonBadge = document.getElementById("soonCountBadge");
+        const soonContainer = document.getElementById("soonEventsContainer");
+        soonBadge.textContent = `${data.starting_soon.length} Starting Soon`;
+
+        if (!data.starting_soon.length) {
+          soonContainer.innerHTML = `
+            <div class="panel" style="padding: var(--space-4); text-align: center; color: var(--muted);">
+              No other events starting in the next 3 hours today.
+            </div>
+          `;
+        } else {
+          soonContainer.innerHTML = data.starting_soon.map(ev => {
+            const conflictNote = ev.has_conflict
+              ? `<span class="status-note conflict">Overlaps with ${escapeHtml(ev.conflicting_course)}</span>`
+              : `<span class="status-note free">No class conflict</span>`;
+
+            return `
+              <div class="live-event-card starts-soon ${ev.has_conflict ? 'has-conflict' : ''}">
+                <div class="live-event-head">
+                  <div>
+                    <h3 class="live-event-title">${escapeHtml(ev.title)}</h3>
+                    <div class="live-event-meta" style="margin-top: 4px;">
+                      <span class="chip" style="font-weight: 600;">${escapeHtml(ev.club_name)}</span>
+                      <span class="chip">${escapeHtml(ev.category)}</span>
+                      <span>Starts at ${escapeHtml(ev.start_time)} (in ${ev.starts_in_minutes}m)</span>
+                      <span>Location: ${escapeHtml(ev.location)}</span>
+                    </div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    ${conflictNote}
+                    <button type="button" class="btn btn-quiet btn-sm" data-title="${escapeHtml(ev.title)}" data-location="${escapeHtml(ev.location)}" data-time="${escapeHtml(ev.start_time)}" onclick="onNotifyClick(this)">
+                      Notify me
+                    </button>
+                  </div>
+                </div>
+                ${ev.description ? `<p style="font-size: 0.92rem; color: var(--ink-soft); margin-top: 4px;">${escapeHtml(ev.description)}</p>` : ""}
+              </div>
+            `;
+          }).join("");
+        }
+
+      } catch (err) {
+        console.error("Failed to load now-and-next:", err);
+      }
+    }
+
     async function loadClasses() {
       try {
         const res = await fetch("/api/classes");
         const classes = await res.json();
         const container = document.getElementById("classList");
         if (!classes.length) {
-          container.innerHTML = `<div style="font-size: 12px; color: var(--side-muted); text-align: center; padding: 12px 0;">No classes registered yet.</div>`;
+          container.innerHTML = `<div style="font-size: 0.8rem; color: var(--side-muted); text-align: center; padding: 10px 0;">No classes added.</div>`;
           return;
         }
 
@@ -1489,19 +861,17 @@
           const dayClasses = classes.filter(c => c.day_of_week === dayIndex);
           if (!dayClasses.length) return "";
           return `
-            <div style="margin-bottom: 10px;">
-              <div style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--gold); margin-bottom: 4px;">${dayName}</div>
+            <div style="margin-bottom: 8px;">
+              <div style="font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700; color: var(--gold); margin-bottom: 4px;">${dayName}</div>
               ${dayClasses.map(c => `
-                <div class="class-item-card">
-                  <div class="class-item-info">
-                    <div class="class-item-name">${escapeHtml(c.course_name)}</div>
-                    <div class="class-item-meta">
-                      <span>${escapeHtml(c.start_time)}–${escapeHtml(c.end_time)}</span>
-                      <span>•</span>
-                      <span>📍 ${escapeHtml(c.location || "TBA")}</span>
+                <div class="side-class-card">
+                  <div class="side-class-info">
+                    <div class="side-class-title">${escapeHtml(c.course_name)}</div>
+                    <div class="side-class-meta">
+                      ${escapeHtml(c.start_time)}–${escapeHtml(c.end_time)} · ${escapeHtml(c.location || "TBA")}
                     </div>
                   </div>
-                  <button type="button" class="delete-btn" onclick="deleteClass(${c.id})" title="Delete class">×</button>
+                  <button type="button" class="btn btn-quiet btn-sm" onclick="deleteClass(${c.id})" title="Delete class" style="color: var(--side-muted); border-color: var(--side-field-line); min-height: 22px; width: 22px; padding: 0;">×</button>
                 </div>
               `).join("")}
             </div>
@@ -1551,9 +921,7 @@
       try {
         const url = new URL(value);
         if ((url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password) return url;
-      } catch (err) {
-        // Invalid or relative source URLs are shown as text only.
-      }
+      } catch (err) {}
       return null;
     }
 
@@ -1561,95 +929,79 @@
       const container = document.getElementById("wmEventsContainer");
       try {
         const res = await fetch("/api/wm-events");
-        if (!res.ok) throw new Error(`W&M event request failed (${res.status})`);
+        if (!res.ok) throw new Error(`W&M request failed (${res.status})`);
         const payload = await res.json();
         const events = Array.isArray(payload) ? payload : payload.events;
         container.replaceChildren();
 
         if (!Array.isArray(events) || events.length === 0) {
           const empty = document.createElement("p");
-          empty.className = "wm-events-status";
-          empty.append("No dated W&M events are imported yet. Run ");
-          const command = document.createElement("code");
-          command.textContent = "python import_wm_events.py";
-          empty.append(command, " to import public W&M iCal calendars.");
+          empty.className = "hint";
+          empty.append("No dated W&M events loaded yet. Run ");
+          const cmd = document.createElement("code");
+          cmd.textContent = "python import_wm_events.py";
+          empty.append(cmd, " to pull public iCal feeds.");
           container.append(empty);
           return;
         }
 
         for (const event of events) {
-          const card = document.createElement("article");
-          card.className = "wm-event-card";
+          const card = document.createElement("div");
+          card.className = "live-event-card";
 
-          const meta = document.createElement("div");
-          meta.className = "wm-event-meta";
+          const head = document.createElement("div");
+          head.className = "live-event-head";
+
+          const title = document.createElement("h3");
+          title.className = "live-event-title";
+          title.textContent = event.title || "Untitled event";
+
           const allDay = Boolean(event.is_all_day);
           const start = formatWmEventDateTime(event.start_at, event.timezone, allDay);
           const end = formatWmEventDateTime(event.end_at, event.timezone, allDay);
-          const dateTime = document.createElement("span");
-          dateTime.textContent = allDay ? `${start} · All day` : `${start} – ${end}`;
-          meta.append(dateTime);
 
-          const categories = Array.isArray(event.categories) ? event.categories : [];
-          for (const category of categories) {
-            const name = typeof category === "string" ? category : category?.name || category?.value;
-            if (!name) continue;
-            const badge = document.createElement("span");
-            badge.className = "wm-event-category";
-            badge.textContent = String(name);
-            meta.append(badge);
+          const meta = document.createElement("div");
+          meta.className = "live-event-meta";
+          meta.textContent = allDay ? `${start} · All day` : `${start} – ${end}`;
+          if (event.location) meta.textContent += ` · Location: ${event.location}`;
+
+          head.append(title);
+          card.append(head, meta);
+
+          if (event.has_conflict) {
+            const conflict = document.createElement("div");
+            conflict.className = "status-note conflict";
+            conflict.textContent = `Overlaps with your class: ${event.conflicting_course}`;
+            card.append(conflict);
           }
 
-          const title = document.createElement("h4");
-          title.className = "wm-event-title";
-          title.textContent = event.title || "Untitled event";
-
-          card.append(meta, title);
-
-          if (event.location) {
-            const location = document.createElement("p");
-            location.className = "wm-event-location";
-            location.textContent = `Location: ${event.location}`;
-            card.append(location);
+          const descText = event.description || event.summary;
+          if (descText) {
+            const desc = document.createElement("p");
+            desc.style.fontSize = "0.9rem";
+            desc.style.color = "var(--ink-soft)";
+            desc.textContent = descText;
+            card.append(desc);
           }
-
-          const descriptionText = event.description || event.summary;
-          if (descriptionText) {
-            const description = document.createElement("p");
-            description.className = "wm-event-description";
-            description.textContent = descriptionText;
-            card.append(description);
-          }
-
-          const sourceCalendars = Array.isArray(event.source_calendars) ? event.source_calendars : [];
-          const sources = document.createElement("p");
-          sources.className = "wm-event-sources";
-          sources.append("Source calendar(s): ");
-          const sourceNames = sourceCalendars
-            .map(source => typeof source === "string" ? source : source?.name || source?.slug)
-            .filter(Boolean);
-          sources.append(document.createTextNode(sourceNames.length ? sourceNames.join(", ") : "W&M calendar"));
 
           const sourceUrl = safeWmSourceUrl(event.source_url);
           if (sourceUrl) {
-            sources.append(" · ");
+            const linkP = document.createElement("p");
+            linkP.className = "crumbs";
             const link = document.createElement("a");
             link.href = sourceUrl.href;
             link.target = "_blank";
             link.rel = "noopener noreferrer";
-            link.textContent = "Open source";
-            sources.append(link);
+            link.textContent = "Open official campus link";
+            linkP.append(link);
+            card.append(linkP);
           }
-          card.append(sources);
+
           container.append(card);
         }
       } catch (err) {
-        console.error("Failed to load dated W&M events:", err);
-        container.replaceChildren();
-        const error = document.createElement("p");
-        error.className = "wm-events-status";
-        error.textContent = "Dated W&M events could not be loaded right now.";
-        container.append(error);
+        console.error("Failed to load W&M events:", err);
+        container.innerHTML = `<p class="hint">Dated W&M calendar events could not be loaded right now.</p>`;
       }
     }
 
@@ -1658,17 +1010,15 @@
         const state = getSimulatedState();
         const params = new URLSearchParams();
 
-        const day = document.getElementById("dayFilter").value;
+        const day = activeQuickDay;
         const category = document.getElementById("categoryFilter").value;
         const search = document.getElementById("searchInput").value.trim();
         const hideConflicts = document.getElementById("hideConflictsFilter").checked;
-        const onlyNow = document.getElementById("onlyNowFilter").checked;
 
         if (day !== "") params.set("day", day);
         if (category && category !== "ALL") params.set("category", category);
         if (search) params.set("search", search);
         if (hideConflicts) params.set("hide_conflicts", "true");
-        if (onlyNow) params.set("only_now", "true");
 
         if (state.isSim) {
           params.set("sim_day", String(state.day));
@@ -1678,12 +1028,13 @@
         const res = await fetch(`/api/events?${params.toString()}`);
         const events = await res.json();
 
-        document.getElementById("directoryStatusChip").textContent = `${SHORT_DAYS[state.day]} @ ${state.time}`;
+        const countBadge = document.getElementById("clubCountBadge");
+        if (countBadge) countBadge.textContent = `${events.length} Available`;
 
         const container = document.getElementById("eventsContainer");
         if (!events.length) {
           container.innerHTML = `
-            <div class="empty-state">
+            <div class="notice notice-info">
               No club events match the selected filters or search terms.
             </div>
           `;
@@ -1691,28 +1042,26 @@
         }
 
         container.innerHTML = events.map(ev => {
-          const statusBadge = ev.has_conflict
-            ? `<span class="status-badge conflict">Class Conflict: ${escapeHtml(ev.conflicting_course)}</span>`
-            : `<span class="status-badge available">Available</span>`;
+          const conflictMarkup = ev.has_conflict
+            ? `<span class="status-note conflict">Class conflict: ${escapeHtml(ev.conflicting_course)}</span>`
+            : `<span class="status-note free">No class conflict</span>`;
 
           return `
-            <div class="event-card ${ev.has_conflict ? 'has-conflict' : ''}">
-              <div class="event-card-top">
+            <div class="live-event-card ${ev.has_conflict ? 'has-conflict' : ''}">
+              <div class="live-event-head">
                 <div>
-                  <div class="event-meta-row">
-                    <span class="time-badge">${DAYS[ev.day_of_week]} • ${escapeHtml(ev.start_time)}–${escapeHtml(ev.end_time)}</span>
-                    <span class="category-badge">${escapeHtml(ev.category)}</span>
-                  </div>
-                  <h3 class="event-title">${escapeHtml(ev.title)}</h3>
-                  <div class="event-club-loc">
-                    <strong>${escapeHtml(ev.club_name)}</strong>
-                    <span>•</span>
-                    <span>📍 ${escapeHtml(ev.location)}</span>
+                  <h3 class="live-event-title">${escapeHtml(ev.title)}</h3>
+                  <div class="live-event-meta" style="margin-top: 4px;">
+                    <span class="chip" style="font-weight: 600;">${escapeHtml(ev.club_name)}</span>
+                    <span>${DAYS[ev.day_of_week]}</span>
+                    <span>${escapeHtml(ev.start_time)}–${escapeHtml(ev.end_time)}</span>
+                    <span>Location: ${escapeHtml(ev.location)}</span>
+                    <span class="chip">${escapeHtml(ev.category)}</span>
                   </div>
                 </div>
-                <div>${statusBadge}</div>
+                <div>${conflictMarkup}</div>
               </div>
-              ${ev.description ? `<p class="event-desc">${escapeHtml(ev.description)}</p>` : ""}
+              ${ev.description ? `<p style="font-size: 0.92rem; color: var(--ink-soft); margin-top: 6px;">${escapeHtml(ev.description)}</p>` : ""}
             </div>
           `;
         }).join("");
@@ -1728,59 +1077,53 @@
         const data = await res.json();
         const { stats, days } = data;
 
-        document.getElementById("weeklyStatsChip").textContent = `${stats.total_classes} Classes • ${stats.total_events} Club Events (${stats.conflicted_events} Planning Notes)`;
-
         const container = document.getElementById("timetableContainer");
         container.innerHTML = days.map(d => {
           const classesHtml = d.classes.length
             ? d.classes.map(c => `
-                <div class="planner-card">
-                  <div style="font-weight: 600; font-size: 13px; color: var(--ink);">${escapeHtml(c.course_name)}</div>
-                  <div style="font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 2px;">
-                    ${escapeHtml(c.start_time)}–${escapeHtml(c.end_time)} • 📍 ${escapeHtml(c.location || "TBA")}
+                <div class="course-card" style="padding: var(--space-3); margin-bottom: var(--space-2);">
+                  <div style="font-weight: 600; font-size: 0.9rem; color: var(--ink);">${escapeHtml(c.course_name)}</div>
+                  <div class="meta num" style="font-size: 0.8rem; margin-top: 2px;">
+                    ${escapeHtml(c.start_time)}–${escapeHtml(c.end_time)} · ${escapeHtml(c.location || "TBA")}
                   </div>
                 </div>
               `).join("")
-            : `<div style="font-size: 12px; color: var(--muted); font-style: italic;">No registered classes.</div>`;
+            : `<div class="hint" style="font-style: italic;">No registered classes.</div>`;
 
           const eventsHtml = d.events.length
             ? d.events.map(ev => {
-                const conflictNote = ev.has_conflict
-                  ? `<div style="font-family: var(--font-mono); font-size: 11px; color: var(--gold-text); margin-top: 4px; font-weight: 600;">
-                       ⚡ Planning note: overlaps with ${escapeHtml(ev.conflicting_course)}
-                     </div>`
-                  : `<div style="font-family: var(--font-mono); font-size: 11px; color: var(--ok); margin-top: 4px; font-weight: 600;">
-                       ✓ Available slot
-                     </div>`;
+                const note = ev.has_conflict
+                  ? `<div class="status-note conflict" style="margin-top: 4px; font-size: 0.75rem;">Planning note: overlaps with ${escapeHtml(ev.conflicting_course)}</div>`
+                  : `<div class="status-note free" style="margin-top: 4px; font-size: 0.75rem;">No class conflict</div>`;
 
                 return `
-                  <div class="planner-card ${ev.has_conflict ? 'has-conflict' : ''}">
-                    <div style="display: flex; justify-content: space-between; align-items: start; gap: 8px;">
-                      <div style="font-weight: 700; font-size: 13px; color: var(--ink);">${escapeHtml(ev.title)}</div>
-                      <span class="category-badge" style="font-size: 9px; padding: 1px 5px;">${escapeHtml(ev.category)}</span>
+                  <div class="course-card ${ev.has_conflict ? 'has-conflict' : ''}" style="padding: var(--space-3); margin-bottom: var(--space-2);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                      <div style="font-weight: 700; font-size: 0.92rem; color: var(--ink);">${escapeHtml(ev.title)}</div>
+                      <span class="chip" style="font-size: 0.75rem;">${escapeHtml(ev.category)}</span>
                     </div>
-                    <div style="font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 2px;">
-                      ${escapeHtml(ev.club_name)} • ${escapeHtml(ev.start_time)}–${escapeHtml(ev.end_time)} • 📍 ${escapeHtml(ev.location)}
+                    <div class="meta num" style="font-size: 0.8rem; margin-top: 2px;">
+                      ${escapeHtml(ev.club_name)} · ${escapeHtml(ev.start_time)}–${escapeHtml(ev.end_time)} · ${escapeHtml(ev.location)}
                     </div>
-                    ${conflictNote}
+                    ${note}
                   </div>
                 `;
               }).join("")
-            : `<div style="font-size: 12px; color: var(--muted); font-style: italic;">No scheduled club events.</div>`;
+            : `<div class="hint" style="font-style: italic;">No scheduled club events.</div>`;
 
           return `
-            <div class="day-schedule-section">
-              <div class="day-section-header">
-                <span class="day-section-title">${d.day_name}</span>
-                <span class="day-section-counts">${d.classes.length} Classes • ${d.events.length} Events</span>
+            <div class="panel" style="padding: var(--space-4);">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--rule); padding-bottom: var(--space-2); margin-bottom: var(--space-3);">
+                <span style="font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; color: var(--ink);">${d.day_name}</span>
+                <span class="chip num">${d.classes.length} Classes · ${d.events.length} Club Events</span>
               </div>
-              <div class="day-section-content">
+              <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: var(--space-4);">
                 <div>
-                  <div class="column-title">Registered Classes</div>
+                  <div style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; border-bottom: 1px solid var(--rule); padding-bottom: 4px;">REGISTERED CLASSES</div>
                   ${classesHtml}
                 </div>
                 <div>
-                  <div class="column-title">Scheduled Club Events</div>
+                  <div style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; border-bottom: 1px solid var(--rule); padding-bottom: 4px;">SCHEDULED CLUB MEETINGS</div>
                   ${eventsHtml}
                 </div>
               </div>
@@ -1804,8 +1147,8 @@
 
         if (start >= end) {
           const box = document.getElementById("slotInspectorBox");
-          box.className = "feasibility-box status-clash";
-          document.getElementById("slotInspectorStatus").textContent = "Invalid Time Range";
+          box.className = "notice notice-bad";
+          document.getElementById("slotInspectorStatus").textContent = "Invalid time range";
           document.getElementById("slotInspectorAdvice").textContent = "Start time must be strictly earlier than end time.";
           document.getElementById("slotInspectorDetails").textContent = "";
           return;
@@ -1820,22 +1163,29 @@
           const box = document.getElementById("slotInspectorBox");
 
           if (report.has_location_clash) {
-            box.className = "feasibility-box status-clash";
+            box.className = "notice notice-bad";
           } else if (report.feasibility === "CLEAR") {
-            box.className = "feasibility-box status-clear";
+            box.className = "notice notice-ok";
           } else {
-            box.className = "feasibility-box status-overlap";
+            box.className = "notice notice-info";
           }
 
-          document.getElementById("slotInspectorStatus").textContent = `Feasibility Status: ${report.feasibility.replace(/_/g, ' ')}`;
+          const statusLabels = {
+            CLEAR: "No conflicts",
+            ROOM_CLASH: "Room conflict",
+            CLASS_OVERLAP: "Class conflict",
+            CLUB_OVERLAP: "Event conflict",
+            HEAVY_OVERLAP: "Multiple conflicts"
+          };
+          document.getElementById("slotInspectorStatus").textContent = statusLabels[report.feasibility] || "Schedule check";
           document.getElementById("slotInspectorAdvice").textContent = report.advice;
 
-          let details = `• Student classes in slot: ${report.conflicting_classes_count}\n• Competing club events: ${report.competing_events_count}`;
+          let details = `Overlapping classes: ${report.conflicting_classes_count}\nOverlapping club events: ${report.competing_events_count}`;
           if (report.conflicting_classes.length) {
-            details += `\n  - Classes: ` + report.conflicting_classes.map(c => `${c.course_name} (${c.start_time}-${c.end_time})`).join(", ");
+            details += `\nClasses: ` + report.conflicting_classes.map(c => `${c.course_name} (${c.start_time}-${c.end_time})`).join(", ");
           }
           if (report.competing_events.length) {
-            details += `\n  - Clubs: ` + report.competing_events.map(e => `${e.title} @ ${e.location}`).join(", ");
+            details += `\nClub events: ` + report.competing_events.map(e => `${e.title} at ${e.location}`).join(", ");
           }
           document.getElementById("slotInspectorDetails").style.whiteSpace = "pre-wrap";
           document.getElementById("slotInspectorDetails").textContent = details;
@@ -1852,19 +1202,19 @@
         const container = document.getElementById("organizerEventsList");
 
         if (!events.length) {
-          container.innerHTML = `<div style="font-size: 12px; color: var(--muted); text-align: center; padding: 12px 0;">No club events found.</div>`;
+          container.innerHTML = `<div class="hint" style="text-align: center; padding: 12px 0;">No club events found.</div>`;
           return;
         }
 
         container.innerHTML = events.map(ev => `
-          <div style="background: var(--paper); border: 1px solid var(--rule); border-radius: var(--radius-sm); padding: 10px 12px; display: flex; justify-content: space-between; align-items: start; gap: 10px;">
+          <div class="panel" style="padding: var(--space-3); display: flex; justify-content: space-between; align-items: center; gap: 10px;">
             <div>
-              <div style="font-weight: 700; font-size: 13px; color: var(--ink);">${escapeHtml(ev.title)}</div>
-              <div style="font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-top: 2px;">
-                ${DAYS[ev.day_of_week]} • ${escapeHtml(ev.start_time)}–${escapeHtml(ev.end_time)} • ${escapeHtml(ev.club_name)} • 📍 ${escapeHtml(ev.location)}
+              <div style="font-weight: 700; font-size: 0.92rem; color: var(--ink);">${escapeHtml(ev.title)}</div>
+              <div class="meta num" style="font-size: 0.78rem; margin-top: 2px;">
+                ${DAYS[ev.day_of_week]} · ${escapeHtml(ev.start_time)}–${escapeHtml(ev.end_time)} · ${escapeHtml(ev.club_name)} · ${escapeHtml(ev.location)}
               </div>
             </div>
-            <button type="button" class="btn btn-danger-quiet" onclick="deleteClubEvent(${ev.id})" title="Delete event">
+            <button type="button" class="btn btn-danger btn-sm" onclick="deleteClubEvent(${ev.id})" title="Delete event">
               Delete
             </button>
           </div>
@@ -1917,6 +1267,7 @@
         if (res.ok) {
           loadOrganizerEvents();
           loadEvents();
+          loadNowAndNext();
         } else {
           alert("Failed to delete club event");
         }
@@ -1929,7 +1280,7 @@
       e.preventDefault();
       const activePills = Array.from(document.querySelectorAll("#dayPills input:checked"));
       if (!activePills.length) {
-        alert("Please select at least one day pill for your class.");
+        alert("Choose at least one class day.");
         return;
       }
       const days = activePills.map(input => parseInt(input.value, 10));
@@ -1957,7 +1308,9 @@
 
         document.getElementById("courseName").value = "";
         document.getElementById("classLoc").value = "";
-        document.querySelectorAll("#dayPills input").forEach(input => { input.checked = ["0", "2", "4"].includes(input.value); });
+        document.querySelectorAll("#dayPills input").forEach(input => {
+          input.checked = ["0", "2", "4"].includes(input.value);
+        });
         await loadAll();
       } catch (err) {
         alert("Network error submitting class");
@@ -1985,6 +1338,7 @@
 
     async function loadAll() {
       await loadClasses();
+      await loadNowAndNext();
       await loadEvents();
       await loadWmEvents();
     }
