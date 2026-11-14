@@ -217,7 +217,7 @@
         <span id="liveDayDisplay" style="color: var(--brand-ink-soft); margin-left: 4px;">---</span>
       </div>
 
-      <!-- Demo Simulator Controls -->
+      <!-- Preview time controls -->
       <label class="conn" style="cursor: pointer; font-size: 0.78rem;">
         <input type="checkbox" id="simToggle" onchange="toggleDemoMode()" style="cursor: pointer;">
         <span>Preview time</span>
@@ -270,7 +270,7 @@
       <!-- Class Schedule Manager -->
       <div class="sidebar-classes">
         <div class="sidebar-classes-head">
-          <h3>YOUR CLASSES</h3>
+          <h3>Your classes</h3>
           <button type="button" class="btn btn-quiet btn-sm" onclick="clearAllClasses()" style="color: var(--side-muted); border-color: var(--side-field-line); font-size: 0.72rem; min-height: 22px; padding: 0 6px;">Clear All</button>
         </div>
 
@@ -304,7 +304,7 @@
 
       <!-- Quick Filters (visible in Directory mode) -->
       <div id="sidebarFiltersSection" class="sidebar-group">
-        <h3>DIRECTORY FILTERS</h3>
+        <h3>Filters</h3>
         <div class="folder-pill-row" style="margin-bottom: var(--space-3);">
           <button type="button" class="folder-pill active" id="dayPillAll" onclick="setQuickDayFilter('')">All</button>
           <button type="button" class="folder-pill" id="dayPill0" onclick="setQuickDayFilter('0')">Mon</button>
@@ -353,7 +353,7 @@
 
         <!-- VIEW 1: NOW & SOON (Focused, zero-clutter live front page) -->
         <div id="viewLive" class="stack view-container">
-          <!-- Student Real-Time Status Strip -->
+          <!-- Schedule status -->
           <div id="studentStatusBox" class="notice notice-ok">
             <strong>Your Schedule:</strong> <span id="studentStatusText">Checking schedule...</span>
           </div>
@@ -406,7 +406,7 @@
           </div>
         </div>
 
-        <!-- VIEW 3: Student Weekly Planner Mode (Matrix) -->
+        <!-- VIEW 3: Weekly schedule -->
         <div id="viewPlanner" class="stack view-container" style="display: none;">
           <div class="notice notice-info">
             Compare your classes with weekly club meetings. Overlaps are flagged for review.
@@ -416,7 +416,7 @@
           </div>
         </div>
 
-        <!-- VIEW 4: Event Organizer Lab (Creator Mode) -->
+        <!-- VIEW 4: Event organizer -->
         <div id="viewOrganizer" class="stack view-container" style="display: none;">
           <div class="notice notice-ok">
             Check for class, event, and room conflicts before creating a club event.
@@ -1029,7 +1029,7 @@
         const events = await res.json();
 
         const countBadge = document.getElementById("clubCountBadge");
-        if (countBadge) countBadge.textContent = `${events.length} Available`;
+        if (countBadge) countBadge.textContent = `${events.length} events`;
 
         const container = document.getElementById("eventsContainer");
         if (!events.length) {
@@ -1088,7 +1088,7 @@
                   </div>
                 </div>
               `).join("")
-            : `<div class="hint" style="font-style: italic;">No registered classes.</div>`;
+            : `<div class="hint" style="font-style: italic;">No classes added.</div>`;
 
           const eventsHtml = d.events.length
             ? d.events.map(ev => {
@@ -1119,11 +1119,11 @@
               </div>
               <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: var(--space-4);">
                 <div>
-                  <div style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; border-bottom: 1px solid var(--rule); padding-bottom: 4px;">REGISTERED CLASSES</div>
+                  <div style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; border-bottom: 1px solid var(--rule); padding-bottom: 4px;">Classes</div>
                   ${classesHtml}
                 </div>
                 <div>
-                  <div style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; border-bottom: 1px solid var(--rule); padding-bottom: 4px;">SCHEDULED CLUB MEETINGS</div>
+                  <div style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; border-bottom: 1px solid var(--rule); padding-bottom: 4px;">Club meetings</div>
                   ${eventsHtml}
                 </div>
               </div>

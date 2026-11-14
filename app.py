@@ -512,9 +512,7 @@ def check_creator_conflicts(
     exclude_event_id: Optional[int] = None,
 ):
     """
-    Creator Planning Mode Endpoint:
-    Checks a proposed timeslot on a given day against existing student classes and competing club events.
-    Returns overlapping classes count, competing clubs, room clash flag, and feasibility recommendation.
+    Checks a proposed event time against scheduled classes, club events, and room conflicts.
     """
     if start_time >= end_time:
         raise HTTPException(status_code=400, detail="start_time must be earlier than end_time")
@@ -559,7 +557,7 @@ def check_creator_conflicts(
                 clash_event_title = ev["title"]
                 break
 
-    # Feasibility advice calculation
+    # Summarize schedule conflicts.
     class_count = len(conflicting_classes)
     event_count = len(competing_events)
 
@@ -597,10 +595,8 @@ def check_creator_conflicts(
 @app.get("/api/planning/weekly-schedule")
 def get_weekly_schedule():
     """
-    Non-Creator / Student Weekly Planner Endpoint:
-    Constructs a 7-day schedule matrix pairing each day's classes with club events.
-    Overlapping club events are marked as soft planning considerations (not blocked)
-    so students can visualize trade-offs and plan their week.
+    Build a seven-day view of classes and recurring club events.
+    Overlaps are reported for planning and do not block event creation.
     """
     conn = get_db()
     cur = conn.cursor()
