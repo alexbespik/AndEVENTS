@@ -1,9 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap');
+
 /* &.edu — design system (engineering edition)
-   IT direction: IBM Plex Mono carries headings, navigation, tabs, buttons and status; IBM Plex Sans carries
-   reading. Square-ish corners, a faint engineering grid behind the work surface, path breadcrumbs.
+   IT direction: Libre Caslon Text carries headings; IBM Plex Sans carries reading, body, navigation and UI;
+   IBM Plex Mono carries numbers, 24h timestamps, code, and path breadcrumbs.
    Deep green frames the app, with the reading surface on warm stone paper. Gold marks the
-   ampersand and active mode. Libre Caslon Text is used for headings, IBM Plex Sans for reading,
-   and IBM Plex Mono for controls and numbers. Light, dark, and system themes share one token set. */
+   ampersand and active mode. Light, dark, and system themes share one token set. */
 
 :root {
   color-scheme: light;
@@ -66,10 +67,10 @@
   --shadow-raised: 0 10px 28px rgba(23, 32, 28, 0.16);
   --scrim: rgba(10, 20, 15, 0.45);
 
-  --font-display: "Libre Caslon Text", Georgia, serif;
-  --font-body: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "IBM Plex Mono", Menlo, Consolas, monospace;
-  --font-ui: "IBM Plex Mono", Menlo, Consolas, monospace;
+  --font-display: "IBM Plex Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --font-body: "IBM Plex Sans", "Segoe UI", -apple-system, Roboto, sans-serif;
+  --font-mono: "IBM Plex Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --font-ui: var(--font-mono);
   --grid: rgba(11, 15, 13, 0.045);
 
   --space-1: 4px;
@@ -2008,10 +2009,50 @@ code, kbd, pre, .num { font-family: var(--font-mono); }
   font-weight: 500;
 }
 
+.cal-item {
+  background: var(--surface);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.cal-item.is-class {
+  border-left: 3px solid var(--accent);
+}
+
+.cal-item.is-class .cal-item-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--ink);
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.cal-item.is-class .cal-item-time {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .cal-item.is-class .cal-item-loc {
   font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cal-item.is-event {
@@ -2022,18 +2063,42 @@ code, kbd, pre, .num { font-family: var(--font-mono); }
   border-left-color: var(--bad);
 }
 
+.cal-item.is-event .cal-item-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
+}
+
+.cal-item.is-event .cal-dept-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
 .cal-item.is-event .cal-item-title {
   font-family: var(--font-body);
   font-weight: 600;
   font-size: 0.88rem;
   color: var(--ink);
   line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
 }
 
 .cal-item.is-event .cal-item-time {
   font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cal-item.is-event .cal-item-meta {
@@ -2043,6 +2108,9 @@ code, kbd, pre, .num { font-family: var(--font-mono); }
   display: flex;
   flex-direction: column;
   gap: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cal-conflict-badge {
@@ -2087,6 +2155,7 @@ code, kbd, pre, .num { font-family: var(--font-mono); }
   --accent-press: #153e6d;
   --accent-tint: #e6f0fa;
   --accent-tint-2: #cbe0f5;
+  --on-accent: #ffffff;
   --brand-line: rgba(59, 130, 246, 0.4);
   --brand-hover: rgba(59, 130, 246, 0.12);
   --side-active: #15325b;
@@ -2100,6 +2169,7 @@ code, kbd, pre, .num { font-family: var(--font-mono); }
   --accent-press: #09472b;
   --accent-tint: #e5f5ed;
   --accent-tint-2: #c3e8d6;
+  --on-accent: #ffffff;
   --brand-line: rgba(16, 185, 129, 0.4);
   --brand-hover: rgba(16, 185, 129, 0.12);
   --side-active: #13452f;
@@ -2113,6 +2183,7 @@ code, kbd, pre, .num { font-family: var(--font-mono); }
   --accent-press: #6e101d;
   --accent-tint: #fae8eb;
   --accent-tint-2: #f2c7ce;
+  --on-accent: #ffffff;
   --brand-line: rgba(239, 68, 68, 0.4);
   --brand-hover: rgba(239, 68, 68, 0.12);
   --side-active: #541926;
@@ -2126,6 +2197,7 @@ code, kbd, pre, .num { font-family: var(--font-mono); }
   --accent-press: #551e73;
   --accent-tint: #f5eafd;
   --accent-tint-2: #e6ccfa;
+  --on-accent: #ffffff;
   --brand-line: rgba(192, 132, 252, 0.4);
   --brand-hover: rgba(192, 132, 252, 0.12);
   --side-active: #472166;
@@ -2139,6 +2211,7 @@ code, kbd, pre, .num { font-family: var(--font-mono); }
   --accent-press: #5e320d;
   --accent-tint: #faf1e8;
   --accent-tint-2: #f2dec9;
+  --on-accent: #ffffff;
   --brand-line: rgba(245, 158, 11, 0.4);
   --brand-hover: rgba(245, 158, 11, 0.12);
   --side-active: #4c2e17;
@@ -2152,11 +2225,164 @@ code, kbd, pre, .num { font-family: var(--font-mono); }
   --accent-press: #0c4345;
   --accent-tint: #e6f6f6;
   --accent-tint-2: #c5ecec;
+  --on-accent: #ffffff;
   --brand-line: rgba(20, 184, 166, 0.4);
   --brand-hover: rgba(20, 184, 166, 0.12);
   --side-active: #174548;
 }
 
+/* Dark mode adjustments for major themes (ensures WCAG AAA contrast on badges & buttons) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"])[data-major="cs"],
+  :root:not([data-theme="light"])[data-major="tech"],
+  :root:not([data-theme="light"]) [data-major="cs"],
+  :root:not([data-theme="light"]) [data-major="tech"] {
+    --brand: #091322; --side-bg: #0d1e38;
+    --accent: #5b9de6; --accent-hover: #7db4f0; --accent-press: #4588d3;
+    --accent-tint: #112338; --accent-tint-2: #183354; --on-accent: #091322;
+  }
+  :root:not([data-theme="light"])[data-major="data"],
+  :root:not([data-theme="light"])[data-major="math"],
+  :root:not([data-theme="light"]) [data-major="data"],
+  :root:not([data-theme="light"]) [data-major="math"] {
+    --brand: #030d09; --side-bg: #071f15;
+    --accent: #34d399; --accent-hover: #5eead4; --accent-press: #10b981;
+    --accent-tint: #0f2c1f; --accent-tint-2: #154530; --on-accent: #061911;
+  }
+  :root:not([data-theme="light"])[data-major="physics"],
+  :root:not([data-theme="light"])[data-major="engineering"],
+  :root:not([data-theme="light"]) [data-major="physics"],
+  :root:not([data-theme="light"]) [data-major="engineering"] {
+    --brand: #130407; --side-bg: #22090e;
+    --accent: #f87171; --accent-hover: #fca5a5; --accent-press: #ef4444;
+    --accent-tint: #381419; --accent-tint-2: #521c23; --on-accent: #20080d;
+  }
+  :root:not([data-theme="light"])[data-major="liberal-arts"],
+  :root:not([data-theme="light"])[data-major="arts"],
+  :root:not([data-theme="light"]) [data-major="liberal-arts"],
+  :root:not([data-theme="light"]) [data-major="arts"] {
+    --brand: #0f0617; --side-bg: #1c0d2b;
+    --accent: #c084fc; --accent-hover: #d8b4fe; --accent-press: #a855f7;
+    --accent-tint: #2e1245; --accent-tint-2: #431b64; --on-accent: #1a0b26;
+  }
+  :root:not([data-theme="light"])[data-major="humanities"],
+  :root:not([data-theme="light"])[data-major="phil"],
+  :root:not([data-theme="light"]) [data-major="humanities"],
+  :root:not([data-theme="light"]) [data-major="phil"] {
+    --brand: #110a04; --side-bg: #1f1207;
+    --accent: #e59a45; --accent-hover: #f3b062; --accent-press: #c97e29;
+    --accent-tint: #361f0d; --accent-tint-2: #4d2d14; --on-accent: #1c1108;
+  }
+  :root:not([data-theme="light"])[data-major="biol"],
+  :root:not([data-theme="light"])[data-major="pre-med"],
+  :root:not([data-theme="light"]) [data-major="biol"],
+  :root:not([data-theme="light"]) [data-major="pre-med"] {
+    --brand: #040e0f; --side-bg: #081d1e;
+    --accent: #2dd4bf; --accent-hover: #5eead4; --accent-press: #14b8a6;
+    --accent-tint: #0f2d2e; --accent-tint-2: #154345; --on-accent: #07191a;
+  }
+}
+
+:root[data-theme="dark"][data-major="cs"],
+:root[data-theme="dark"][data-major="tech"],
+:root[data-theme="dark"] [data-major="cs"],
+:root[data-theme="dark"] [data-major="tech"] {
+  --brand: #091322; --side-bg: #0d1e38;
+  --accent: #5b9de6; --accent-hover: #7db4f0; --accent-press: #4588d3;
+  --accent-tint: #112338; --accent-tint-2: #183354; --on-accent: #091322;
+}
+:root[data-theme="dark"][data-major="data"],
+:root[data-theme="dark"][data-major="math"],
+:root[data-theme="dark"] [data-major="data"],
+:root[data-theme="dark"] [data-major="math"] {
+  --brand: #030d09; --side-bg: #071f15;
+  --accent: #34d399; --accent-hover: #5eead4; --accent-press: #10b981;
+  --accent-tint: #0f2c1f; --accent-tint-2: #154530; --on-accent: #061911;
+}
+:root[data-theme="dark"][data-major="physics"],
+:root[data-theme="dark"][data-major="engineering"],
+:root[data-theme="dark"] [data-major="physics"],
+:root[data-theme="dark"] [data-major="engineering"] {
+  --brand: #130407; --side-bg: #22090e;
+  --accent: #f87171; --accent-hover: #fca5a5; --accent-press: #ef4444;
+  --accent-tint: #381419; --accent-tint-2: #521c23; --on-accent: #20080d;
+}
+:root[data-theme="dark"][data-major="liberal-arts"],
+:root[data-theme="dark"][data-major="arts"],
+:root[data-theme="dark"] [data-major="liberal-arts"],
+:root[data-theme="dark"] [data-major="arts"] {
+  --brand: #0f0617; --side-bg: #1c0d2b;
+  --accent: #c084fc; --accent-hover: #d8b4fe; --accent-press: #a855f7;
+  --accent-tint: #2e1245; --accent-tint-2: #431b64; --on-accent: #1a0b26;
+}
+:root[data-theme="dark"][data-major="humanities"],
+:root[data-theme="dark"][data-major="phil"],
+:root[data-theme="dark"] [data-major="humanities"],
+:root[data-theme="dark"] [data-major="phil"] {
+  --brand: #110a04; --side-bg: #1f1207;
+  --accent: #e59a45; --accent-hover: #f3b062; --accent-press: #c97e29;
+  --accent-tint: #361f0d; --accent-tint-2: #4d2d14; --on-accent: #1c1108;
+}
+:root[data-theme="dark"][data-major="biol"],
+:root[data-theme="dark"][data-major="pre-med"],
+:root[data-theme="dark"] [data-major="biol"],
+:root[data-theme="dark"] [data-major="pre-med"] {
+  --brand: #040e0f; --side-bg: #081d1e;
+  --accent: #2dd4bf; --accent-hover: #5eead4; --accent-press: #14b8a6;
+  --accent-tint: #0f2d2e; --accent-tint-2: #154345; --on-accent: #07191a;
+}
+
 .app, .masthead, .sidebar {
   transition: background-color 220ms var(--ease), border-color 220ms var(--ease);
 }
+
+/* ---------- Canonical Department Color System & Badges ---------- */
+.live-event-card.dept-card-dept-cs { border-left: 5px solid #2563eb !important; }
+.live-event-card.dept-card-dept-arts { border-left: 5px solid #9333ea !important; }
+.live-event-card.dept-card-dept-sports { border-left: 5px solid #d97706 !important; }
+.live-event-card.dept-card-dept-biol { border-left: 5px solid #0d9488 !important; }
+.live-event-card.dept-card-dept-civics { border-left: 5px solid #b45309 !important; }
+.live-event-card.dept-card-dept-life { border-left: 5px solid #eab308 !important; }
+.live-event-card.dept-card-dept-acad { border-left: 5px solid #64748b !important; }
+
+.cal-item.is-event.has-conflict {
+  border-left-color: var(--bad) !important;
+}
+
+/* Department badge pills */
+.dept-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 3px;
+  font-family: var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.dept-pill.dept-dept-cs, .dept-pill.dept-cs { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.dept-pill.dept-dept-arts, .dept-pill.dept-arts { background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+.dept-pill.dept-dept-sports, .dept-pill.dept-sports { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.dept-pill.dept-dept-biol, .dept-pill.dept-biol { background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; }
+.dept-pill.dept-dept-civics, .dept-pill.dept-civics { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+.dept-pill.dept-dept-life, .dept-pill.dept-life { background: #fefce8; color: #a16207; border: 1px solid #fef08a; }
+.dept-pill.dept-dept-acad, .dept-pill.dept-acad { background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .dept-pill.dept-dept-cs, :root:not([data-theme="light"]) .dept-pill.dept-cs { background: #11253e; color: #7db4f0; border-color: #1f4270; }
+  :root:not([data-theme="light"]) .dept-pill.dept-dept-arts, :root:not([data-theme="light"]) .dept-pill.dept-arts { background: #291438; color: #d8b4fe; border-color: #4a2166; }
+  :root:not([data-theme="light"]) .dept-pill.dept-dept-sports, :root:not([data-theme="light"]) .dept-pill.dept-sports { background: #332408; color: #e5b35a; border-color: #594014; }
+  :root:not([data-theme="light"]) .dept-pill.dept-dept-biol, :root:not([data-theme="light"]) .dept-pill.dept-biol { background: #0c2728; color: #4ee0cf; border-color: #174d4f; }
+  :root:not([data-theme="light"]) .dept-pill.dept-dept-civics, :root:not([data-theme="light"]) .dept-pill.dept-civics { background: #2e1a0d; color: #e09d73; border-color: #522d17; }
+  :root:not([data-theme="light"]) .dept-pill.dept-dept-life, :root:not([data-theme="light"]) .dept-pill.dept-life { background: #382c0b; color: #f0cc6b; border-color: #5e4a15; }
+  :root:not([data-theme="light"]) .dept-pill.dept-dept-acad, :root:not([data-theme="light"]) .dept-pill.dept-acad { background: #192026; color: #9bb0be; border-color: #2e3a42; }
+}
+:root[data-theme="dark"] .dept-pill.dept-dept-cs, :root[data-theme="dark"] .dept-pill.dept-cs { background: #11253e; color: #7db4f0; border-color: #1f4270; }
+:root[data-theme="dark"] .dept-pill.dept-dept-arts, :root[data-theme="dark"] .dept-pill.dept-arts { background: #291438; color: #d8b4fe; border-color: #4a2166; }
+:root[data-theme="dark"] .dept-pill.dept-dept-sports, :root[data-theme="dark"] .dept-pill.dept-sports { background: #332408; color: #e5b35a; border-color: #594014; }
+:root[data-theme="dark"] .dept-pill.dept-dept-biol, :root[data-theme="dark"] .dept-pill.dept-biol { background: #0c2728; color: #4ee0cf; border-color: #174d4f; }
+:root[data-theme="dark"] .dept-pill.dept-dept-civics, :root[data-theme="dark"] .dept-pill.dept-civics { background: #2e1a0d; color: #e09d73; border-color: #522d17; }
+:root[data-theme="dark"] .dept-pill.dept-dept-life, :root[data-theme="dark"] .dept-pill.dept-life { background: #382c0b; color: #f0cc6b; border-color: #5e4a15; }
+:root[data-theme="dark"] .dept-pill.dept-dept-acad, :root[data-theme="dark"] .dept-pill.dept-acad { background: #192026; color: #9bb0be; border-color: #2e3a42; }

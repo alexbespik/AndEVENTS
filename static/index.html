@@ -17,13 +17,15 @@
         if (rawTags) {
           var parsed = JSON.parse(rawTags);
           if (Array.isArray(parsed) && parsed.length) {
-            var c = parsed[0].replace('#', '').toUpperCase();
-            if (c === 'CS' || c === 'TECH') document.documentElement.dataset.major = 'cs';
-            else if (c === 'DATA' || c === 'MATH') document.documentElement.dataset.major = 'data';
-            else if (c === 'PHYSICS' || c === 'ENGINEERING') document.documentElement.dataset.major = 'physics';
-            else if (c === 'ART' || c === 'ARTS' || c === 'DESIGN') document.documentElement.dataset.major = 'arts';
-            else if (c === 'PHIL' || c === 'ETHICS') document.documentElement.dataset.major = 'humanities';
-            else if (c === 'BIOL' || c === 'PRE-MED') document.documentElement.dataset.major = 'biol';
+            for (var i = 0; i < parsed.length; i++) {
+              var c = parsed[i].replace('#', '').toUpperCase();
+              if (c === 'CS' || c === 'TECH' || c === 'TECHNOLOGY') { document.documentElement.dataset.major = 'cs'; break; }
+              if (c === 'DATA' || c === 'MATH' || c === 'STATISTICS') { document.documentElement.dataset.major = 'data'; break; }
+              if (c === 'PHYSICS' || c === 'ENGINEERING') { document.documentElement.dataset.major = 'physics'; break; }
+              if (c === 'ART' || c === 'ARTS' || c === 'DESIGN' || c === 'MUSIC') { document.documentElement.dataset.major = 'arts'; break; }
+              if (c === 'PHIL' || c === 'PHILOSOPHY' || c === 'ETHICS' || c === 'HUMANITIES') { document.documentElement.dataset.major = 'humanities'; break; }
+              if (c === 'BIOL' || c === 'BIOLOGY' || c === 'PRE-MED' || c === 'SCI') { document.documentElement.dataset.major = 'biol'; break; }
+            }
           }
         }
       }
@@ -33,7 +35,7 @@
   <title>&amp;.events</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/lab.css" />
   <style>
     /* Clean, understated extensions adhering strictly to lab.css design tokens */
@@ -94,7 +96,7 @@
     .folder-pill {
       min-height: 26px;
       padding: 0 8px;
-      font: 500 0.76rem/1 var(--font-mono);
+      font: 500 0.76rem/1 var(--font-body);
       border: 1px solid var(--side-field-line);
       border-radius: var(--radius-sm);
       background: var(--side-field);
@@ -123,20 +125,111 @@
       display: flex;
       flex-direction: column;
       gap: var(--space-2);
-      transition: border-color 120ms var(--ease);
+      transition: border-color 120ms var(--ease), box-shadow 120ms var(--ease);
+      cursor: pointer;
     }
     .live-event-card:hover {
-      border-color: var(--ink);
+      border-color: var(--rule-strong);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
     .live-event-card.in-session {
-      border-left: 3px solid var(--ok);
+      border-left: 5px solid var(--ok);
     }
     .live-event-card.starts-soon {
-      border-left: 3px solid var(--gold);
+      border-left: 5px solid var(--gold);
     }
     .live-event-card.has-conflict {
       opacity: 0.82;
-      border-left: 3px solid var(--rule-strong);
+    }
+    .live-event-card .live-event-details {
+      display: none;
+    }
+    .live-event-card.is-expanded .live-event-details {
+      display: block;
+    }
+
+    /* Universal Canonical Department Borders */
+    .live-event-card.dept-card-dept-cs { border-left: 5px solid #2563eb !important; }
+    .live-event-card.dept-card-dept-arts { border-left: 5px solid #9333ea !important; }
+    .live-event-card.dept-card-dept-sports { border-left: 5px solid #d97706 !important; }
+    .live-event-card.dept-card-dept-biol { border-left: 5px solid #0d9488 !important; }
+    .live-event-card.dept-card-dept-civics { border-left: 5px solid #b45309 !important; }
+    .live-event-card.dept-card-dept-life { border-left: 5px solid #eab308 !important; }
+    .live-event-card.dept-card-dept-acad { border-left: 5px solid #64748b !important; }
+
+    /* Department badge pills */
+    .dept-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      border-radius: 3px;
+      font-family: var(--font-body);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .dept-pill.dept-dept-cs, .dept-pill.dept-cs { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .dept-pill.dept-dept-arts, .dept-pill.dept-arts { background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+    .dept-pill.dept-dept-sports, .dept-pill.dept-sports { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+    .dept-pill.dept-dept-biol, .dept-pill.dept-biol { background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; }
+    .dept-pill.dept-dept-civics, .dept-pill.dept-civics { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+    .dept-pill.dept-dept-life, .dept-pill.dept-life { background: #fefce8; color: #a16207; border: 1px solid #fef08a; }
+    .dept-pill.dept-dept-acad, .dept-pill.dept-acad { background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) .dept-pill.dept-dept-cs, :root:not([data-theme="light"]) .dept-pill.dept-cs { background: #11253e; color: #7db4f0; border-color: #1f4270; }
+      :root:not([data-theme="light"]) .dept-pill.dept-dept-arts, :root:not([data-theme="light"]) .dept-pill.dept-arts { background: #291438; color: #d8b4fe; border-color: #4a2166; }
+      :root:not([data-theme="light"]) .dept-pill.dept-dept-sports, :root:not([data-theme="light"]) .dept-pill.dept-sports { background: #332408; color: #e5b35a; border-color: #594014; }
+      :root:not([data-theme="light"]) .dept-pill.dept-dept-biol, :root:not([data-theme="light"]) .dept-pill.dept-biol { background: #0c2728; color: #4ee0cf; border-color: #174d4f; }
+      :root:not([data-theme="light"]) .dept-pill.dept-dept-civics, :root:not([data-theme="light"]) .dept-pill.dept-civics { background: #2e1a0d; color: #e09d73; border-color: #522d17; }
+      :root:not([data-theme="light"]) .dept-pill.dept-dept-life, :root:not([data-theme="light"]) .dept-pill.dept-life { background: #382c0b; color: #f0cc6b; border-color: #5e4a15; }
+      :root:not([data-theme="light"]) .dept-pill.dept-dept-acad, :root:not([data-theme="light"]) .dept-pill.dept-acad { background: #192026; color: #9bb0be; border-color: #2e3a42; }
+    }
+    :root[data-theme="dark"] .dept-pill.dept-dept-cs, :root[data-theme="dark"] .dept-pill.dept-cs { background: #11253e; color: #7db4f0; border-color: #1f4270; }
+    :root[data-theme="dark"] .dept-pill.dept-dept-arts, :root[data-theme="dark"] .dept-pill.dept-arts { background: #291438; color: #d8b4fe; border-color: #4a2166; }
+    :root[data-theme="dark"] .dept-pill.dept-dept-sports, :root[data-theme="dark"] .dept-pill.dept-sports { background: #332408; color: #e5b35a; border-color: #594014; }
+    :root[data-theme="dark"] .dept-pill.dept-dept-biol, :root[data-theme="dark"] .dept-pill.dept-biol { background: #0c2728; color: #4ee0cf; border-color: #174d4f; }
+    :root[data-theme="dark"] .dept-pill.dept-dept-civics, :root[data-theme="dark"] .dept-pill.dept-civics { background: #2e1a0d; color: #e09d73; border-color: #522d17; }
+    :root[data-theme="dark"] .dept-pill.dept-dept-life, :root[data-theme="dark"] .dept-pill.dept-life { background: #382c0b; color: #f0cc6b; border-color: #5e4a15; }
+    :root[data-theme="dark"] .dept-pill.dept-dept-acad, :root[data-theme="dark"] .dept-pill.dept-acad { background: #192026; color: #9bb0be; border-color: #2e3a42; }
+
+    /* Calendar item sleek styles */
+    .cal-item {
+      overflow: hidden;
+      max-width: 100%;
+    }
+    .cal-item-head {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      width: 100%;
+    }
+    .cal-dept-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: inline-block;
+    }
+    .cal-item-title {
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+      max-width: 100%;
+    }
+    .cal-item-time {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cal-item-loc, .cal-item-meta {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
     }
     .live-event-head {
       display: flex;
@@ -157,7 +250,7 @@
       flex-wrap: wrap;
       align-items: center;
       gap: var(--space-2) var(--space-3);
-      font-family: var(--font-mono);
+      font-family: var(--font-body);
       font-size: 0.82rem;
       color: var(--muted);
     }
@@ -168,7 +261,7 @@
       display: inline-flex;
       align-items: center;
       gap: var(--space-1);
-      font-family: var(--font-mono);
+      font-family: var(--font-body);
     }
     .status-note.free {
       background: var(--ok-tint);
@@ -242,7 +335,7 @@
         </button>
 
         <div id="cornerMenuDropdown" class="menu mode-pop-right" style="display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 50; min-width: 260px; padding: var(--space-3); background: var(--surface); border: 1px solid var(--rule-strong); border-radius: var(--radius); box-shadow: var(--shadow-raised);">
-          <div style="font-family: var(--font-mono); font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Appearance</div>
+          <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Appearance</div>
           <div class="theme-switch" role="group" aria-label="Color theme" style="width: 100%; display: flex; justify-content: space-between; border-color: var(--rule); margin-bottom: var(--space-3);">
             <button type="button" id="themeBtnSystem" style="flex: 1; justify-content: center; color: var(--ink-soft);" title="System theme" onclick="setTheme('system')">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
@@ -258,8 +351,8 @@
             </button>
           </div>
 
-          <div style="font-family: var(--font-mono); font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Major Frame Theme</div>
-          <select id="majorThemeSelect" class="select" style="width: 100%; height: 30px; font-size: 0.78rem; font-family: var(--font-mono); margin-bottom: var(--space-3);" onchange="setStudentMajor(this.value)">
+          <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Major Frame Theme</div>
+          <select id="majorThemeSelect" class="select" style="width: 100%; height: 30px; font-size: 0.78rem; margin-bottom: var(--space-3);" onchange="setStudentMajor(this.value)">
             <option value="auto">Auto (Matches Interests)</option>
             <option value="cs">CS &amp; Tech (Technical Blue)</option>
             <option value="data">Data &amp; Math (Cyber Emerald)</option>
@@ -269,14 +362,14 @@
             <option value="biol">Biology &amp; Pre-Med (Sage Teal)</option>
           </select>
 
-          <div style="font-family: var(--font-mono); font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Simulation</div>
+          <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Simulation</div>
           <div style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2); background: var(--sunk); border-radius: var(--radius-sm); margin-bottom: var(--space-3);">
             <label class="conn" style="cursor: pointer; font-size: 0.8rem; color: var(--ink);">
               <input type="checkbox" id="simToggle" onchange="toggleDemoMode()" style="cursor: pointer;">
               <span>Preview simulated time</span>
             </label>
             <div id="demoControls" style="display: none; align-items: center; gap: 6px; margin-top: 4px;">
-              <select id="simDay" class="select" style="height: 28px; padding: 0 4px; font-size: 0.75rem; font-family: var(--font-mono);" onchange="loadAll()">
+              <select id="simDay" class="select" style="height: 28px; padding: 0 4px; font-size: 0.75rem;" onchange="loadAll()">
                 <option value="0">Mon</option>
                 <option value="1">Tue</option>
                 <option value="2">Wed</option>
@@ -285,11 +378,11 @@
                 <option value="5">Sat</option>
                 <option value="6">Sun</option>
               </select>
-              <input type="time" id="simTime" value="17:15" class="input" style="height: 28px; width: 85px; padding: 0 4px; font-size: 0.75rem; font-family: var(--font-mono);" onchange="loadAll()">
+              <input type="time" id="simTime" value="17:15" class="input num" style="height: 28px; width: 85px; padding: 0 4px; font-size: 0.75rem;" onchange="loadAll()">
             </div>
           </div>
 
-          <div style="font-family: var(--font-mono); font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Preferences &amp; Schedule</div>
+          <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Preferences &amp; Schedule</div>
           <button type="button" class="btn btn-quiet btn-sm" onclick="closeCornerMenu(); openFiltersModal();" style="width: 100%; justify-content: flex-start;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
             <span>Open Schedule &amp; Preferences</span>
@@ -374,8 +467,8 @@
           <div id="activeTagsRow" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;"></div>
 
           <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--rule);">
-            <span style="font-family: var(--font-mono); font-size: 0.74rem; font-weight: 700; color: var(--muted); text-transform: uppercase;">Major Frame Theme:</span>
-            <select id="modalMajorThemeSelect" class="select" style="height: 28px; font-size: 0.75rem; font-family: var(--font-mono);" onchange="setStudentMajor(this.value)">
+            <span style="font-size: 0.74rem; font-weight: 700; color: var(--muted); text-transform: uppercase;">Major Frame Theme:</span>
+            <select id="modalMajorThemeSelect" class="select" style="height: 28px; font-size: 0.75rem;" onchange="setStudentMajor(this.value)">
               <option value="auto">Auto (Matches Interests)</option>
               <option value="cs">CS &amp; Tech (Technical Blue)</option>
               <option value="data">Data &amp; Math (Cyber Emerald)</option>
@@ -403,7 +496,7 @@
           <!-- Quick W&M Presets Chips Row -->
           <div style="margin-bottom: var(--space-2);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <span style="font-family: var(--font-mono); font-size: 0.74rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Quick W&amp;M Presets</span>
+              <span style="font-size: 0.74rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Quick W&amp;M Presets</span>
               <span class="hint" style="font-size: 0.72rem;">Click to pre-fill</span>
             </div>
             <div id="coursePresetChips" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;"></div>
@@ -424,7 +517,7 @@
 
               <!-- Standard Time Blocks -->
               <div>
-                <div style="font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Standard Time Blocks</div>
+                <div style="font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Standard Time Blocks</div>
                 <div id="slotPresetPills" style="display: flex; flex-wrap: wrap; gap: 4px;"></div>
               </div>
 
@@ -486,7 +579,7 @@
           <!-- Interests / Tags Strip & Recommended Filter -->
           <div class="panel" style="padding: var(--space-3) var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;">
             <div style="display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;">
-              <span style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; color: var(--ink);">Your Interests:</span>
+              <span style="font-size: 0.82rem; font-weight: 700; color: var(--ink);">Your Interests:</span>
               <div id="frontPageTagsList" style="display: inline-flex; gap: 6px; flex-wrap: wrap;"></div>
               <button type="button" class="btn btn-quiet btn-sm" onclick="openFiltersModal('tags')" style="padding: 0 10px; min-height: 26px; font-size: 0.78rem; font-family: var(--font-ui); font-weight: 600;">
                 + Edit
@@ -501,26 +594,51 @@
             </div>
           </div>
 
-          <!-- Section: Happening Right Now -->
-          <div>
-            <div class="section-title">
-              <span>Happening Right Now</span>
-              <span id="nowCountBadge" class="status status-ready">0 In Session</span>
-            </div>
-            <div id="nowEventsContainer" class="stack">
-              <p class="hint">Loading current events…</p>
+          <!-- View Arrangement Controls on Now & Soon -->
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-top: var(--space-3); margin-bottom: var(--space-2); flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;">Arrangement:</span>
+              <div class="btn-group" role="tablist" aria-label="Event arrangement" style="display: inline-flex; border: 1px solid var(--rule); border-radius: var(--radius-sm); overflow: hidden;">
+                <button type="button" id="arrangeChronoBtn" class="btn btn-xs btn-gold" onclick="setNowSoonArrangement('chrono')" style="border-radius: 0; border: none; font-size: 0.76rem;">
+                  ⏱ Chronological
+                </button>
+                <button type="button" id="arrangeGroupBtn" class="btn btn-xs btn-quiet" onclick="setNowSoonArrangement('grouped')" style="border-radius: 0; border: none; font-size: 0.76rem;">
+                  🏢 Group by Department
+                </button>
+                <button type="button" id="arrangeShuffleBtn" class="btn btn-xs btn-quiet" onclick="setNowSoonArrangement('shuffled')" style="border-radius: 0; border: none; font-size: 0.76rem;">
+                  🔀 Shuffle by Department
+                </button>
+              </div>
             </div>
           </div>
 
-          <!-- Section: Coming Up Soon (Next 3 Hours) -->
-          <div style="margin-top: var(--space-4);">
-            <div class="section-title">
-              <span>Starting in the next 3 hours</span>
-              <span id="soonCountBadge" class="status status-working">0 upcoming</span>
+          <!-- Chronological Mode Sections -->
+          <div id="chronoSections">
+            <!-- Section: Happening Right Now -->
+            <div>
+              <div class="section-title">
+                <span>Happening Right Now</span>
+                <span id="nowCountBadge" class="status status-ready">0 In Session</span>
+              </div>
+              <div id="nowEventsContainer" class="stack">
+                <p class="hint">Loading current events…</p>
+              </div>
             </div>
-            <div id="soonEventsContainer" class="stack">
-              <p class="hint">Loading upcoming events…</p>
+
+            <!-- Section: Coming Up Soon (Next 3 Hours) -->
+            <div style="margin-top: var(--space-4);">
+              <div class="section-title">
+                <span>Starting in the next 3 hours</span>
+                <span id="soonCountBadge" class="status status-working">0 upcoming</span>
+              </div>
+              <div id="soonEventsContainer" class="stack">
+                <p class="hint">Loading upcoming events…</p>
+              </div>
             </div>
+          </div>
+
+          <!-- Arranged Mode Container (Grouped or Shuffled) -->
+          <div id="arrangedEventsContainer" style="display: none; margin-top: var(--space-3);" class="stack">
           </div>
         </div>
 
@@ -529,7 +647,7 @@
           <!-- Interests / Recommended Filter for Directory -->
           <div class="panel" style="padding: var(--space-3) var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;">
             <div style="display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;">
-              <span style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; color: var(--ink);">Your Interests:</span>
+              <span style="font-size: 0.82rem; font-weight: 700; color: var(--ink);">Your Interests:</span>
               <div id="dirPageTagsList" style="display: inline-flex; gap: 6px; flex-wrap: wrap;"></div>
               <button type="button" class="btn btn-quiet btn-sm" onclick="openFiltersModal('tags')" style="padding: 0 10px; min-height: 26px; font-size: 0.78rem; font-family: var(--font-ui); font-weight: 600;">
                 + Edit
@@ -570,8 +688,16 @@
         <!-- VIEW 3: Weekly schedule -->
         <div id="viewPlanner" class="stack view-container" style="display: none;">
           <div class="cal-summary-bar">
-            <div class="cal-summary-stats">
-              <span id="plannerSummaryStats" class="chip num" style="font-weight: 600;">0 Classes · 0 Club Events</span>
+            <div class="cal-summary-stats" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <div class="btn-group" role="tablist" aria-label="Planner scope filter" style="display: inline-flex; border: 1px solid var(--rule); border-radius: var(--radius-sm); overflow: hidden;">
+                <button type="button" id="plannerTabMy" class="btn btn-xs btn-gold" onclick="setPlannerScope('my')" style="border-radius: 0; border: none; font-size: 0.78rem;">
+                  ★ My Calendar
+                </button>
+                <button type="button" id="plannerTabAll" class="btn btn-xs btn-quiet" onclick="setPlannerScope('all')" style="border-radius: 0; border: none; font-size: 0.78rem;">
+                  🏫 All Campus Events
+                </button>
+              </div>
+              <span id="plannerSummaryStats" class="chip num" style="font-weight: 600;">0 Classes · 0 Events</span>
               <span id="plannerConflictBadge" class="status status-bad" style="display: none; font-size: 0.75rem;">0 Overlaps</span>
             </div>
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -1261,6 +1387,272 @@
       return `${m}m`;
     }
 
+    const DEPARTMENTS = {
+      "dept-cs": { id: "dept-cs", name: "Computer Science & Technology", color: "#2563eb" },
+      "dept-arts": { id: "dept-arts", name: "Arts & Museum Exhibitions", color: "#9333ea" },
+      "dept-sports": { id: "dept-sports", name: "Athletics & Recreation", color: "#d97706" },
+      "dept-biol": { id: "dept-biol", name: "Marine Science & Biology", color: "#0d9488" },
+      "dept-civics": { id: "dept-civics", name: "Civics, History & Dialogue", color: "#b45309" },
+      "dept-life": { id: "dept-life", name: "Student Life & RSO Clubs", color: "#eab308" },
+      "dept-acad": { id: "dept-acad", name: "Academic & Professional", color: "#64748b" },
+    };
+
+    function getUserSavedEvents() {
+      try {
+        const val = localStorage.getItem("user_saved_events");
+        return val ? JSON.parse(val) : [];
+      } catch (e) {
+        return [];
+      }
+    }
+
+    function getEventKey(ev) {
+      if (!ev) return "";
+      if (ev.id != null) return `event-${ev.id}`;
+      if (ev.uid != null) return `wm-${ev.uid}`;
+      return `title-${ev.title}-${ev.day_of_week ?? ev.start_at ?? ""}`;
+    }
+
+    function isEventSaved(ev) {
+      const saved = getUserSavedEvents();
+      const key = getEventKey(ev);
+      return saved.some(item => getEventKey(item) === key);
+    }
+
+    function toggleSaveEvent(ev, mouseEv) {
+      if (mouseEv && mouseEv.stopPropagation) mouseEv.stopPropagation();
+      let saved = getUserSavedEvents();
+      const key = getEventKey(ev);
+      const idx = saved.findIndex(item => getEventKey(item) === key);
+      if (idx >= 0) {
+        saved.splice(idx, 1);
+      } else {
+        saved.push({
+          id: ev.id,
+          uid: ev.uid,
+          title: ev.title,
+          club_name: ev.club_name || (ev.is_wm_event ? "W&M Campus" : "Campus"),
+          category: ev.category || "",
+          categories: ev.categories || [],
+          day_of_week: ev.day_of_week,
+          start_time: ev.start_time,
+          end_time: ev.end_time,
+          start_at: ev.start_at,
+          end_at: ev.end_at,
+          timezone: ev.timezone,
+          location: ev.location,
+          department_id: ev.department_id || "dept-acad",
+          department_name: ev.department_name || "Academic & Professional",
+          department_color: ev.department_color || "#4a5b66",
+          is_all_day: ev.is_all_day,
+          is_wm_event: ev.is_wm_event,
+          is_user_saved: true
+        });
+      }
+      localStorage.setItem("user_saved_events", JSON.stringify(saved));
+
+      if (currentMode === "live") loadNowAndNext();
+      if (currentMode === "directory") { loadEvents(); loadWmEvents(); }
+      if (currentMode === "planner") loadWeeklyPlanner();
+    }
+
+    function handleCardSaveToggle(btn, mouseEv) {
+      if (mouseEv) mouseEv.stopPropagation();
+      try {
+        if (!btn) return;
+        const raw = btn.getAttribute("data-event");
+        if (!raw) return;
+        const ev = JSON.parse(raw);
+        toggleSaveEvent(ev, mouseEv);
+      } catch (err) {
+        console.error("Failed to parse event for toggle:", err);
+      }
+    }
+
+    function onCardKeyDown(cardEl, ev) {
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        if (ev.target.closest("button") || ev.target.closest("a") || ev.target.closest("input") || ev.target.closest(".btn")) return;
+        ev.preventDefault();
+        toggleCardExpansion(cardEl, ev);
+      }
+    }
+
+    function toggleCardExpansion(cardEl, mouseEv) {
+      if (!cardEl) return;
+      if (mouseEv && (mouseEv.target.closest("button") || mouseEv.target.closest("a") || mouseEv.target.closest("input") || mouseEv.target.closest(".btn"))) {
+        return;
+      }
+      cardEl.classList.toggle("is-expanded");
+      const isExp = cardEl.classList.contains("is-expanded");
+      cardEl.setAttribute("aria-expanded", isExp ? "true" : "false");
+      const details = cardEl.querySelector(".live-event-details");
+      const label = cardEl.querySelector(".card-expand-label");
+      if (details) {
+        details.style.display = isExp ? "block" : "none";
+      }
+      if (label) {
+        label.textContent = isExp ? "▴ Less" : "▾ Details";
+      }
+    }
+
+    function toggleCalItemExpansion(el, mouseEv) {
+      if (!el) return;
+      if (mouseEv && (mouseEv.target.closest("button") || mouseEv.target.closest("a") || mouseEv.target.closest("input") || mouseEv.target.closest(".btn"))) {
+        return;
+      }
+      const details = el.querySelector(".cal-item-expanded-details");
+      if (details) {
+        const isShown = details.style.display !== "none";
+        details.style.display = isShown ? "none" : "block";
+        el.classList.toggle("is-expanded", !isShown);
+      }
+    }
+
+    function openCreateEventDay(dayIndex) {
+      switchMode('organizer');
+      const sel = document.getElementById("evDay");
+      if (sel && dayIndex != null) sel.value = String(dayIndex);
+      const input = document.getElementById("evTitle");
+      if (input) setTimeout(() => input.focus(), 60);
+    }
+
+    let nowSoonArrangement = localStorage.getItem("now_soon_arrangement") || "chrono";
+    function setNowSoonArrangement(mode) {
+      nowSoonArrangement = mode;
+      localStorage.setItem("now_soon_arrangement", mode);
+      loadNowAndNext();
+    }
+
+    let plannerScope = localStorage.getItem("planner_scope") || "my";
+    function setPlannerScope(scope) {
+      plannerScope = scope;
+      localStorage.setItem("planner_scope", scope);
+      loadWeeklyPlanner();
+    }
+
+    function format12hJs(timeStr) {
+      if (!timeStr || !timeStr.includes(":")) return timeStr;
+      try {
+        const parts = timeStr.split(":");
+        const h = parseInt(parts[0], 10);
+        const m = parts[1];
+        const period = h >= 12 ? "PM" : "AM";
+        const h12 = h % 12 || 12;
+        return `${h12}:${m} ${period}`;
+      } catch (e) {
+        return timeStr;
+      }
+    }
+
+    function renderLiveEventCardHtml(ev, options = {}) {
+      const deptId = ev.department_id || "dept-acad";
+      const deptInfo = DEPARTMENTS[deptId] || { name: "Academic & Professional", color: "#64748b" };
+      const deptName = ev.department_name || deptInfo.name;
+
+      const saved = isEventSaved(ev);
+      const eventJsonEscaped = escapeHtml(JSON.stringify(ev));
+      const saveBtn = `
+        <button type="button" class="btn btn-xs ${saved ? 'btn-gold' : 'btn-quiet'}" data-event="${eventJsonEscaped}" onclick="handleCardSaveToggle(this, event)" title="${saved ? 'Remove from my calendar' : 'Add to my calendar'}" style="white-space: nowrap;">
+          ${saved ? '✓ On My Calendar' : '+ Add to My Calendar'}
+        </button>
+      `;
+
+      const conflictNote = ev.has_conflict
+        ? `<span class="status-note conflict">${options.conflictPrefix || 'Class conflict: '}${escapeHtml(ev.conflicting_course || 'Class')}</span>`
+        : `<span class="status-note free">No class conflict</span>`;
+
+      const tagPill = (ev.matched_tags && ev.matched_tags.length)
+        ? `<span class="tag-match-pill ${getTagThemeClass(ev.matched_tags[0])}">★ Recommended · ${escapeHtml(ev.matched_tags.join(" "))}</span>`
+        : "";
+
+      let timeDisplay = "";
+      if (ev.is_all_day) {
+        timeDisplay = "All Day";
+      } else if (ev.start_time && ev.end_time) {
+        timeDisplay = `${escapeHtml(ev.start_time)}–${escapeHtml(ev.end_time)}`;
+      } else if (ev.start_at) {
+        const st = formatWmEventDateTime(ev.start_at, ev.timezone, false);
+        const en = ev.end_at ? formatWmEventDateTime(ev.end_at, ev.timezone, false) : "";
+        timeDisplay = en ? `${st} – ${en}` : st;
+      }
+
+      const dayLabel = ev.day_of_week != null ? DAYS[ev.day_of_week] : (ev.start_at ? formatWmEventDateTime(ev.start_at, ev.timezone, Boolean(ev.is_all_day)).split(',')[0] : "");
+
+      let statusBadge = "";
+      if (options.statusLabel) {
+        statusBadge = `<span class="status ${options.statusClass || 'status-ready'}">${escapeHtml(options.statusLabel)}</span>`;
+      } else if (ev.status_label) {
+        statusBadge = `<span class="status ${ev.minutes_remaining != null ? 'status-ready' : 'status-working'}">${escapeHtml(ev.status_label)}</span>`;
+      }
+
+      let notifyBtn = "";
+      if (options.showNotify) {
+        const eventTimeStr = ev.start_time || (ev.start_at ? formatWmEventDateTime(ev.start_at, ev.timezone, Boolean(ev.is_all_day)) : "");
+        notifyBtn = `
+          <button type="button" class="btn btn-quiet btn-xs" data-title="${escapeHtml(ev.title)}" data-location="${escapeHtml(ev.location || 'Campus')}" data-time="${escapeHtml(eventTimeStr)}" onclick="onNotifyClick(this)" style="white-space: nowrap;">
+            Notify me
+          </button>
+        `;
+      }
+
+      let sourceLink = "";
+      if (ev.source_url) {
+        const sUrl = safeWmSourceUrl(ev.source_url);
+        if (sUrl) {
+          sourceLink = `<p class="crumbs" style="margin-top: 4px;"><a href="${sUrl.href}" target="_blank" rel="noopener noreferrer">Open official campus link ↗</a></p>`;
+        }
+      }
+
+      const cardClasses = [
+        "live-event-card",
+        `dept-card-${deptId}`,
+        options.extraCardClass || "",
+        ev.has_conflict ? "has-conflict" : ""
+      ].filter(Boolean).join(" ");
+
+      return `
+        <div class="${cardClasses}" onclick="toggleCardExpansion(this, event)" onkeydown="onCardKeyDown(this, event)" role="button" tabindex="0" aria-expanded="false">
+          <div class="live-event-head">
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span class="dept-pill dept-${deptId}">${escapeHtml(deptName)}</span>
+                <h3 class="live-event-title" style="display: inline;">${escapeHtml(ev.title)}</h3>
+                ${tagPill}
+              </div>
+              <div class="live-event-meta" style="margin-top: 6px;">
+                <span class="chip" style="font-weight: 600;">${escapeHtml(ev.club_name || (ev.is_wm_event ? "W&M Campus" : "Campus"))}</span>
+                ${dayLabel ? `<span>${escapeHtml(dayLabel)}</span>` : ""}
+                ${timeDisplay ? `<span>${timeDisplay}</span>` : ""}
+                <span>Location: ${escapeHtml(ev.location || "Campus")}</span>
+                ${ev.category ? `<span class="chip">${escapeHtml(ev.category)}</span>` : ""}
+              </div>
+            </div>
+            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
+                ${statusBadge}
+                ${saveBtn}
+                ${notifyBtn}
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                ${conflictNote}
+                <span class="card-expand-label" style="font-size: 0.74rem; font-family: var(--font-mono); color: var(--muted); cursor: pointer; user-select: none;">▾ Details</span>
+              </div>
+            </div>
+          </div>
+          <div class="live-event-details" style="display: none; margin-top: var(--space-2); padding-top: var(--space-2); border-top: 1px dashed var(--rule);">
+            ${(ev.description || ev.summary) ? `<p style="font-size: 0.90rem; color: var(--ink-soft); margin-bottom: 8px; line-height: 1.45;">${escapeHtml(ev.description || ev.summary)}</p>` : `<p style="font-size: 0.84rem; color: var(--muted); margin-bottom: 6px; font-style: italic;">No detailed summary published for this session.</p>`}
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+              <div style="font-size: 0.80rem; color: var(--muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                ${ev.category ? `<span><strong>Category:</strong> ${escapeHtml(ev.category)}</span>` : ""}
+                ${ev.location ? `<span><strong>Venue:</strong> ${escapeHtml(ev.location)}</span>` : ""}
+              </div>
+              ${sourceLink}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     // LOAD NOW & NEXT (Front page view)
     async function loadNowAndNext() {
       try {
@@ -1409,112 +1801,142 @@
           return startA - startB;
         });
 
-        // 2. Render Happening Right Now
-        const nowBadge = document.getElementById("nowCountBadge");
-        const nowContainer = document.getElementById("nowEventsContainer");
-        nowBadge.textContent = `${happening.length} happening now`;
+        // Update arrangement button states
+        const bChrono = document.getElementById("arrangeChronoBtn");
+        const bGroup = document.getElementById("arrangeGroupBtn");
+        const bShuffle = document.getElementById("arrangeShuffleBtn");
+        if (bChrono) bChrono.className = nowSoonArrangement === "chrono" ? "btn btn-xs btn-gold" : "btn btn-xs btn-quiet";
+        if (bGroup) bGroup.className = nowSoonArrangement === "grouped" ? "btn btn-xs btn-gold" : "btn btn-xs btn-quiet";
+        if (bShuffle) bShuffle.className = nowSoonArrangement === "shuffled" ? "btn btn-xs btn-gold" : "btn btn-xs btn-quiet";
 
-        if (!happening.length) {
-          nowContainer.innerHTML = `
-            <div class="panel" style="padding: var(--space-4); text-align: center; color: var(--muted);">
-              ${recommendedOnly ? "No events matching your tags are in session right now." : "No club or campus sessions in progress right now."}
-            </div>
-          `;
-        } else {
-          nowContainer.innerHTML = happening.map(ev => {
-            const conflictNote = ev.has_conflict
-              ? `<span class="status-note conflict">Class Conflict: ${escapeHtml(ev.conflicting_course)}</span>`
-              : `<span class="status-note free">No class conflict</span>`;
+        const chronoEl = document.getElementById("chronoSections");
+        const arrangedEl = document.getElementById("arrangedEventsContainer");
 
-            const primaryTheme = getEventPrimaryTagTheme(ev);
-            const accentClass = primaryTheme !== "tag-theme-default" ? primaryTheme.replace("tag-theme-", "accent-tag-") : "";
+        if (nowSoonArrangement === "chrono") {
+          if (chronoEl) chronoEl.style.display = "block";
+          if (arrangedEl) arrangedEl.style.display = "none";
 
-            const tagPill = (ev.matched_tags && ev.matched_tags.length)
-              ? `<span class="tag-match-pill ${getTagThemeClass(ev.matched_tags[0])}">★ Recommended · ${escapeHtml(ev.matched_tags.join(" "))}</span>`
-              : "";
+          const nowBadge = document.getElementById("nowCountBadge");
+          const nowContainer = document.getElementById("nowEventsContainer");
+          if (nowBadge) nowBadge.textContent = `${happening.length} happening now`;
 
-            const statusLabel = ev.status_label || (ev.minutes_remaining ? `In Session · ${ev.minutes_remaining}m left` : (ev.is_all_day ? "All Day Today" : "In Session"));
-
-            return `
-              <div class="live-event-card in-session ${accentClass} ${ev.has_conflict ? 'has-conflict' : ''}">
-                <div class="live-event-head">
-                  <div>
-                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                      <h3 class="live-event-title">${escapeHtml(ev.title)}</h3>
-                      ${tagPill}
-                    </div>
-                    <div class="live-event-meta" style="margin-top: 4px;">
-                      <span class="chip" style="font-weight: 600;">${escapeHtml(ev.club_name || (ev.is_wm_event ? "W&M Campus" : "Campus"))}</span>
-                      ${ev.category ? `<span class="chip">${escapeHtml(ev.category)}</span>` : ""}
-                      <span>${ev.is_all_day ? "All Day" : `${escapeHtml(ev.start_time || formatWmEventDateTime(ev.start_at, ev.timezone, false))}–${escapeHtml(ev.end_time || formatWmEventDateTime(ev.end_at, ev.timezone, false))}`}</span>
-                      <span>Location: ${escapeHtml(ev.location || "Campus")}</span>
-                    </div>
-                  </div>
-                  <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-                    <span class="status status-ready">${escapeHtml(statusLabel)}</span>
-                    ${conflictNote}
-                  </div>
-                </div>
-                ${(ev.description || ev.summary) ? `<p style="font-size: 0.92rem; color: var(--ink-soft); margin-top: 4px;">${escapeHtml(ev.description || ev.summary)}</p>` : ""}
+          if (!happening.length) {
+            nowContainer.innerHTML = `
+              <div class="panel" style="padding: var(--space-4); text-align: center; color: var(--muted);">
+                ${recommendedOnly ? "No events matching your tags are in session right now." : "No club or campus sessions in progress right now."}
               </div>
             `;
-          }).join("");
-        }
+          } else {
+            nowContainer.innerHTML = happening.map(ev => renderLiveEventCardHtml(ev, { extraCardClass: 'in-session', statusClass: 'status-ready' })).join("");
+          }
 
-        // 3. Render Starting Soon
-        const soonBadge = document.getElementById("soonCountBadge");
-        const soonContainer = document.getElementById("soonEventsContainer");
-        soonBadge.textContent = `${soon.length} Starting Soon`;
+          const soonBadge = document.getElementById("soonCountBadge");
+          const soonContainer = document.getElementById("soonEventsContainer");
+          if (soonBadge) soonBadge.textContent = `${soon.length} Starting Soon`;
 
-        if (!soon.length) {
-          soonContainer.innerHTML = `
-            <div class="panel" style="padding: var(--space-4); text-align: center; color: var(--muted);">
-              ${recommendedOnly ? "No events matching your tags starting in the next 3 hours." : "No other events starting in the next 3 hours today."}
-            </div>
-          `;
-        } else {
-          soonContainer.innerHTML = soon.map(ev => {
-            const conflictNote = ev.has_conflict
-              ? `<span class="status-note conflict">Overlaps with ${escapeHtml(ev.conflicting_course)}</span>`
-              : `<span class="status-note free">No class conflict</span>`;
-
-            const primaryTheme = getEventPrimaryTagTheme(ev);
-            const accentClass = primaryTheme !== "tag-theme-default" ? primaryTheme.replace("tag-theme-", "accent-tag-") : "";
-
-            const tagPill = (ev.matched_tags && ev.matched_tags.length)
-              ? `<span class="tag-match-pill ${getTagThemeClass(ev.matched_tags[0])}">★ Recommended · ${escapeHtml(ev.matched_tags.join(" "))}</span>`
-              : "";
-
-            const statusLabel = ev.status_label || (ev.starts_in_minutes ? `Starts in ${ev.starts_in_minutes}m` : "Starts Soon");
-
-            const eventTimeStr = ev.start_time || (ev.start_at ? formatWmEventDateTime(ev.start_at, ev.timezone, Boolean(ev.is_all_day)) : "");
-
-            return `
-              <div class="live-event-card starts-soon ${accentClass} ${ev.has_conflict ? 'has-conflict' : ''}">
-                <div class="live-event-head">
-                  <div>
-                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                      <h3 class="live-event-title">${escapeHtml(ev.title)}</h3>
-                      ${tagPill}
-                    </div>
-                    <div class="live-event-meta" style="margin-top: 4px;">
-                      <span class="chip" style="font-weight: 600;">${escapeHtml(ev.club_name || (ev.is_wm_event ? "W&M Campus" : "Campus"))}</span>
-                      ${ev.category ? `<span class="chip">${escapeHtml(ev.category)}</span>` : ""}
-                      <span>${escapeHtml(statusLabel)}</span>
-                      <span>Location: ${escapeHtml(ev.location || "Campus")}</span>
-                    </div>
-                  </div>
-                  <div style="display: flex; align-items: center; gap: 6px;">
-                    ${conflictNote}
-                    <button type="button" class="btn btn-quiet btn-sm" data-title="${escapeHtml(ev.title)}" data-location="${escapeHtml(ev.location || 'Campus')}" data-time="${escapeHtml(eventTimeStr)}" onclick="onNotifyClick(this)">
-                      Notify me
-                    </button>
-                  </div>
-                </div>
-                ${(ev.description || ev.summary) ? `<p style="font-size: 0.92rem; color: var(--ink-soft); margin-top: 4px;">${escapeHtml(ev.description || ev.summary)}</p>` : ""}
+          if (!soon.length) {
+            soonContainer.innerHTML = `
+              <div class="panel" style="padding: var(--space-4); text-align: center; color: var(--muted);">
+                ${recommendedOnly ? "No events matching your tags starting in the next 3 hours." : "No other events starting in the next 3 hours today."}
               </div>
             `;
-          }).join("");
+          } else {
+            soonContainer.innerHTML = soon.map(ev => renderLiveEventCardHtml(ev, { extraCardClass: 'starts-soon', statusClass: 'status-working', showNotify: true })).join("");
+          }
+        } else if (nowSoonArrangement === "grouped") {
+          if (chronoEl) chronoEl.style.display = "none";
+          if (arrangedEl) {
+            arrangedEl.style.display = "flex";
+            const combined = [];
+            const seen = new Set();
+            for (const ev of [...happening, ...soon]) {
+              const k = getEventKey(ev);
+              if (!seen.has(k)) {
+                seen.add(k);
+                combined.push(ev);
+              }
+            }
+
+            const deptOrder = ['dept-cs', 'dept-arts', 'dept-sports', 'dept-biol', 'dept-civics', 'dept-life', 'dept-acad'];
+            const groups = {};
+            for (const ev of combined) {
+              const d = ev.department_id || "dept-acad";
+              if (!groups[d]) groups[d] = [];
+              groups[d].push(ev);
+            }
+
+            const shelvesHtml = deptOrder.map(dId => {
+              const list = groups[dId];
+              if (!list || !list.length) return "";
+              const dept = DEPARTMENTS[dId] || { name: dId, color: "#64748b" };
+              return `
+                <div class="dept-shelf" style="background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3);">
+                  <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid ${dept.color}; padding-bottom: 6px; margin-bottom: var(--space-3);">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <span class="dept-pill dept-${dId}">${escapeHtml(dept.name)}</span>
+                    </div>
+                    <span class="num chip" style="font-size: 0.76rem;">${list.length} event${list.length === 1 ? '' : 's'}</span>
+                  </div>
+                  <div class="stack" style="gap: var(--space-2);">
+                    ${list.map(ev => renderLiveEventCardHtml(ev)).join("")}
+                  </div>
+                </div>
+              `;
+            }).filter(Boolean).join("");
+
+            arrangedEl.innerHTML = shelvesHtml || `
+              <div class="panel" style="padding: var(--space-4); text-align: center; color: var(--muted);">
+                ${recommendedOnly ? "No events matching your tags." : "No events in session or starting soon."}
+              </div>
+            `;
+          }
+        } else if (nowSoonArrangement === "shuffled") {
+          if (chronoEl) chronoEl.style.display = "none";
+          if (arrangedEl) {
+            arrangedEl.style.display = "flex";
+            const deptOrder = ['dept-cs', 'dept-arts', 'dept-sports', 'dept-biol', 'dept-civics', 'dept-life', 'dept-acad'];
+            const bins = {};
+            for (const d of deptOrder) bins[d] = [];
+            const seen = new Set();
+            for (const ev of [...happening, ...soon]) {
+              const k = getEventKey(ev);
+              if (!seen.has(k)) {
+                seen.add(k);
+                const d = ev.department_id || "dept-acad";
+                if (!bins[d]) bins[d] = [];
+                bins[d].push(ev);
+              }
+            }
+
+            const interleaved = [];
+            let added = true;
+            while (added) {
+              added = false;
+              for (const d of deptOrder) {
+                if (bins[d] && bins[d].length > 0) {
+                  interleaved.push(bins[d].shift());
+                  added = true;
+                }
+              }
+            }
+
+            if (!interleaved.length) {
+              arrangedEl.innerHTML = `
+                <div class="panel" style="padding: var(--space-4); text-align: center; color: var(--muted);">
+                  ${recommendedOnly ? "No events matching your tags." : "No events in session or starting soon."}
+                </div>
+              `;
+            } else {
+              arrangedEl.innerHTML = `
+                <div style="padding: 6px 12px; background: var(--sunk); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 0.76rem; color: var(--muted); margin-bottom: var(--space-2);">
+                  🔀 Shuffled Stream · ${interleaved.length} events round-robin interleaved across departments
+                </div>
+                <div class="stack" style="gap: var(--space-2);">
+                  ${interleaved.map(ev => renderLiveEventCardHtml(ev)).join("")}
+                </div>
+              `;
+            }
+          }
         }
 
       } catch (err) {
@@ -1646,74 +2068,7 @@
           return;
         }
 
-        for (const event of events) {
-          const card = document.createElement("div");
-          card.className = "live-event-card";
-
-          const head = document.createElement("div");
-          head.className = "live-event-head";
-
-          const titleWrap = document.createElement("div");
-          titleWrap.style.display = "flex";
-          titleWrap.style.alignItems = "center";
-          titleWrap.style.gap = "8px";
-          titleWrap.style.flexWrap = "wrap";
-
-          const title = document.createElement("h3");
-          title.className = "live-event-title";
-          title.textContent = event.title || "Untitled event";
-          titleWrap.append(title);
-
-          if (event.matched_tags && event.matched_tags.length) {
-            const tagPill = document.createElement("span");
-            tagPill.className = "tag-match-pill";
-            tagPill.textContent = `Recommended · ${event.matched_tags.join(" ")}`;
-            titleWrap.append(tagPill);
-          }
-
-          const allDay = Boolean(event.is_all_day);
-          const start = formatWmEventDateTime(event.start_at, event.timezone, allDay);
-          const end = formatWmEventDateTime(event.end_at, event.timezone, allDay);
-
-          const meta = document.createElement("div");
-          meta.className = "live-event-meta";
-          meta.textContent = allDay ? `${start} · All day` : `${start} – ${end}`;
-          if (event.location) meta.textContent += ` · Location: ${event.location}`;
-
-          head.append(titleWrap);
-          card.append(head, meta);
-
-          if (event.has_conflict) {
-            const conflict = document.createElement("div");
-            conflict.className = "status-note conflict";
-            conflict.textContent = `Overlaps with your class: ${event.conflicting_course}`;
-            card.append(conflict);
-          }
-
-          const descText = event.description || event.summary;
-          if (descText) {
-            const desc = document.createElement("p");
-            desc.style.fontSize = "0.9rem";
-            desc.style.color = "var(--ink-soft)";
-            desc.textContent = descText;
-            card.append(desc);
-          }
-
-          const sourceUrl = safeWmSourceUrl(event.source_url);
-          if (sourceUrl) {
-            const linkP = document.createElement("p");
-            linkP.className = "crumbs";
-            const link = document.createElement("a");
-            link.href = sourceUrl.href;
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
-            link.textContent = "Open official campus link";
-            linkP.append(link);
-            card.append(linkP);
-          }
-
-          container.append(card);
-        }
+        container.innerHTML = events.map(ev => renderLiveEventCardHtml(ev, { isWm: true })).join("");
       } catch (err) {
         console.error("Failed to load W&M events:", err);
         container.innerHTML = `<p class="hint">Dated W&M calendar events could not be loaded right now.</p>`;
@@ -1766,37 +2121,7 @@
           return;
         }
 
-        container.innerHTML = events.map(ev => {
-          const conflictMarkup = ev.has_conflict
-            ? `<span class="status-note conflict">Class conflict: ${escapeHtml(ev.conflicting_course)}</span>`
-            : `<span class="status-note free">No class conflict</span>`;
-
-          const tagPill = (ev.matched_tags && ev.matched_tags.length)
-            ? `<span class="tag-match-pill">Recommended · ${escapeHtml(ev.matched_tags.join(" "))}</span>`
-            : "";
-
-          return `
-            <div class="live-event-card ${ev.has_conflict ? 'has-conflict' : ''}">
-              <div class="live-event-head">
-                <div>
-                  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                    <h3 class="live-event-title">${escapeHtml(ev.title)}</h3>
-                    ${tagPill}
-                  </div>
-                  <div class="live-event-meta" style="margin-top: 4px;">
-                    <span class="chip" style="font-weight: 600;">${escapeHtml(ev.club_name)}</span>
-                    <span>${DAYS[ev.day_of_week]}</span>
-                    <span>${escapeHtml(ev.start_time)}–${escapeHtml(ev.end_time)}</span>
-                    <span>Location: ${escapeHtml(ev.location)}</span>
-                    <span class="chip">${escapeHtml(ev.category)}</span>
-                  </div>
-                </div>
-                <div>${conflictMarkup}</div>
-              </div>
-              ${ev.description ? `<p style="font-size: 0.92rem; color: var(--ink-soft); margin-top: 6px;">${escapeHtml(ev.description)}</p>` : ""}
-            </div>
-          `;
-        }).join("");
+        container.innerHTML = events.map(ev => renderLiveEventCardHtml(ev)).join("");
 
       } catch (err) {
         console.error("Failed to load events:", err);
@@ -1814,14 +2139,118 @@
         const data = await res.json();
         const { stats, days } = data;
 
+        const savedEvents = getUserSavedEvents();
+
+        const tMy = document.getElementById("plannerTabMy");
+        const tAll = document.getElementById("plannerTabAll");
+        if (tMy) tMy.className = plannerScope === "my" ? "btn btn-xs btn-gold" : "btn btn-xs btn-quiet";
+        if (tAll) tAll.className = plannerScope === "all" ? "btn btn-xs btn-gold" : "btn btn-xs btn-quiet";
+
+        let totalClassesCount = 0;
+        let totalEventsCount = 0;
+        let totalOverlapsCount = 0;
+
+        const processedDays = (days || []).map(d => {
+          const dayIndex = d.day_index;
+          const dayClasses = d.classes || [];
+          totalClassesCount += dayClasses.length;
+
+          let dayEvents = [];
+          if (plannerScope === "my") {
+            // Strictly show enrolled classes + events explicitly saved/added to personal calendar
+            const dbSaved = (d.events || []).filter(ev => isEventSaved(ev));
+            // Also check savedEvents from localStorage for this day of week
+            const localSaved = savedEvents.filter(ev => {
+              if (ev.day_of_week === dayIndex) return true;
+              if (ev.start_at) {
+                const dayOfIso = (new Date(ev.start_at).getDay() + 6) % 7;
+                return dayOfIso === dayIndex;
+              }
+              return false;
+            });
+
+            const seenKeys = new Set(dbSaved.map(e => getEventKey(e)));
+            dayEvents = [...dbSaved];
+            for (const le of localSaved) {
+              const k = getEventKey(le);
+              if (!seenKeys.has(k)) {
+                seenKeys.add(k);
+                const isAllDay = !!le.is_all_day;
+                let st = le.start_time;
+                let et = le.end_time;
+                if (!st && le.start_at) {
+                  st = le.start_at.length >= 16 ? le.start_at.slice(11, 16) : (isAllDay ? "All Day" : "12:00");
+                }
+                if (!et && le.end_at) {
+                  et = le.end_at.length >= 16 ? le.end_at.slice(11, 16) : (isAllDay ? "All Day" : "13:00");
+                }
+                const st_12h = isAllDay ? "All Day" : format12hJs(st || "12:00");
+                const et_12h = isAllDay ? "" : format12hJs(et || "13:00");
+                const time_range_12h = isAllDay ? "All Day" : (st_12h + (et_12h ? ` – ${et_12h}` : ""));
+
+                // Conflict check with day classes (skip for all-day events)
+                let hasConf = false;
+                let confName = null;
+                if (!isAllDay && st && et) {
+                  for (const cl of dayClasses) {
+                    if (st < cl.end_time && et > cl.start_time) {
+                      hasConf = true;
+                      confName = cl.course_name;
+                      break;
+                    }
+                  }
+                }
+
+                dayEvents.push({
+                  ...le,
+                  type: "event",
+                  is_all_day: isAllDay,
+                  start_time: st,
+                  end_time: et,
+                  start_time_12h: st_12h,
+                  end_time_12h: et_12h,
+                  time_range_12h: time_range_12h,
+                  has_conflict: hasConf,
+                  conflicting_course: confName,
+                  department_id: le.department_id || "dept-acad",
+                  department_name: le.department_name || "Academic & Professional",
+                  department_color: le.department_color || "#4a5b66"
+                });
+              }
+            }
+          } else {
+            // All campus events
+            dayEvents = d.events || [];
+          }
+
+          totalEventsCount += dayEvents.length;
+          const dayOverlaps = dayEvents.filter(e => e.has_conflict).length;
+          totalOverlapsCount += dayOverlaps;
+
+          const timeline = [...dayClasses, ...dayEvents].sort((a, b) => {
+            const timeA = a.start_time || "00:00";
+            const timeB = b.start_time || "00:00";
+            if (timeA !== timeB) return timeA.localeCompare(timeB);
+            return (a.type === "class" ? 0 : 1) - (b.type === "class" ? 0 : 1);
+          });
+
+          return {
+            ...d,
+            classes: dayClasses,
+            events: dayEvents,
+            timeline: timeline,
+            total_commitments: timeline.length
+          };
+        });
+
         const statsEl = document.getElementById("plannerSummaryStats");
-        if (statsEl && stats) {
-          statsEl.textContent = `${stats.total_classes} Classes · ${stats.total_events} Club Events`;
+        if (statsEl) {
+          statsEl.textContent = `${totalClassesCount} Classes · ${totalEventsCount} ${plannerScope === 'my' ? 'My Events' : 'Campus Events'}`;
         }
         const conflictEl = document.getElementById("plannerConflictBadge");
-        if (conflictEl && stats) {
-          if (stats.conflicted_events > 0) {
-            conflictEl.textContent = `⚠️ ${stats.conflicted_events} Overlap${stats.conflicted_events > 1 ? 's' : ''}`;
+        if (conflictEl) {
+          if (totalOverlapsCount > 0) {
+            conflictEl.textContent = `⚠️ ${totalOverlapsCount} Overlap${totalOverlapsCount > 1 ? 's' : ''}`;
             conflictEl.style.display = "inline-flex";
           } else {
             conflictEl.style.display = "none";
@@ -1833,10 +2262,10 @@
 
         container.innerHTML = `
           <div class="cal-grid">
-            ${days.map(d => {
+            ${processedDays.map(d => {
               const isToday = !!d.is_today;
               const todayBadge = isToday ? `<span class="cal-today-pill">Today</span>` : "";
-              const totalCount = d.total_commitments !== undefined ? d.total_commitments : (d.timeline ? d.timeline.length : (d.classes.length + d.events.length));
+              const totalCount = d.total_commitments ?? (d.timeline?.length || 0);
               const countLabel = `${totalCount} item${totalCount === 1 ? '' : 's'}`;
 
               const timeline = d.timeline || [];
@@ -1846,12 +2275,15 @@
                 timelineContent = `
                   <div class="cal-empty">
                     <span class="cal-empty-text">No commitments</span>
-                    <button type="button" class="btn btn-quiet btn-xs" onclick="openFiltersModal('classes', ${d.day_index})" style="font-size: 0.75rem;">+ Add</button>
+                    <div style="display: flex; gap: 4px; margin-top: 4px;">
+                      <button type="button" class="btn btn-quiet btn-xs" onclick="openFiltersModal('classes', ${d.day_index})" style="font-size: 0.72rem;">+ Class</button>
+                      <button type="button" class="btn btn-quiet btn-xs" onclick="openCreateEventDay(${d.day_index})" style="font-size: 0.72rem;">+ Event</button>
+                    </div>
                   </div>
                 `;
               } else {
                 timelineContent = timeline.map(item => {
-                  const timeRange = item.time_range_12h || `${item.start_time_12h || item.start_time} – ${item.end_time_12h || item.end_time}`;
+                  const timeRange = item.is_all_day ? "All Day" : (item.time_range_12h || `${item.start_time_12h || item.start_time || ''} – ${item.end_time_12h || item.end_time || ''}`);
                   if (item.type === "class") {
                     return `
                       <div class="cal-item is-class">
@@ -1864,18 +2296,27 @@
                     const conflictBadge = item.has_conflict
                       ? `<div class="cal-conflict-badge">⚠️ Overlaps ${escapeHtml(item.conflicting_course || "class")}</div>`
                       : "";
+                    const deptColor = item.department_color || (DEPARTMENTS[item.department_id] ? DEPARTMENTS[item.department_id].color : '#4a5b66');
+                    const savedInCal = isEventSaved(item);
+                    const safeLink = item.source_url ? safeWmSourceUrl(item.source_url) : null;
                     return `
-                      <div class="cal-item is-event ${item.has_conflict ? 'has-conflict' : ''}">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 4px;">
-                          <div class="cal-item-title">${escapeHtml(item.title)}</div>
-                          ${item.category ? `<span class="chip" style="font-size: 0.68rem; padding: 1px 5px;">${escapeHtml(item.category)}</span>` : ""}
+                      <div class="cal-item is-event ${item.has_conflict ? 'has-conflict' : ''}" style="${item.has_conflict ? '' : `border-left-color: ${deptColor};`} cursor: pointer;" onclick="toggleCalItemExpansion(this, event)">
+                        <div class="cal-item-head">
+                          <span class="cal-dept-dot" style="background: ${deptColor};"></span>
+                          <span class="cal-item-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</span>
                         </div>
                         <div class="cal-item-time">${escapeHtml(timeRange)}</div>
-                        <div class="cal-item-meta">
-                          ${item.club_name ? `<span>${escapeHtml(item.club_name)}</span>` : ""}
-                          ${item.location ? `<span>${escapeHtml(item.location)}</span>` : ""}
-                        </div>
+                        ${item.location ? `<div class="cal-item-loc">${escapeHtml(item.location)}</div>` : ""}
                         ${conflictBadge}
+                        <div class="cal-item-expanded-details" style="display: none; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--rule); font-size: 0.76rem;">
+                          ${(item.description || item.summary) ? `<div style="color: var(--ink-soft); margin-bottom: 6px; line-height: 1.35;">${escapeHtml(item.description || item.summary)}</div>` : ''}
+                          <div style="display: flex; gap: 6px; align-items: center; justify-content: space-between; margin-top: 4px; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-xs ${savedInCal ? 'btn-gold' : 'btn-quiet'}" data-event="${escapeHtml(JSON.stringify(item))}" onclick="handleCardSaveToggle(this, event)" style="font-size: 0.70rem; padding: 2px 6px;">
+                              ${savedInCal ? '✓ On My Calendar' : '+ Add to My Calendar'}
+                            </button>
+                            ${safeLink ? `<a href="${safeLink.href}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="font-size: 0.70rem; color: var(--accent); text-decoration: underline;">Open Link ↗</a>` : ''}
+                          </div>
+                        </div>
                       </div>
                     `;
                   }
@@ -1889,7 +2330,13 @@
                       <span>${escapeHtml(d.day_name)}</span>
                       ${todayBadge}
                     </div>
-                    <div class="cal-day-meta">${countLabel}</div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 2px;">
+                      <div class="cal-day-meta">${countLabel}</div>
+                      <div style="display: flex; gap: 4px;">
+                        <button type="button" class="btn btn-quiet btn-xs" onclick="openFiltersModal('classes', ${d.day_index})" title="Add class to ${escapeHtml(d.day_name)}" style="padding: 1px 4px; font-size: 0.68rem; min-height: 20px;">+ Class</button>
+                        <button type="button" class="btn btn-quiet btn-xs" onclick="openCreateEventDay(${d.day_index})" title="Propose event on ${escapeHtml(d.day_name)}" style="padding: 1px 4px; font-size: 0.68rem; min-height: 20px;">+ Event</button>
+                      </div>
+                    </div>
                   </div>
                   <div class="cal-day-timeline">
                     ${timelineContent}

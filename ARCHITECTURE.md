@@ -22,7 +22,8 @@ graph TD
         API_WMEvents["/api/wm-events (GET)"]
         API_Planning_Conflicts["/api/planning/creator-conflicts (GET)"]
         API_Planning_Weekly["/api/planning/weekly-schedule (GET)"]
-        Engine["Conflict & Live Calculation Engine"]
+        API_AICat["/api/ai/department-categorize (GET, POST)"]
+        Engine["Conflict, Live Calculation & Department Classifier"]
     end
 
     subgraph Ingestion ["Calendar Ingestion (wm_data.py, import_wm_events.py)"]
@@ -46,6 +47,7 @@ graph TD
     UI_Organizer -->|GET /api/planning/creator-conflicts| API_Planning_Conflicts
     UI_Organizer -->|POST, DELETE /api/events| API_Events
     UI_Nav -->|GET /api/wm-events| API_WMEvents
+    UI_Radar -.->|POST /api/ai/department-categorize| API_AICat
 
     Ingestion -->|Strict HTTPS / Parse / Expand| T_WMEvents
     Ingestion -->|Calendar Mapping| T_WMCals
@@ -55,17 +57,20 @@ graph TD
     API_Planning_Conflicts --> Engine
     API_Planning_Weekly --> Engine
     API_WMEvents --> T_WMEvents
+    API_AICat --> Engine
 
     Engine --> T_Events
     Engine --> T_Classes
     Engine --> T_WMEvents
     Engine --> T_Meta
+    Engine -.->|GEMINI_API_KEY / urllib.request| GeminiAPI["Google Gemini API (Fallback: Rule-Based Classifier)"]
 ```
 
 ### Component Responsibilities & Data Ownership
 | Component | Responsibility | Owned Data / State |
 | :--- | :--- | :--- |
-| **`app.py` (FastAPI Server)** | Boundary validation, schedule indexing, conflict calculations, REST endpoints | `schedule.db` connection lifecycle, business rules |
+| **`app.py` (FastAPI Server)** | Boundary validation, schedule indexing, conflict calculations, department categorization, REST endpoints | `schedule.db` connection lifecycle, business rules, stdlib `.env` loader |
+| **Department Classifier** | Deterministic keyword + AI semantic mapping to 7 core academic departments | Subject taxonomy definitions and department color tokens |
 | **`wm_data.py`** | Safe RFC 5545 iCal parser, RRULE expansion, Windows TZID alias resolution, location normalization, SSRF host validation | Pure functions, parser and schema integrity |
 | **`import_wm_events.py`** | Scheduled feed crawler & CLI importer for `events.wm.edu` and `tribelink.wm.edu` | Ingestion lifecycle, savepoint transactions |
 | **`club_events` Table** | Authoritative store of weekly recurring club meetings | Campus events (title, club, category, day 0-6, start/end 24h, location, description) |
@@ -370,6 +375,69 @@ Returns static, curated William & Mary course presets across departments (CSCI, 
 
 ---
 
+### 2.3 Academic Department Taxonomy & AI Categorizer Contracts
+
+Every campus event (club meetings, dated W&M events, Muscarelle exhibitions, athletics matches, guest lectures) is enriched with an academic department classification.
+
+#### Official 7-Department Taxonomy
+| Department ID (`department_id`) | Department Name (`department_name`) | Subject Color (`department_color`) | Visual Token | Scope & Disciplines |
+| :--- | :--- | :--- | :--- | :--- |
+| `dept-cs` | Computer Science & Technology | `#2c6eb5` | Technical Blue | CS, CSCI, Software, Coding, Linux, AI, Hackathons, Robotics, Systems, Cyber |
+| `dept-arts` | Arts & Museum Exhibitions | `#8b3ab8` | Creative Violet/Plum | Fine Arts, Muscarelle Museum, Theater, Music, Orchestra, Choir, Dance, Exhibitions |
+| `dept-sports` | Athletics & Recreation | `#b07d1e` | Amber/Olive | Tribe Athletics, Kaplan Arena, Intramural Sports, Rec Center, Tennis, Soccer, Swim |
+| `dept-biol` | Marine Science & Biology | `#19787a` | Sage/Teal | Biology, VIMS Marine Science, Botany, Ecology, Pre-Med, Chemistry, Genetics |
+| `dept-civics` | Civics, History & Dialogue | `#8c532b` | Classical Bronze | History, Government, Law, Public Policy, Philosophy, Ethics, Debates, Global Affairs |
+| `dept-life` | Student Life & RSO Clubs | `#c9a24a` | Warm Gold | Campus Life, Social RSOs, Wellness, Mindfulness, Traditions, Community Hangouts |
+| `dept-acad` | Academic & Professional | `#4a5b66` | Classic Slate | Career Center, Workshops, Professional Development, Symposia, Admissions |
+
+#### Enriched Event Contract Boundary
+All endpoints returning events (`/api/events`, `/api/now-and-next`, `/api/wm-events`, `/api/planning/weekly-schedule`, and `POST /api/events`) guarantee the inclusion of:
+```json
+{
+  "department_id": "dept-cs",
+  "department_name": "Computer Science & Technology",
+  "department_color": "#2c6eb5"
+}
+```
+
+#### `POST /api/ai/department-categorize` (and `GET /api/ai/department-categorize`)
+Classifies events using Google Gemini when `GEMINI_API_KEY` is present; seamlessly falls back to deterministic rule-based taxonomy classification when the key is omitted, blank, or network is unavailable.
+- **Request Body (Optional)**:
+```json
+{
+  "events": [
+    {
+      "id": 1,
+      "title": "Kernel & Dotfiles Workshop",
+      "club_name": "Linux 1991 Club",
+      "category": "Tech",
+      "location": "ISC 1127",
+      "description": "Customizing tiling window managers and shell configs."
+    }
+  ]
+}
+```
+- **Response**:
+```json
+{
+  "source": "gemini",
+  "count": 1,
+  "events": [
+    {
+      "id": 1,
+      "title": "Kernel & Dotfiles Workshop",
+      "department_id": "dept-cs",
+      "department_name": "Computer Science & Technology",
+      "department_color": "#2c6eb5",
+      "ai_summary": "Hands-on systems workshop exploring shell automation and window manager configuration."
+    }
+  ]
+}
+```
+*(When `GEMINI_API_KEY` is absent, `"source": "deterministic"` is returned with the exact same schema).*
+
+---
+
 ## 3. Database Schema & Indexing
 
 ```sql
@@ -464,21 +532,37 @@ stateDiagram-v2
 5. **Event Organizer Lab (`organizer`)**:
    - Propose event time and location; checks for class overlap and room collisions using canonicalized building names.
 
-### 4.2 AndEDU Design System Tokens
-- **Palette**:
-  - Griffin Green Frame: `--side-bg: #0b3b2c` (Light) / `#07140f` (Dark)
+### 4.2 AndEDU Design System Tokens & Chrome Stability
+- **Masthead & Frame Consistency**:
+  - The masthead retains its crisp Technical Blue styling (`#0d1e38` background, Caslon gold border, and `#ffffff` high-contrast reading) as the stable anchor of the application.
+  - The masthead does not darken or swing across disparate colors when browsing different events. The chrome remains stable, letting the events themselves supply subject-matter color.
+- **Palette Tokens**:
+  - Stable Masthead Navy: `--masthead-bg: #0d1e38`, `--brand-line: rgba(59, 130, 246, 0.4)`
   - Stone Paper / Surface: `--paper: #f1f0ea` / `#050806`, `--surface: #ffffff` / `#0e1411`
   - Caslon Gold Accents: `--gold: #c9a24a` / `#e0bb62`, `--gold-text: #6f5114` / `#e8c877`
-  - Interactive Accent: `--accent: #0e4a37` / `#5aae8b`
+  - Interactive Accent: `--accent: #2c6eb5` / `#5aae8b`
   - Available Status: `--ok: #0e4a37` / `#5fb390`
   - Conflict Status: `--bad: #9a2b2b` / `#e27f72`
-- **Typography**:
-  - Headings: `Libre Caslon Text`, Georgia, serif
-  - Code, Badges, 24h Times: `IBM Plex Mono`, monospace (tabular-nums)
-  - Body: `IBM Plex Sans`, -apple-system, sans-serif
-- **Geometry**:
-  - Corners: `--radius-sm: 3px`, `--radius-md: 6px`
-  - Engineering grid background: `24px 24px`
+
+### 4.3 Department-Themed Event Cards
+Rather than changing the entire page chrome, every individual event card across the app (club meetings, W&M calendar events, Muscarelle exhibitions, athletics games, symposiums) carries its department's visual identity:
+1. **Left Border Accent**:
+   - `dept-cs`: `4px solid #2c6eb5` (Technical Blue)
+   - `dept-arts`: `4px solid #8b3ab8` (Creative Violet/Plum)
+   - `dept-sports`: `4px solid #b07d1e` (Amber/Olive)
+   - `dept-biol`: `4px solid #19787a` (Sage/Teal)
+   - `dept-civics`: `4px solid #8c532b` (Classical Bronze)
+   - `dept-life`: `4px solid #c9a24a` (Warm Gold)
+   - `dept-acad`: `4px solid #4a5b66` (Classic Slate)
+2. **Department Badge Pill**:
+   - Compact inline pill styled with the department's tint and text color (e.g. `<span class="dept-badge dept-cs">Computer Science & Technology</span>`).
+   - Sits alongside status indicators (`In Session`, `Starts soon`) without visual interference.
+
+### 4.4 View Arrangement Controls
+In event browsing modes (`Now & Soon` and `Directory`), users can arrange event cards with three toggles:
+- **`[ Chronological ]`** (Default): Events ordered by start time, ending soonest, or scheduled timetable order.
+- **`[ 🏢 Group by Department ]`**: Events organized into visual departmental clusters with header banners and counts.
+- **`[ 🔀 Shuffle by Department ]`**: Round-robin interleave across departments, guaranteeing that students encounter an eclectic, interdisciplinary mix of events (CS, Arts, Athletics, Biology, Civics, Life) rather than a monolithic block of one type.
 
 ---
 
@@ -504,3 +588,7 @@ stateDiagram-v2
    - Parameterized SQL queries (`?` placeholders) prevent SQL injection across all endpoints.
    - HTML sanitization (`escapeHtml`) on the client prevents Cross-Site Scripting (XSS).
    - Strict 127.0.0.1 default binding for development.
+6. **Safe Environment & AI Integration**:
+   - Standard library `.env` loader on application startup reads key-value pairs without third-party dependencies (`python-dotenv`).
+   - `GEMINI_API_KEY` is loaded strictly from environment or `.env` and never written to logs or transmitted to clients.
+   - Outbound requests to Gemini API use standard library `urllib.request` with strict timeouts and seamless fallback to deterministic department classification.

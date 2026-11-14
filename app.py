@@ -2,15 +2,194 @@ import os
 import json
 import re
 import sqlite3
+import urllib.request
+import asyncio
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from fastapi import FastAPI, HTTPException, Query, status
+from fastapi import FastAPI, HTTPException, Query, Request, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from wm_data import ensure_schema, normalize_wm_location
+
+
+def load_dotenv():
+    """Standard library parser reading .env into os.environ if present."""
+    env_file = Path(__file__).resolve().parent / ".env"
+    if env_file.is_file():
+        try:
+            with open(env_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line or line.startswith("#"):
+                        continue
+                    if "=" in line:
+                        k, v = line.split("=", 1)
+                        k = k.strip()
+                        v = v.strip().strip("'\"")
+                        if k and k not in os.environ:
+                            os.environ[k] = v
+        except Exception:
+            pass
+
+
+load_dotenv()
+
+
+# Canonical 7-department taxonomy dictionary
+DEPARTMENTS: dict[str, dict[str, str]] = {
+    "dept-cs": {
+        "id": "dept-cs",
+        "name": "Computer Science & Technology",
+        "color": "#2c6eb5",
+    },
+    "dept-arts": {
+        "id": "dept-arts",
+        "name": "Arts & Museum Exhibitions",
+        "color": "#8b3ab8",
+    },
+    "dept-sports": {
+        "id": "dept-sports",
+        "name": "Athletics & Recreation",
+        "color": "#b07d1e",
+    },
+    "dept-biol": {
+        "id": "dept-biol",
+        "name": "Marine Science & Biology",
+        "color": "#19787a",
+    },
+    "dept-civics": {
+        "id": "dept-civics",
+        "name": "Civics, History & Dialogue",
+        "color": "#8c532b",
+    },
+    "dept-life": {
+        "id": "dept-life",
+        "name": "Student Life & RSO Clubs",
+        "color": "#c9a24a",
+    },
+    "dept-acad": {
+        "id": "dept-acad",
+        "name": "Academic & Professional",
+        "color": "#4a5b66",
+    },
+}
+
+
+def format_dept(dept: dict[str, str]) -> dict[str, str]:
+    return {
+        "department_id": dept["id"],
+        "department_name": dept["name"],
+        "department_color": dept["color"],
+        "id": dept["id"],
+        "name": dept["name"],
+        "color": dept["color"],
+    }
+
+
+def classify_department(event_dict: dict[str, Any]) -> dict[str, str]:
+    """Classifies an event into one of 7 canonical departments based on keywords and locations."""
+    if not isinstance(event_dict, dict):
+        return format_dept(DEPARTMENTS["dept-acad"])
+
+    existing = event_dict.get("department_id") or event_dict.get("id")
+    if existing and existing in DEPARTMENTS:
+        return format_dept(DEPARTMENTS[existing])
+
+    cats = event_dict.get("categories") or []
+    if isinstance(cats, str):
+        try:
+            cats = json.loads(cats)
+        except Exception:
+            cats = [cats]
+    cats_str = " ".join(cats) if isinstance(cats, list) else str(cats)
+
+    title = str(event_dict.get("title") or "")
+    category = str(event_dict.get("category") or "")
+    club = str(event_dict.get("club_name") or "")
+    loc = str(event_dict.get("location") or "")
+    desc = str(event_dict.get("description") or event_dict.get("summary") or "")
+
+    dept_keywords: dict[str, list[str]] = {
+        "dept-cs": [
+            "cs", "csci", "computer", "software", "code", "coding", "linux", "kernel",
+            "ai", "machine learning", "hardware", "robotics", "cybersecurity", "web",
+            "hackathon", "data", "analytics", "statistics", "datascience", "cad",
+            "3d printing", "mesh network", "algorithm", "programming", "python",
+            "makerspace", "small hall makerspace", "mcglothlin"
+        ],
+        "dept-arts": [
+            "muscarelle", "art", "arts", "museum", "exhibition", "exhibit", "gallery",
+            "painting", "drawing", "music", "concert", "theater", "theatre", "dance",
+            "choir", "orchestra", "band", "performance", "craft", "film", "cinema",
+            "sculpture", "opera", "pottery", "ceramics", "andrews hall", "pbk"
+        ],
+        "dept-sports": [
+            "athletics", "recreation", "rec", "rec center", "pool", "swim", "polo",
+            "soccer", "basketball", "volleyball", "running", "fitness", "climbing",
+            "tennis", "gym", "sport", "sports", "scrimmage", "intramural", "conditioning",
+            "kaplan", "zable", "busch field", "mccormack", "plumeri"
+        ],
+        "dept-biol": [
+            "biology", "biol", "marine", "vims", "wildlife", "botany", "genetics",
+            "ecology", "pre-med", "medicine", "biomedical", "bio", "nature",
+            "conservation", "keck lab", "greenhouse", "lake matoaka"
+        ],
+        "dept-civics": [
+            "civics", "history", "dialogue", "government", "law", "public policy",
+            "citizenship", "debate", "political", "politics", "constitution",
+            "diplomacy", "colonial", "wren", "democracy", "civil rights", "philosophy",
+            "phil", "ethics"
+        ],
+        "dept-life": [
+            "student life", "rso", "club", "clubs", "fraternity", "sorority", "greek",
+            "social", "chess", "tabletop", "gaming", "wargaming", "board game", "trivia",
+            "boba", "mixer", "activities", "guild", "sadler", "campus center", "trinkle"
+        ],
+        "dept-acad": [
+            "academic", "professional", "symposium", "colloquium", "career", "seminar",
+            "lecture", "research", "reading group", "conference", "scholar", "workshop",
+            "graduate", "advising", "honors", "admissions", "swem", "library"
+        ],
+    }
+
+    scores = {d: 0 for d in DEPARTMENTS}
+
+    def score_field(text: str, weight: int):
+        if not text:
+            return
+        lower = text.lower()
+        for d_id, kws in dept_keywords.items():
+            for kw in kws:
+                if re.search(r"\b" + re.escape(kw) + r"\b", lower):
+                    scores[d_id] += weight
+
+    score_field(title, 4)
+    score_field(category, 4)
+    score_field(cats_str, 3)
+    score_field(club, 3)
+    score_field(loc, 2)
+    score_field(desc, 1)
+
+    best_dept = max(scores, key=scores.get)
+    if scores[best_dept] > 0:
+        return format_dept(DEPARTMENTS[best_dept])
+
+    if club or (category and category.lower() not in ("general", "campus")):
+        return format_dept(DEPARTMENTS["dept-life"])
+    return format_dept(DEPARTMENTS["dept-acad"])
+
+
+def enrich_department(ev: dict[str, Any]) -> dict[str, Any]:
+    """Enriches event dictionary with department_id, department_name, department_color."""
+    dept = classify_department(ev)
+    ev["department_id"] = dept["department_id"]
+    ev["department_name"] = dept["department_name"]
+    ev["department_color"] = dept["department_color"]
+    return ev
+
 
 TAG_KEYWORDS: dict[str, list[str]] = {
     "CS": ["cs", "csci", "computer", "software", "code", "coding", "linux", "kernel", "ai", "machine learning", "hardware", "robotics", "cybersecurity", "web", "hackathon"],
@@ -151,34 +330,57 @@ def init_db():
     cur.execute("CREATE INDEX IF NOT EXISTS idx_club_events_day_time ON club_events (day_of_week, start_time);")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_user_classes_day_time ON user_classes (day_of_week, start_time);")
 
-    # Seed initial demo data once on fresh initialization
-    cur.execute("SELECT value FROM app_meta WHERE key = 'initial_seeded'")
-    if not cur.fetchone():
-        seed_events = [
-            ("Kernel & Dotfiles Workshop", "Linux 1991 Club", "Tech", 0, "17:00", "18:30", "ISC 1127", "Bring your laptop. Customizing shells and tiling window managers."),
-            ("AI Paper Reading Group", "AI Society", "Academic", 0, "14:00", "15:15", "McGlothlin-Street 020", "Breaking down transformer attention optimizations."),
-            ("Open Lap Swim & Water Polo", "Aquatics Club", "Sports", 1, "16:00", "17:30", "Rec Center Pool", "Open scrimmage and conditioning."),
-            ("Rapid Chess Blitz Night", "Chess Club", "Gaming", 2, "18:00", "20:00", "Sadler Center 202", "10+0 and 3+2 brackets, open to all ratings."),
-            ("3D Printing & CAD Clinic", "Makerspace Guild", "Tech", 2, "13:00", "14:30", "Small Hall Makerspace", "Slicer tuning, multi-color purge calibration, and OpenSCAD."),
-            ("Embedded Mesh Networking Lab", "Robotics & Hardware", "Tech", 3, "15:00", "16:30", "ISC 2011", "Testing off-grid packet relays and microcontrollers."),
-            ("Tabletop Lore & Painting", "Wargaming Guild", "Gaming", 4, "19:00", "22:00", "Campus Center 104", "2000pt matches and miniature painting station."),
+    # Seed student organization club meetings if table is empty
+    cur.execute("SELECT COUNT(*) FROM club_events")
+    if cur.fetchone()[0] == 0:
+        events = [
+            ("W&M Linux Users Group", "Kernel & Dotfiles Workshop", "Hands-on compilation, config tweaking, and terminal setups.", 0, "17:00", "18:30", "ISC 1127", "Technology"),
+            ("Machine Learning Club", "AI Paper Reading Group", "Discussion on recent transformer architectures and reasoning papers.", 2, "18:00", "19:30", "McGlothlin 020", "Academic"),
+            ("W&M Club Swim & Water Polo", "Open Lap Swim & Water Polo", "Casual scrimmages and endurance lap lanes.", 1, "19:00", "20:30", "Student Rec Center", "Sports"),
+            ("W&M Chess Club", "Rapid Chess Blitz Night", "Casual and rated 5+3 blitz games. All rating tiers welcome.", 3, "18:30", "20:00", "Sadler Center 202", "Social"),
+            ("Makerspace Guild", "3D Printing & CAD Clinic", "Assisted slicing, filament tuning, and rapid prototyping consultation.", 4, "15:00", "17:00", "Small Hall Makerspace", "Workshop"),
+            ("Robotics & IoT Group", "Embedded Mesh Networking Lab", "Testing ESP32 mesh routing protocols across the academic green.", 5, "13:00", "16:00", "Integrated Science Center", "Technology"),
+            ("Tabletop Gaming Society", "Tabletop Lore & Painting", "Miniature painting, worldbuilding, and campaign session zero.", 6, "14:00", "18:00", "Campus Center", "Social"),
         ]
         cur.executemany("""
-            INSERT INTO club_events (title, club_name, category, day_of_week, start_time, end_time, location, description)
+            INSERT INTO club_events (club_name, title, description, day_of_week, start_time, end_time, location, category)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, seed_events)
+        """, events)
 
-        seed_classes = [
-            ("CSCI 241: Data Structures", 0, "14:00", "15:15", "Jones Hall 301"),
-            ("CSCI 241: Data Structures", 2, "14:00", "15:15", "Jones Hall 301"),
-            ("MATH 211: Linear Algebra", 1, "15:30", "16:50", "Jones Hall 202"),
-            ("MATH 211: Linear Algebra", 3, "15:30", "16:50", "Jones Hall 202"),
-        ]
+    # Authentic William & Mary student schedule across all 5 weekdays (Monday-Friday):
+    # - CSCI 141: Computational Problem Solving (MWF 10:00-10:50, McGlothlin-Street 020)
+    # - DATA 141: Programming for Data Science (MWF 13:00-13:50, Blow 332)
+    # - CSCI 241: Data Structures (MW 14:00-15:15, Jones 301)
+    # - PHIL 201: Introduction to Philosophy (TR 09:30-10:50, Wren 200)
+    # - MATH 211: Linear Algebra (TR 15:30-16:50, Jones 202)
+    authentic_classes = [
+        # Monday (0)
+        ("CSCI 141: Computational Problem Solving", 0, "10:00", "10:50", "McGlothlin-Street 020"),
+        ("DATA 141: Programming for Data Science", 0, "13:00", "13:50", "Blow 332"),
+        ("CSCI 241: Data Structures", 0, "14:00", "15:15", "Jones Hall 301"),
+        # Tuesday (1)
+        ("PHIL 201: Introduction to Philosophy", 1, "09:30", "10:50", "Wren 200"),
+        ("MATH 211: Linear Algebra", 1, "15:30", "16:50", "Jones Hall 202"),
+        # Wednesday (2)
+        ("CSCI 141: Computational Problem Solving", 2, "10:00", "10:50", "McGlothlin-Street 020"),
+        ("DATA 141: Programming for Data Science", 2, "13:00", "13:50", "Blow 332"),
+        ("CSCI 241: Data Structures", 2, "14:00", "15:15", "Jones Hall 301"),
+        # Thursday (3)
+        ("PHIL 201: Introduction to Philosophy", 3, "09:30", "10:50", "Wren 200"),
+        ("MATH 211: Linear Algebra", 3, "15:30", "16:50", "Jones Hall 202"),
+        # Friday (4)
+        ("CSCI 141: Computational Problem Solving", 4, "10:00", "10:50", "McGlothlin-Street 020"),
+        ("DATA 141: Programming for Data Science", 4, "13:00", "13:50", "Blow 332"),
+    ]
+
+    cur.execute("SELECT value FROM app_meta WHERE key = 'wm_authentic_schedule_v2'")
+    if not cur.fetchone():
+        cur.execute("DELETE FROM user_classes")
         cur.executemany("""
             INSERT INTO user_classes (course_name, day_of_week, start_time, end_time, location)
             VALUES (?, ?, ?, ?, ?)
-        """, seed_classes)
-
+        """, authentic_classes)
+        cur.execute("INSERT OR REPLACE INTO app_meta (key, value) VALUES ('wm_authentic_schedule_v2', '1')")
         cur.execute("INSERT OR REPLACE INTO app_meta (key, value) VALUES ('initial_seeded', '1')")
 
     conn.commit()
@@ -301,6 +503,7 @@ def get_events(
         if only_now and not ev["can_attend_now"]:
             continue
 
+        enrich_department(ev)
         enriched.append(ev)
 
     return enriched
@@ -318,8 +521,9 @@ def get_now_and_next(
     curr_mins = time_to_minutes(current_time)
 
     # Date anchor for dated W&M events:
-    day_diff = current_day - now_campus.weekday()
-    current_date = now_campus.date() + timedelta(days=day_diff)
+    # Use Monday of the current campus week
+    current_monday = now_campus.date() + timedelta(days=(0 - now_campus.weekday()))
+    current_date = current_monday + timedelta(days=current_day)
     today_d = current_date
     today_iso = current_date.isoformat()
 
@@ -419,6 +623,7 @@ def get_now_and_next(
         ev["has_conflict"] = conflict_course is not None
         ev["conflicting_course"] = conflict_course
         ev["matched_tags"] = match_tags(ev, student_tags)
+        enrich_department(ev)
 
         if ev_start <= curr_mins <= ev_end:
             ev["minutes_remaining"] = ev_end - curr_mins
@@ -453,6 +658,7 @@ def get_now_and_next(
             r["has_conflict"] = False
             r["conflicting_course"] = None
             r["matched_tags"] = match_tags(r, student_tags)
+            enrich_department(r)
             happening_now.append(r)
             wm_processed.append(r)
         else:
@@ -469,6 +675,7 @@ def get_now_and_next(
 
             r["is_wm_event"] = True
             r["matched_tags"] = match_tags(r, student_tags)
+            enrich_department(r)
 
             # Conflict check with today's classes
             r["has_conflict"] = False
@@ -603,6 +810,7 @@ def get_wm_events(
                 except (TypeError, ValueError):
                     pass
 
+            enrich_department(event)
             events[uid] = event
 
         if row["calendar_slug"] is not None:
@@ -920,10 +1128,14 @@ def check_creator_conflicts(
 
 
 @app.get("/api/planning/weekly-schedule")
-def get_weekly_schedule(sim_day: Optional[int] = Query(None, ge=0, le=6)):
+def get_weekly_schedule(
+    sim_day: Optional[int] = Query(None, ge=0, le=6),
+    week_anchor: Optional[str] = Query(None),
+):
     """
-    Build a seven-day view of classes and recurring club events.
-    Overlaps are reported for planning and do not block event creation.
+    Build a seven-day view of enrolled classes and actual William & Mary campus events
+    (from wm_events) plus any user-created club events.
+    Overlaps and conflicts are calculated per day.
     """
     conn = get_db()
     cur = conn.cursor()
@@ -932,20 +1144,33 @@ def get_weekly_schedule(sim_day: Optional[int] = Query(None, ge=0, le=6)):
     classes = [dict(r) for r in cur.fetchall()]
 
     cur.execute("SELECT * FROM club_events ORDER BY day_of_week ASC, start_time ASC")
-    events = [dict(r) for r in cur.fetchall()]
-    conn.close()
+    user_club_events = [dict(r) for r in cur.fetchall()]
 
-    current_day = sim_day if sim_day is not None else datetime.now(CAMPUS_TZ).weekday()
+    # Determine the active academic week Monday
+    if week_anchor:
+        try:
+            anchor_dt = date.fromisoformat(week_anchor.strip()[:10])
+            monday_date = anchor_dt - timedelta(days=anchor_dt.weekday())
+        except Exception:
+            monday_date = date(2026, 11, 16)
+    else:
+        # Default to the primary active academic week in November 2026 (Nov 16-22, 2026)
+        monday_date = date(2026, 11, 16)
+
+    now_campus = datetime.now(CAMPUS_TZ)
+    current_day = sim_day if sim_day is not None else now_campus.weekday()
     days_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     days_data = []
 
     total_classes = len(classes)
-    total_events = len(events)
+    total_events = 0
     conflicted_events = 0
 
     for d in range(7):
+        day_date = monday_date + timedelta(days=d)
+        day_iso = day_date.isoformat()
+
         day_classes = [c for c in classes if c["day_of_week"] == d]
-        day_events_raw = [e for e in events if e["day_of_week"] == d]
 
         enriched_classes = []
         for cl in day_classes:
@@ -959,8 +1184,26 @@ def get_weekly_schedule(sim_day: Optional[int] = Query(None, ge=0, le=6)):
                 "time_range_12h": f"{st_12h} – {et_12h}",
             })
 
+        # Query actual William & Mary events for this date
+        cur.execute("""
+            SELECT uid, title, summary, description, start_at, end_at, timezone, location, source_url, categories, is_all_day
+            FROM wm_events
+            WHERE start_at LIKE ? OR (is_all_day = 1 AND SUBSTR(start_at, 1, 10) <= ? AND (end_at IS NULL OR SUBSTR(end_at, 1, 10) > ?))
+            ORDER BY start_at ASC
+        """, (f"{day_iso}%", day_iso, day_iso))
+        raw_wm = [dict(r) for r in cur.fetchall()]
+
+        # Query user-created club events for this day of week
+        day_user_events = [e for e in user_club_events if e["day_of_week"] == d]
+
         enriched_events = []
-        for ev in day_events_raw:
+        seen_keys = set()
+
+        # Process user club events first
+        for ev in day_user_events:
+            enrich_department(ev)
+            k = f"club_{ev.get('id', ev.get('title'))}"
+            seen_keys.add(k)
             conflicts = []
             for cl in day_classes:
                 if ev["start_time"] < cl["end_time"] and ev["end_time"] > cl["start_time"]:
@@ -981,7 +1224,68 @@ def get_weekly_schedule(sim_day: Optional[int] = Query(None, ge=0, le=6)):
                 "has_conflict": has_conf,
                 "conflicting_course": conflicts[0]["course_name"] if has_conf else None,
                 "conflicting_classes": conflicts,
+                "is_all_day": False,
             })
+
+        # Process actual W&M university events
+        for r in raw_wm:
+            uid = r.get("uid") or r.get("title")
+            if uid in seen_keys:
+                continue
+            seen_keys.add(uid)
+
+            try:
+                r["categories"] = json.loads(r["categories"]) if isinstance(r["categories"], str) else (r["categories"] or [])
+            except Exception:
+                r["categories"] = []
+
+            is_all_day = bool(r.get("is_all_day"))
+            start_at = str(r.get("start_at") or "")
+            end_at = str(r.get("end_at") or "")
+
+            if is_all_day or len(start_at) == 10:
+                is_all_day = True
+                st = "08:00"
+                et = "23:59"
+                st_12h = "All Day"
+                et_12h = ""
+                time_range_12h = "All Day"
+            else:
+                st = start_at[11:16] if len(start_at) >= 16 else "12:00"
+                et = end_at[11:16] if len(end_at) >= 16 else "13:00"
+                st_12h = format_12h(st)
+                et_12h = format_12h(et)
+                time_range_12h = f"{st_12h} – {et_12h}"
+
+            enrich_department(r)
+
+            conflicts = []
+            if not is_all_day:
+                for cl in day_classes:
+                    if st < cl["end_time"] and et > cl["start_time"]:
+                        conflicts.append(cl)
+
+            has_conf = len(conflicts) > 0
+            if has_conf:
+                conflicted_events += 1
+
+            enriched_events.append({
+                **r,
+                "type": "event",
+                "is_wm_event": True,
+                "day_of_week": d,
+                "start_time": st,
+                "end_time": et,
+                "start_time_12h": st_12h,
+                "end_time_12h": et_12h,
+                "time_range_12h": time_range_12h,
+                "has_conflict": has_conf,
+                "conflicting_course": conflicts[0]["course_name"] if has_conf else None,
+                "conflicting_classes": conflicts,
+                "is_all_day": is_all_day,
+            })
+
+        total_events += len(enriched_events)
 
         timeline = sorted(
             enriched_classes + enriched_events,
@@ -991,6 +1295,7 @@ def get_weekly_schedule(sim_day: Optional[int] = Query(None, ge=0, le=6)):
         days_data.append({
             "day_index": d,
             "day_name": days_names[d],
+            "date": day_iso,
             "is_today": (d == current_day),
             "total_commitments": len(timeline),
             "timeline": timeline,
@@ -998,7 +1303,10 @@ def get_weekly_schedule(sim_day: Optional[int] = Query(None, ge=0, le=6)):
             "events": enriched_events,
         })
 
+    conn.close()
+
     return {
+        "week_start": monday_date.isoformat(),
         "stats": {
             "total_classes": total_classes,
             "total_events": total_events,
@@ -1007,6 +1315,138 @@ def get_weekly_schedule(sim_day: Optional[int] = Query(None, ge=0, le=6)):
         },
         "days": days_data,
     }
+
+
+AI_CLASSIFICATION_CACHE: dict[str, dict[str, str]] = {}
+
+
+def _query_gemini_categorization(api_key: str, data: dict[str, Any]) -> Optional[str]:
+    """Helper running in threadpool making outbound Gemini API request with strict timeout and x-goog-api-key header."""
+    try:
+        title = str(data.get("title") or "")[:150]
+        club = str(data.get("club_name") or "")[:120]
+        category = str(data.get("category") or "")[:60]
+        location = str(data.get("location") or "")[:120]
+        description = str(data.get("description") or data.get("summary") or "")[:500]
+
+        prompt = (
+            "Classify this university event into exactly ONE of these canonical IDs:\n"
+            "dept-cs (Computer Science & Technology)\n"
+            "dept-arts (Arts & Museum Exhibitions)\n"
+            "dept-sports (Athletics & Recreation)\n"
+            "dept-biol (Marine Science & Biology)\n"
+            "dept-civics (Civics, History & Dialogue)\n"
+            "dept-life (Student Life & RSO Clubs)\n"
+            "dept-acad (Academic & Professional)\n\n"
+            f"Title: {title}\n"
+            f"Club/Host: {club}\n"
+            f"Category: {category}\n"
+            f"Location: {location}\n"
+            f"Description: {description}\n\n"
+            "Reply with ONLY the department ID (e.g., dept-cs)."
+        )
+        req_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+        req_body = json.dumps({
+            "contents": [{"parts": [{"text": prompt}]}]
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            req_url,
+            data=req_body,
+            headers={
+                "Content-Type": "application/json",
+                "x-goog-api-key": api_key,
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=5.0) as resp:
+            if resp.status == 200:
+                resp_data = json.loads(resp.read().decode("utf-8"))
+                text = resp_data["candidates"][0]["content"]["parts"][0]["text"].strip().lower()
+                for dept_id in DEPARTMENTS:
+                    if dept_id in text:
+                        return dept_id
+    except Exception:
+        pass
+    return None
+
+
+@app.api_route("/api/ai/department-categorize", methods=["GET", "POST"])
+async def ai_department_categorize(request: Request):
+    """
+    Categorizes an event using Gemini AI if GEMINI_API_KEY is configured in os.environ.
+    Gracefully falls back to deterministic classify_department on missing key, timeout, or error.
+    Supports both batch {"events": [...]} and single-event payloads or query parameters.
+    """
+    body_data: dict[str, Any] = {}
+    if request.method == "POST":
+        try:
+            body = await request.json()
+            if isinstance(body, dict):
+                body_data = body
+        except Exception:
+            pass
+
+    # Batch support matching ARCHITECTURE.md contract
+    if "events" in body_data and isinstance(body_data["events"], list):
+        if len(body_data["events"]) > 50:
+            raise HTTPException(status_code=400, detail="Batch size exceeds maximum limit of 50 events.")
+        api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+        classified = []
+        for raw_ev in body_data["events"]:
+            if not isinstance(raw_ev, dict):
+                continue
+            ev_copy = dict(raw_ev)
+            ev_title = str(ev_copy.get("title") or "").strip()[:150]
+            ev_cat = str(ev_copy.get("category") or "").strip()[:60]
+            ev_club = str(ev_copy.get("club_name") or "").strip()[:120]
+            cache_k = f"{ev_title.lower()}|{ev_cat.lower()}|{ev_club.lower()}"
+
+            matched_id = AI_CLASSIFICATION_CACHE.get(cache_k)
+            if not matched_id and api_key and (ev_title or ev_cat or ev_club):
+                matched_id = await asyncio.to_thread(_query_gemini_categorization, api_key, ev_copy)
+                if matched_id and matched_id in DEPARTMENTS:
+                    AI_CLASSIFICATION_CACHE[cache_k] = matched_id
+
+            if matched_id and matched_id in DEPARTMENTS:
+                dept_info = format_dept(DEPARTMENTS[matched_id])
+            else:
+                dept_info = classify_department(ev_copy)
+            ev_copy.update(dept_info)
+            classified.append(ev_copy)
+        return {
+            "source": "gemini" if api_key else "deterministic",
+            "count": len(classified),
+            "events": classified,
+        }
+
+    data: dict[str, Any] = dict(body_data)
+    for k, v in request.query_params.items():
+        if k not in data or not data[k]:
+            data[k] = v
+
+    title = str(data.get("title") or "").strip()[:150]
+    category = str(data.get("category") or "").strip()[:60]
+    club = str(data.get("club_name") or "").strip()[:120]
+    cache_key = f"{title.lower()}|{category.lower()}|{club.lower()}"
+
+    if cache_key and cache_key in AI_CLASSIFICATION_CACHE:
+        return dict(AI_CLASSIFICATION_CACHE[cache_key])
+
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if api_key:
+        matched_id = await asyncio.to_thread(_query_gemini_categorization, api_key, data)
+        if matched_id and matched_id in DEPARTMENTS:
+            res = dict(classify_department({"department_id": matched_id}))
+            res["source"] = "ai"
+            if len(AI_CLASSIFICATION_CACHE) < 500:
+                AI_CLASSIFICATION_CACHE[cache_key] = res
+            return res
+
+    res = dict(classify_department(data))
+    res["source"] = "fallback"
+    if cache_key and len(AI_CLASSIFICATION_CACHE) < 500:
+        AI_CLASSIFICATION_CACHE[cache_key] = res
+    return res
 
 
 if __name__ == "__main__":

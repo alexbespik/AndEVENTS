@@ -141,9 +141,12 @@ class TestCampusScheduleAPI(unittest.TestCase):
             self.assertIn("start_time_12h", item)
             self.assertIn("end_time_12h", item)
             self.assertIn("time_range_12h", item)
-            self.assertTrue("AM" in item["start_time_12h"] or "PM" in item["start_time_12h"])
-            self.assertTrue("AM" in item["end_time_12h"] or "PM" in item["end_time_12h"])
-            self.assertIn(" – ", item["time_range_12h"])
+            if not item.get("is_all_day"):
+                self.assertTrue("AM" in item["start_time_12h"] or "PM" in item["start_time_12h"])
+                self.assertTrue("AM" in item["end_time_12h"] or "PM" in item["end_time_12h"])
+                self.assertIn(" – ", item["time_range_12h"])
+            else:
+                self.assertEqual(item["start_time_12h"], "All Day")
 
         # Verify chronological order
         for i in range(len(timeline) - 1):
@@ -379,6 +382,212 @@ class TestCampusScheduleAPI(unittest.TestCase):
         self.assertEqual(conflict_data["feasibility"], "CLASS_OVERLAP")
         self.assertEqual(conflict_data["conflicting_classes_count"], 1)
         self.assertEqual(conflict_data["conflicting_classes"][0]["course_name"], "MATH 211: Linear Algebra")
+
+    def test_10_department_enrichment_on_endpoints(self):
+        """
+        Verify canonical 7-department taxonomy enrichment across:
+        - GET /api/events
+        - GET /api/now-and-next
+        - GET /api/wm-events
+        - GET /api/planning/weekly-schedule
+        """
+        # 1. /api/events
+        res = client.get("/api/events")
+        self.assertEqual(res.status_code, 200)
+        events = res.json()
+        self.assertGreater(len(events), 0)
+        for ev in events:
+            self.assertIn("department_id", ev)
+            self.assertIn("department_name", ev)
+            self.assertIn("department_color", ev)
+            self.assertTrue(ev["department_id"].startswith("dept-"))
+            self.assertTrue(ev["department_color"].startswith("#"))
+
+        # Check specific expected seed event classifications
+        kernel_ev = next((e for e in events if "Kernel" in e["title"]), None)
+        self.assertIsNotNone(kernel_ev)
+        self.assertEqual(kernel_ev["department_id"], "dept-cs")
+        self.assertEqual(kernel_ev["department_color"], "#2c6eb5")
+
+        swim_ev = next((e for e in events if "Swim" in e["title"]), None)
+        self.assertIsNotNone(swim_ev)
+        self.assertEqual(swim_ev["department_id"], "dept-sports")
+
+        # 2. /api/now-and-next
+        res_now = client.get("/api/now-and-next?sim_day=0&sim_time=17:15")
+        self.assertEqual(res_now.status_code, 200)
+        data_now = res_now.json()
+        for ev in data_now.get("happening_now", []):
+            self.assertIn("department_id", ev)
+            self.assertIn("department_name", ev)
+            self.assertIn("department_color", ev)
+
+        # 3. /api/wm-events
+        conn = get_db()
+        conn.execute(
+            """INSERT OR REPLACE INTO wm_events (uid, title, summary, description, start_at, end_at, timezone, location, source_url, categories, is_all_day)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "test-wm-art-exhibit",
+                "Muscarelle Museum Art Exhibition",
+                "New gallery collection opening",
+                "Paintings, drawings, and sculptures.",
+                "2026-11-20T10:00:00-05:00",
+                "2026-11-20T18:00:00-05:00",
+                "America/New_York",
+                "Muscarelle Hall",
+                "https://events.wm.edu",
+                '["Exhibition", "Arts"]',
+                0,
+            ),
+        )
+        conn.commit()
+        conn.close()
+
+        def cleanup_test_wm():
+            c = get_db()
+            c.execute("DELETE FROM wm_events WHERE uid = ?", ("test-wm-art-exhibit",))
+            c.commit()
+            c.close()
+
+        self.addCleanup(cleanup_test_wm)
+
+        wm_res = client.get("/api/wm-events?search=Muscarelle")
+        self.assertEqual(wm_res.status_code, 200)
+        wm_events = wm_res.json()
+        self.assertGreater(len(wm_events), 0)
+        art_ev = next(e for e in wm_events if e["uid"] == "test-wm-art-exhibit")
+        self.assertEqual(art_ev["department_id"], "dept-arts")
+        self.assertEqual(art_ev["department_name"], "Arts & Museum Exhibitions")
+        self.assertEqual(art_ev["department_color"], "#8b3ab8")
+
+        # 4. /api/planning/weekly-schedule
+        plan_res = client.get("/api/planning/weekly-schedule")
+        self.assertEqual(plan_res.status_code, 200)
+        plan_data = plan_res.json()
+        for day in plan_data["days"]:
+            for item in day["events"]:
+                self.assertIn("department_id", item)
+                self.assertIn("department_name", item)
+                self.assertIn("department_color", item)
+
+    def test_11_ai_department_categorize(self):
+        """
+        Verify /api/ai/department-categorize endpoint:
+        - GET and POST requests
+        - Response structure (department_id, department_name, department_color, source)
+        - Deterministic fallback when no GEMINI_API_KEY
+        """
+        # GET with query params for CS
+        get_res = client.get("/api/ai/department-categorize?title=Hackathon%20Coding%20Sprint&category=Tech")
+        self.assertEqual(get_res.status_code, 200)
+        get_data = get_res.json()
+        self.assertEqual(get_data["department_id"], "dept-cs")
+        self.assertEqual(get_data["department_name"], "Computer Science & Technology")
+        self.assertIn("source", get_data)
+
+        # POST with JSON for Arts
+        post_arts = client.post(
+            "/api/ai/department-categorize",
+            json={
+                "title": "Symphony Orchestra Concert",
+                "club_name": "Music Ensemble",
+                "category": "Performance",
+                "location": "PBK Hall",
+                "description": "Classical overtures and string quartets."
+            }
+        )
+        self.assertEqual(post_arts.status_code, 200)
+        arts_data = post_arts.json()
+        self.assertEqual(arts_data["department_id"], "dept-arts")
+
+        # POST with JSON for Athletics/Sports
+        post_sports = client.post(
+            "/api/ai/department-categorize",
+            json={
+                "title": "Intramural Basketball Tournament",
+                "location": "Rec Center Gym",
+                "description": "5v5 bracket tournament."
+            }
+        )
+        self.assertEqual(post_sports.status_code, 200)
+        sports_data = post_sports.json()
+        self.assertEqual(sports_data["department_id"], "dept-sports")
+
+        # POST with Biology/Marine
+        post_biol = client.post(
+            "/api/ai/department-categorize",
+            json={
+                "title": "Marine Biodiversity Field Study",
+                "location": "VIMS Gloucester Point",
+                "description": "Estuarine sampling and oyster reef ecology."
+            }
+        )
+        self.assertEqual(post_biol.status_code, 200)
+        biol_data = post_biol.json()
+        self.assertEqual(biol_data["department_id"], "dept-biol")
+
+        # POST with Civics
+        post_civics = client.post(
+            "/api/ai/department-categorize",
+            json={
+                "title": "Constitutional Law & Civil Rights Forum",
+                "location": "Wren Chapel",
+                "description": "Public debate and dialogue."
+            }
+        )
+        self.assertEqual(post_civics.status_code, 200)
+        civics_data = post_civics.json()
+        self.assertEqual(civics_data["department_id"], "dept-civics")
+
+        # POST batch matching ARCHITECTURE.md contract
+        batch_res = client.post(
+            "/api/ai/department-categorize",
+            json={
+                "events": [
+                    {"title": "Algorithms & Operating Systems", "category": "CS"},
+                    {"title": "Varsity Swimming Championship", "location": "Rec Center Pool"}
+                ]
+            }
+        )
+        self.assertEqual(batch_res.status_code, 200)
+        batch_data = batch_res.json()
+        self.assertIn("source", batch_data)
+        self.assertEqual(batch_data["count"], 2)
+        self.assertEqual(len(batch_data["events"]), 2)
+        self.assertEqual(batch_data["events"][0]["department_id"], "dept-cs")
+        self.assertEqual(batch_data["events"][1]["department_id"], "dept-sports")
+
+    def test_12_escape_and_special_character_safety(self):
+        """
+        Verify events with quotes, apostrophes, and HTML special chars
+        are properly handled and categorized without syntax errors or crashes.
+        """
+        payload = {
+            "title": "Dean's Reception & Women's Rugby Match",
+            "club_name": "Tribe Athletics & Dean's Council",
+            "category": "Sports",
+            "day_of_week": 2,
+            "start_time": "18:00",
+            "end_time": "19:30",
+            "location": "Kaplan Arena",
+            "description": "Celebrating women's rugby season opener.",
+        }
+        res = client.post("/api/events", json=payload)
+        self.assertEqual(res.status_code, 201)
+        ev_id = res.json()["id"]
+
+        ev_res = client.get("/api/events?search=Dean%27s")
+        self.assertEqual(ev_res.status_code, 200)
+        events = ev_res.json()
+        self.assertGreater(len(events), 0)
+        ev = next(e for e in events if e["id"] == ev_id)
+        self.assertEqual(ev["department_id"], "dept-sports")
+        self.assertIn("department_color", ev)
+
+        # Clean up
+        del_res = client.delete(f"/api/events/{ev_id}")
+        self.assertEqual(del_res.status_code, 200)
 
 
 if __name__ == "__main__":
