@@ -1,0 +1,63 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environments & Packaging
+.venv/
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Databases & runtime SQLite storage
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+auth.json*
+
+# Operating System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs & temporary runtime files
+*.log
+*.log.*
+*.tmp
+*.bak
+
+# IDE / Editor configurations
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.cursor/
+.claude/
+
+# Internal agent scratch files & coordination notes
+AGY_TASK_*.md
+COLLABORATION.md
+NEXT_STEPS.md
+SECURITY_FINDINGS*.md
+*HANDOFF*.md
+CLAUDE.local.md

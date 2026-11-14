@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#121212" />
+  <title>&amp;.events — Campus Radar &amp; Conflict Engine</title>
+  <script>
+    // Apply saved theme before first paint (no light flash)
+    try {
+      var t = localStorage.getItem('andedu_lab_theme');
+      if (t === 'light' || t === 'dark') {
+        document.documentElement.dataset.theme = t;
+      } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.dataset.theme = 'dark';
+      }
+    } catch (e) {}
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <style>
+    /* &.edu — design system (engineering & campus radar edition) */
+    :root {
+      color-scheme: light;
+      --font-display: 'Libre Caslon Text', Georgia, serif;
+      --font-body: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'IBM Plex Mono', monospace;
+
+      /* Frame & Deep Griffin Green */
+      --brand: #0b0f0d;
+      --brand-strong: #000000;
+      --brand-ink: #ffffff;
+      --brand-ink-soft: #c4ccc7;
+      --brand-hover: rgba(255, 255, 255, 0.08);
+      --brand-line: rgba(201, 162, 74, 0.45);
+      --side-bg: #0b3b2c;
+      --side-ink: #ffffff;
+      --side-muted: #b3c9bd;
+      --side-hover: rgba(255, 255, 255, 0.08);
+      --side-active: #155540;
+      --side-field: rgba(243, 241, 234, 0.08);
+      --side-field-line: rgba(243, 241, 234, 0.24);
+
+      /* Interactive Green */
+      --accent: #0e4a37;
+      --accent-hover: #093526;
+      --accent-press: #062519;
+      --accent-tint: #e2ebe5;
+      --accent-tint-2: #c6d8cd;
+      --on-accent: #ffffff;
+
+      /* Caslon Gold */
+      --gold: #c9a24a;
+      --gold-text: #6f5114;
+      --gold-tint: #f7eed6;
+      --gold-rule: #d9bf7c;
+      --on-gold: #0b0f0d;
+
+      /* Stone Neutrals */
+      --paper: #f1f0ea;
+      --surface: #ffffff;
+      --sunk: #e9e7df;
+      --code-bg: #f4f3ee;
+      --ink: #0b0f0d;
+      --ink-soft: #2b3430;
+      --muted: #4f5953;
+      --rule: #cbc7b9;
+      --rule-strong: #8f8a7c;
+
+      /* Status */
+      --ok: #0e4a37;
+      --ok-tint: #e2ebe5;
+      --ok-ink: #082f22;
+      --bad: #9a2b2b;
+      --bad-tint: #f6e6e3;
+      --bad-ink: #6b1b1b;
+      --bad-rule: #dca8a1;
+      --info: #215a7d;
+      --info-tint: #e4edf4;
+
+      --radius-sm: 3px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+      --grid: rgba(11, 15, 13, 0.035);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+      --shadow-raised: 0 8px 24px rgba(0, 0, 0, 0.12);
+      --control-h: 36px;
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Dark Mode (Default System or Dataset) */
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --brand: #000000;
+        --brand-strong: #000000;
+        --brand-ink: #ffffff;
+        --brand-ink-soft: #b9c2bd;
+        --brand-hover: rgba(230, 235, 231, 0.07);
+        --brand-line: rgba(224, 187, 98, 0.4);
+        --side-bg: #07140f;
+        --side-ink: #f2f5f3;
+        --side-muted: #8ea49a;
+        --side-hover: rgba(230, 235, 231, 0.05);
+        --side-active: #163428;
+        --side-field: rgba(230, 235, 231, 0.06);
+        --side-field-line: rgba(230, 235, 231, 0.18);
+        --accent: #5aae8b;
+        --accent-hover: #6fbf9c;
+        --accent-press: #4a9a79;
+        --accent-tint: #142a21;
+        --accent-tint-2: #1f3d30;
+        --on-accent: #06140e;
+        --gold: #e0bb62;
+        --gold-text: #e8c877;
+        --gold-tint: #2a2416;
+        --gold-rule: #5b4b2b;
+        --on-gold: #17110a;
+        --paper: #050806;
+        --surface: #0e1411;
+        --sunk: #090e0b;
+        --code-bg: #0b110e;
+        --ink: #f4f7f5;
+        --ink-soft: #cfd9d3;
+        --muted: #9eada5;
+        --rule: #2b3b34;
+        --rule-strong: #4a5f55;
+        --ok: #5fb390;
+        --ok-tint: #142a21;
+        --ok-ink: #bfe3d2;
+        --bad: #e27f72;
+        --bad-tint: #2c1714;
+        --bad-ink: #f3bdb4;
+        --bad-rule: #5a2b25;
+        --info: #7fb0d1;
+        --info-tint: #13212a;
+        --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+        --shadow-raised: 0 10px 28px rgba(0, 0, 0, 0.55);
+        --grid: rgba(230, 235, 231, 0.035);
+      }
+    }
+
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --brand: #000000;
+      --brand-strong: #000000;
+      --brand-ink: #ffffff;
+      --brand-ink-soft: #b9c2bd;
+      --brand-hover: rgba(230, 235, 231, 0.07);
+      --brand-line: rgba(224, 187, 98, 0.4);
+      --side-bg: #07140f;
+      --side-ink: #f2f5f3;
+      --side-muted: #8ea49a;
+      --side-hover: rgba(230, 235, 231, 0.05);
+      --side-active: #163428;
+      --side-field: rgba(230, 235, 231, 0.06);
+      --side-field-line: rgba(230, 235, 231, 0.18);
+      --accent: #5aae8b;
+      --accent-hover: #6fbf9c;
+      --accent-press: #4a9a79;
+      --accent-tint: #142a21;
+      --accent-tint-2: #1f3d30;
+      --on-accent: #06140e;
+      --gold: #e0bb62;
+      --gold-text: #e8c877;
+      --gold-tint: #2a2416;
+      --gold-rule: #5b4b2b;
+      --on-gold: #17110a;
+      --paper: #050806;
+      --surface: #0e1411;
+      --sunk: #090e0b;
+      --code-bg: #0b110e;
+      --ink: #f4f7f5;
+      --ink-soft: #cfd9d3;
+      --muted: #9eada5;
+      --rule: #2b3b34;
+      --rule-strong: #4a5f55;
+      --ok: #5fb390;
+      --ok-tint: #142a21;
+      --ok-ink: #bfe3d2;
+      --bad: #e27f72;
+      --bad-tint: #2c1714;
+      --bad-ink: #f3bdb4;
+      --bad-rule: #5a2b25;
+      --info: #7fb0d1;
+      --info-tint: #13212a;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+      --shadow-raised: 0 10px 28px rgba(0, 0, 0, 0.55);
+      --grid: rgba(230, 235, 231, 0.035);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      background-color: var(--paper);
+      background-image:
+        linear-gradient(to right, var(--grid) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+      background-size: 24px 24px;
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Masthead Navigation */
+    .masthead {
+      background: var(--brand);
+      color: var(--brand-ink);
+      border-bottom: 1px solid var(--brand-line);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+    .masthead-inner {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 10px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-mark {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--gold);
+      line-height: 1;
+      user-select: none;
+    }
+    .brand-title {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--brand-ink);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand-tag {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      background: var(--accent-tint);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    .masthead-right {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+    }
+    .clock-chip {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--brand-line);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--gold-text);
+      font-variant-numeric: tabular-nums;
+    }
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--ok);
+      box-shadow: 0 0 6px var(--ok);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Controls & Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: var(--control-h);
+      padding: 0 14px;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 120ms var(--ease), border-color 120ms var(--ease), color 120ms var(--ease);
+      user-select: none;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: var(--on-accent);
+      border-color: var(--accent);
+    }
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+    .btn-gold {
+      background: var(--gold);
+      color: var(--on-gold);
+      border-color: var(--gold-rule);
+    }
+    .btn-gold:hover {
+      filter: brightness(0.92);
+    }
+    .btn-quiet {
+      background: transparent;
+      color: var(--brand-ink-soft);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .btn-quiet:hover {
+      background: var(--brand-hover);
+      color: var(--brand-ink);
+    }
+    .btn-danger-quiet {
+      background: transparent;
+      color: var(--bad);
+      border: 1px solid transparent;
+      padding: 2px 6px;
+      font-size: 11px;
+    }
+    .btn-danger-quiet:hover {
+      background: var(--bad-tint);
+      border-color: var(--bad-rule);
+    }
+
+    /* Form Fields */
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .field-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--side-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .input, .select {
+      height: var(--control-h);
+      padding: 0 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--rule-strong);
+      background: var(--surface);
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: 13px;
+      transition: border-color 120ms var(--ease);
+      outline: none;
+    }
+    .input:focus, .select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    .sidebar .input, .sidebar .select {
+      background: var(--side-field);
+      border-color: var(--side-field-line);
+      color: var(--side-ink);
+    }
+    .sidebar .input:focus, .sidebar .select:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 1px var(--gold);
+    }
+
+    /* Main Grid Layout */
+    .app-layout {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 24px 20px;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    @media (max-width: 960px) {
+      .app-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Left Panel: Class Schedule Manager */
+    .sidebar {
+      background: var(--side-bg);
+      color: var(--side-ink);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-raised);
+    }
+    .sidebar-header {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--side-field-line);
+    }
+    .sidebar-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--side-ink);
+      margin: 0 0 4px 0;
+    }
+    .sidebar-desc {
+      font-size: 12px;
+      color: var(--side-muted);
+      margin: 0;
+    }
+    .sidebar-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .day-pills-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+    .day-pill-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 0;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--side-field-line);
+      background: var(--side-field);
+      color: var(--side-muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      transition: all 120ms var(--ease);
+    }
+    .day-pill-btn:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--side-ink);
+    }
+    .day-pill-btn.active {
+      background: var(--gold);
+      color: var(--on-gold);
+      border-color: var(--gold);
+    }
+
+    /* Current Classes Section */
+    .classes-manager {
+      margin-top: 10px;
+      border-top: 1px solid var(--side-field-line);
+      padding-top: 16px;
+    }
+    .classes-manager-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .classes-manager-head h4 {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--side-ink);
+      text-transform: uppercase;
+      margin: 0;
+      letter-spacing: 0.05em;
+    }
+    .class-item-card {
+      background: var(--side-field);
+      border: 1px solid var(--side-field-line);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .class-item-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+    .class-item-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--side-ink);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .class-item-meta {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--side-muted);
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .delete-btn {
+      background: transparent;
+      border: none;
+      color: var(--side-muted);
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 2px 6px;
+      line-height: 1;
+      border-radius: var(--radius-sm);
+    }
+    .delete-btn:hover {
+      color: var(--bad);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Right Panel: Radar & Club Events */
+    .main-surface {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Hero Radar Banner */
+    .radar-banner {
+      background: var(--surface);
+      border: 1px solid var(--ok);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .radar-header {
+      background: var(--ok-tint);
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--ok);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .radar-title {
+      font-family: var(--font-display);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--ok-ink);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+    }
+    .radar-pill {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      background: var(--ok);
+      color: var(--on-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .radar-content {
+      padding: 16px 18px;
+    }
+    .radar-event-card {
+      background: var(--paper);
+      border: 1px solid var(--rule);
+      border-left: 4px solid var(--ok);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .radar-event-card:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Filter Toolbar */
+    .filter-panel {
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .filter-controls-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 768px) {
+      .filter-controls-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .filter-toggles-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 20px;
+      padding-top: 8px;
+      border-top: 1px solid var(--rule);
+    }
+    .toggle-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-soft);
+      cursor: pointer;
+      user-select: none;
+    }
+    .toggle-label input[type="checkbox"] {
+      width: 15px;
+      height: 15px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    /* Events List & Cards */
+    .events-stream {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .event-card {
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+      box-shadow: var(--shadow);
+      transition: border-color 120ms var(--ease), box-shadow 120ms var(--ease);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .event-card:hover {
+      border-color: var(--rule-strong);
+      box-shadow: var(--shadow-raised);
+    }
+    .event-card.has-conflict {
+      border-left: 4px solid var(--bad);
+      background: var(--paper);
+    }
+    .event-card-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .event-meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .time-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: var(--radius-sm);
+      background: var(--sunk);
+      color: var(--ink);
+      border: 1px solid var(--rule);
+      font-variant-numeric: tabular-nums;
+    }
+    .category-badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: var(--radius-sm);
+      background: var(--info-tint);
+      color: var(--info);
+      border: 1px solid var(--info);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    .live-badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      background: var(--ok);
+      color: var(--on-accent);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .soon-badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      background: var(--gold-tint);
+      color: var(--gold-text);
+      border: 1px solid var(--gold-rule);
+    }
+    .event-title {
+      font-family: var(--font-display);
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--ink);
+      margin: 0;
+    }
+    .event-club-loc {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+    .status-badge.available {
+      background: var(--ok-tint);
+      color: var(--ok-ink);
+      border: 1px solid var(--ok);
+    }
+    .status-badge.conflict {
+      background: var(--bad-tint);
+      color: var(--bad-ink);
+      border: 1px solid var(--bad-rule);
+    }
+    .event-desc {
+      font-size: 13px;
+      color: var(--ink-soft);
+      line-height: 1.5;
+      padding-top: 8px;
+      border-top: 1px solid var(--rule);
+      margin: 0;
+    }
+    .empty-state {
+      background: var(--surface);
+      border: 1px dashed var(--rule-strong);
+      border-radius: var(--radius-md);
+      padding: 32px 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    /* Monokai Black & Forest palette from &edu Studio */
+    :root:not([data-theme="light"]), :root[data-theme="light"] {
+      color-scheme: dark;
+      --font-display: 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace;
+      --font-mono: 'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace;
+
+      --brand: #161616;
+      --brand-strong: #121212;
+      --brand-ink: #f4f7f5;
+      --brand-ink-soft: #b9c2bd;
+      --brand-hover: rgba(230, 235, 231, 0.07);
+      --brand-line: #282828;
+      --side-bg: #161616;
+      --side-ink: #f4f7f5;
+      --side-muted: #9eada5;
+      --side-hover: rgba(230, 235, 231, 0.05);
+      --side-active: #1e1e1e;
+      --side-field: #121212;
+      --side-field-line: #282828;
+
+      --accent: #23a55a;
+      --accent-hover: #2ecc71;
+      --accent-press: #188347;
+      --accent-tint: #142a21;
+      --accent-tint-2: #1f3d30;
+      --on-accent: #f4f7f5;
+      --gold: #e5b85c;
+      --gold-text: #e5b85c;
+      --gold-tint: #2a2416;
+      --gold-rule: #5b4b2b;
+      --on-gold: #17110a;
+
+      --paper: #121212;
+      --surface: #1a1a1a;
+      --sunk: #1e1e1e;
+      --code-bg: #121212;
+      --ink: #f4f7f5;
+      --ink-soft: #cfd9d3;
+      --muted: #9eada5;
+      --rule: #282828;
+      --rule-strong: #383838;
+
+      --ok: #23a55a;
+      --ok-tint: #142a21;
+      --ok-ink: #bfe3d2;
+      --bad: #e27f72;
+      --bad-tint: #2c1714;
+      --bad-ink: #f3bdb4;
+      --bad-rule: #5a2b25;
+      --info: #66d9ef;
+      --info-tint: #13212a;
+
+      --radius-sm: 3px;
+      --radius-md: 5px;
+      --radius-lg: 6px;
+      --grid: rgba(230, 235, 231, 0.025);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.24);
+      --shadow-raised: 0 6px 18px rgba(0, 0, 0, 0.32);
+    }
+
+    body {
+      font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    .brand-title, .brand-tag, .clock-chip, .btn, .field-label,
+    .classes-manager-head h4, .class-item-meta, .day-pill-btn,
+    .radar-pill, .toggle-label, .time-badge, .category-badge,
+    .live-badge, .soon-badge, .status-badge {
+      font-family: var(--font-mono);
+    }
+
+    .sidebar, .radar-banner, .filter-panel, .event-card, .empty-state {
+      box-shadow: var(--shadow);
+    }
+
+    .event-card:hover {
+      box-shadow: var(--shadow-raised);
+    }
+  </style>
+</head>
+<body>
+  <!-- Masthead -->
+  <header class="masthead">
+    <div class="masthead-inner">
+      <div class="brand-wrap">
+        <span class="brand-mark">&amp;</span>
+        <div class="brand-title">
+          <span>.events</span>
+          <span class="brand-tag">Campus Radar</span>
+        </div>
+      </div>
+
+      <div class="masthead-right">
+        <!-- Live 24-hour clock -->
+        <div class="clock-chip">
+          <span class="pulse-dot"></span>
+          <span id="liveClockDisplay">--:--:--</span>
+          <span id="liveDayDisplay" style="color: var(--brand-ink-soft); font-weight: 400;">---</span>
+        </div>
+
+        <!-- Hackathon Demo Override -->
+        <label class="toggle-label" style="color: var(--brand-ink-soft); font-size: 11px;">
+          <input type="checkbox" id="simToggle" onchange="toggleDemoMode()">
+          <span>Hackathon Demo Override</span>
+        </label>
+
+        <div id="demoControls" style="display: none; align-items: center; gap: 6px;">
+          <select id="simDay" class="select" style="height: 28px; padding: 0 6px; font-size: 11px; font-family: var(--font-mono); background: var(--brand); color: var(--brand-ink); border-color: var(--brand-line);" onchange="loadAll()">
+            <option value="0">Mon</option>
+            <option value="1">Tue</option>
+            <option value="2">Wed</option>
+            <option value="3">Thu</option>
+            <option value="4">Fri</option>
+            <option value="5">Sat</option>
+            <option value="6">Sun</option>
+          </select>
+          <input type="time" id="simTime" value="17:15" class="input" style="height: 28px; padding: 0 6px; font-size: 11px; font-family: var(--font-mono); background: var(--brand); color: var(--brand-ink); border-color: var(--brand-line);" onchange="loadAll()">
+        </div>
+
+        <!-- Theme Toggle Button -->
+        <button type="button" class="btn btn-quiet" onclick="toggleTheme()" title="Toggle Theme" style="padding: 0 8px; min-height: 28px;">
+          <span id="themeIcon">🌓</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main class="app-layout">
+    <!-- LEFT PANEL: Class Schedule Manager -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2 class="sidebar-title">Class Schedule</h2>
+        <p class="sidebar-desc">Add your weekly lectures to detect conflicts automatically.</p>
+      </div>
+
+      <div class="sidebar-body">
+        <form id="classForm" onsubmit="submitClass(event)" style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="field-group">
+            <label class="field-label" for="courseName">Course Name</label>
+            <input type="text" id="courseName" class="input" required placeholder="e.g. CSCI 241: Data Structures">
+          </div>
+
+          <div class="field-group">
+            <span class="field-label">Days of Week</span>
+            <div class="day-pills-grid" id="dayPills">
+              <div class="day-pill-btn active" data-day="0" onclick="toggleDayPill(this)">Mon</div>
+              <div class="day-pill-btn" data-day="1" onclick="toggleDayPill(this)">Tue</div>
+              <div class="day-pill-btn active" data-day="2" onclick="toggleDayPill(this)">Wed</div>
+              <div class="day-pill-btn" data-day="3" onclick="toggleDayPill(this)">Thu</div>
+              <div class="day-pill-btn active" data-day="4" onclick="toggleDayPill(this)">Fri</div>
+              <div class="day-pill-btn" data-day="5" onclick="toggleDayPill(this)">Sat</div>
+              <div class="day-pill-btn" data-day="6" onclick="toggleDayPill(this)">Sun</div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="field-group">
+              <label class="field-label" for="classStart">Start (24h)</label>
+              <input type="time" id="classStart" class="input" required value="14:00" style="font-family: var(--font-mono);">
+            </div>
+            <div class="field-group">
+              <label class="field-label" for="classEnd">End (24h)</label>
+              <input type="time" id="classEnd" class="input" required value="15:15" style="font-family: var(--font-mono);">
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="classLoc">Location (Optional)</label>
+            <input type="text" id="classLoc" class="input" placeholder="e.g. Jones Hall 301">
+          </div>
+
+          <button type="submit" class="btn btn-gold" style="width: 100%; margin-top: 4px;">
+            + Save to Class Schedule
+          </button>
+        </form>
+
+        <!-- Active Classes List -->
+        <div class="classes-manager">
+          <div class="classes-manager-head">
+            <h4>Active Classes</h4>
+            <button type="button" class="btn-danger-quiet" onclick="clearAllClasses()">Clear All</button>
+          </div>
+          <div id="classList"></div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT PANEL: Radar & Events -->
+    <section class="main-surface">
+      <!-- "Attend Right Now / Starting in 60m" Hero Banner -->
+      <div class="radar-banner">
+        <div class="radar-header">
+          <h3 class="radar-title">
+            <span style="color: var(--gold); font-family: var(--font-display); font-size: 20px;">&amp;</span>
+            <span>Attend Right Now / Starting in 60m</span>
+          </h3>
+          <span id="radarTimePill" class="radar-pill">Radar Scanning...</span>
+        </div>
+        <div class="radar-content" id="radarBanner">
+          <p style="margin: 0; color: var(--muted); font-size: 13px;">Checking radar status…</p>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-panel">
+        <div class="filter-controls-grid">
+          <div class="field-group">
+            <label class="field-label" for="searchInput">Search Radar</label>
+            <input type="text" id="searchInput" class="input" placeholder="Title, club, or hall..." oninput="loadEvents()">
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="dayFilter">Day</label>
+            <select id="dayFilter" class="select" onchange="loadEvents()" style="font-family: var(--font-mono);">
+              <option value="">All Days</option>
+              <option value="0">Monday</option>
+              <option value="1">Tuesday</option>
+              <option value="2">Wednesday</option>
+              <option value="3">Thursday</option>
+              <option value="4">Friday</option>
+              <option value="5">Saturday</option>
+              <option value="6">Sunday</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label class="field-label" for="categoryFilter">Category</label>
+            <select id="categoryFilter" class="select" onchange="loadEvents()">
+              <option value="ALL">All Categories</option>
+              <option value="Tech">Tech</option>
+              <option value="Academic">Academic</option>
+              <option value="Sports">Sports</option>
+              <option value="Gaming">Gaming</option>
+              <option value="Social">Social</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="filter-toggles-row">
+          <label class="toggle-label" style="color: var(--ok-ink); font-weight: 700;">
+            <input type="checkbox" id="onlyNowFilter" onchange="loadEvents()">
+            <span>Can Attend Right Now</span>
+          </label>
+
+          <label class="toggle-label">
+            <input type="checkbox" id="hideConflictsFilter" onchange="loadEvents()">
+            <span>Hide Class Conflicts</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Events Stream (Daily Schedule Cards) -->
+      <div class="events-stream" id="eventsContainer"></div>
+    </section>
+  </main>
+
+  <script>
+    const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const SHORT_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function toggleTheme() {
+      const current = document.documentElement.dataset.theme;
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = next;
+      localStorage.setItem('andedu_lab_theme', next);
+    }
+
+    function toggleDayPill(el) {
+      el.classList.toggle('active');
+    }
+
+    function toggleDemoMode() {
+      const isSim = document.getElementById("simToggle").checked;
+      const controls = document.getElementById("demoControls");
+      controls.style.display = isSim ? "inline-flex" : "none";
+      loadAll();
+    }
+
+    function getSimulatedState() {
+      const isSim = document.getElementById("simToggle").checked;
+      if (isSim) {
+        return {
+          isSim: true,
+          day: parseInt(document.getElementById("simDay").value, 10),
+          time: document.getElementById("simTime").value
+        };
+      }
+      const now = new Date();
+      const jsDay = now.getDay();
+      const pythonDay = (jsDay + 6) % 7;
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      return {
+        isSim: false,
+        day: pythonDay,
+        time: `${hh}:${mm}`
+      };
+    }
+
+    function updateLiveClock() {
+      const now = new Date();
+      const isSim = document.getElementById("simToggle").checked;
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const ss = String(now.getSeconds()).padStart(2, '0');
+      const pythonDay = (now.getDay() + 6) % 7;
+
+      if (!isSim) {
+        document.getElementById("liveClockDisplay").textContent = `${hh}:${mm}:${ss}`;
+        document.getElementById("liveDayDisplay").textContent = `${SHORT_DAYS[pythonDay]}`;
+      } else {
+        const simDay = parseInt(document.getElementById("simDay").value, 10);
+        const simTime = document.getElementById("simTime").value;
+        document.getElementById("liveClockDisplay").textContent = `${simTime}:00 [SIM]`;
+        document.getElementById("liveDayDisplay").textContent = `${SHORT_DAYS[simDay]}`;
+      }
+    }
+    setInterval(updateLiveClock, 1000);
+    updateLiveClock();
+
+    async function loadClasses() {
+      try {
+        const res = await fetch("/api/classes");
+        const classes = await res.json();
+        const container = document.getElementById("classList");
+        if (!classes.length) {
+          container.innerHTML = `<div style="font-size: 12px; color: var(--side-muted); text-align: center; padding: 12px 0;">No classes registered yet.</div>`;
+          return;
+        }
+
+        container.innerHTML = DAYS.map((dayName, dayIndex) => {
+          const dayClasses = classes.filter(c => c.day_of_week === dayIndex);
+          if (!dayClasses.length) return "";
+          return `
+            <div style="margin-bottom: 10px;">
+              <div style="font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--gold); text-transform: uppercase; margin-bottom: 4px;">${dayName}</div>
+              ${dayClasses.map(c => `
+                <div class="class-item-card">
+                  <div class="class-item-info">
+                    <div class="class-item-name">${escapeHtml(c.course_name)}</div>
+                    <div class="class-item-meta">
+                      <span>${escapeHtml(c.start_time)}–${escapeHtml(c.end_time)}</span>
+                      <span>•</span>
+                      <span>📍 ${escapeHtml(c.location || "TBA")}</span>
+                    </div>
+                  </div>
+                  <button type="button" class="delete-btn" onclick="deleteClass(${c.id})" title="Delete class">×</button>
+                </div>
+              `).join("")}
+            </div>
+          `;
+        }).join("");
+      } catch (err) {
+        console.error("Failed to load classes:", err);
+      }
+    }
+
+    async function loadEvents() {
+      try {
+        const state = getSimulatedState();
+        const params = new URLSearchParams();
+
+        const day = document.getElementById("dayFilter").value;
+        const category = document.getElementById("categoryFilter").value;
+        const search = document.getElementById("searchInput").value.trim();
+        const hideConflicts = document.getElementById("hideConflictsFilter").checked;
+        const onlyNow = document.getElementById("onlyNowFilter").checked;
+
+        if (day !== "") params.set("day", day);
+        if (category && category !== "ALL") params.set("category", category);
+        if (search) params.set("search", search);
+        if (hideConflicts) params.set("hide_conflicts", "true");
+        if (onlyNow) params.set("only_now", "true");
+
+        if (state.isSim) {
+          params.set("sim_day", String(state.day));
+          params.set("sim_time", state.time);
+        }
+
+        // 1. Fetch filtered events
+        const res = await fetch(`/api/events?${params.toString()}`);
+        const events = await res.json();
+
+        // 2. Fetch radar banner events
+        const radarParams = new URLSearchParams();
+        if (state.isSim) {
+          radarParams.set("sim_day", String(state.day));
+          radarParams.set("sim_time", state.time);
+        }
+        const radarRes = await fetch(`/api/events?${radarParams.toString()}`);
+        const allRadarEvents = await radarRes.json();
+        const radarAttending = allRadarEvents.filter(ev => ev.can_attend_now);
+
+        document.getElementById("radarTimePill").textContent = `${SHORT_DAYS[state.day]} @ ${state.time}`;
+
+        const banner = document.getElementById("radarBanner");
+        if (radarAttending.length) {
+          banner.innerHTML = radarAttending.map(ev => {
+            const statusLabel = ev.is_happening_now ? "🔥 HAPPENING NOW" : "⏱️ STARTS SOON (<60m)";
+            return `
+              <div class="radar-event-card">
+                <div>
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+                    <span class="live-badge">${statusLabel}</span>
+                    <strong style="font-family: var(--font-display); font-size: 15px; color: var(--ink);">${escapeHtml(ev.title)}</strong>
+                  </div>
+                  <div style="font-size: 12px; color: var(--muted); font-family: var(--font-mono);">
+                    <span>${escapeHtml(ev.club_name)}</span> • <span>${escapeHtml(ev.start_time)}–${escapeHtml(ev.end_time)}</span> • <span>📍 ${escapeHtml(ev.location)}</span>
+                  </div>
+                </div>
+                <span class="status-badge available">Ready to Attend</span>
+              </div>
+            `;
+          }).join("");
+        } else {
+          banner.innerHTML = `
+            <p style="margin: 0; color: var(--muted); font-size: 13px;">
+              No conflict-free events are live or starting within 60 minutes for this time window.
+            </p>
+          `;
+        }
+
+        // Render Daily Schedule Cards
+        const container = document.getElementById("eventsContainer");
+        if (!events.length) {
+          container.innerHTML = `
+            <div class="empty-state">
+              No club events match the selected filters or search terms.
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = events.map(ev => {
+          const statusBadge = ev.has_conflict
+            ? `<span class="status-badge conflict">Conflicts with ${escapeHtml(ev.conflicting_course)}</span>`
+            : `<span class="status-badge available">Available</span>`;
+
+          const liveBadge = ev.is_happening_now
+            ? `<span class="live-badge">LIVE NOW</span>`
+            : ev.starts_soon
+            ? `<span class="soon-badge">Starts &lt; 60m</span>`
+            : "";
+
+          return `
+            <div class="event-card ${ev.has_conflict ? 'has-conflict' : ''}">
+              <div class="event-card-top">
+                <div>
+                  <div class="event-meta-row">
+                    <span class="time-badge">${DAYS[ev.day_of_week]} • ${escapeHtml(ev.start_time)}–${escapeHtml(ev.end_time)}</span>
+                    <span class="category-badge">${escapeHtml(ev.category)}</span>
+                    ${liveBadge}
+                  </div>
+                  <h3 class="event-title">${escapeHtml(ev.title)}</h3>
+                  <div class="event-club-loc">
+                    <strong>${escapeHtml(ev.club_name)}</strong>
+                    <span>•</span>
+                    <span>📍 ${escapeHtml(ev.location)}</span>
+                  </div>
+                </div>
+                <div>${statusBadge}</div>
+              </div>
+              ${ev.description ? `<p class="event-desc">${escapeHtml(ev.description)}</p>` : ""}
+            </div>
+          `;
+        }).join("");
+
+      } catch (err) {
+        console.error("Failed to load events:", err);
+      }
+    }
+
+    async function submitClass(e) {
+      e.preventDefault();
+      const activePills = Array.from(document.querySelectorAll("#dayPills .day-pill-btn.active"));
+      if (!activePills.length) {
+        alert("Please select at least one day pill for your class.");
+        return;
+      }
+      const days = activePills.map(p => parseInt(p.dataset.day, 10));
+
+      const payload = {
+        course_name: document.getElementById("courseName").value.trim(),
+        days: days,
+        start_time: document.getElementById("classStart").value,
+        end_time: document.getElementById("classEnd").value,
+        location: document.getElementById("classLoc").value.trim() || "TBA"
+      };
+
+      try {
+        const res = await fetch("/api/classes/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          alert(err.detail || "Failed to add class");
+          return;
+        }
+
+        document.getElementById("courseName").value = "";
+        document.getElementById("classLoc").value = "";
+        document.querySelectorAll("#dayPills .day-pill-btn").forEach(p => p.classList.remove("active"));
+        document.querySelectorAll('#dayPills .day-pill-btn[data-day="0"], #dayPills .day-pill-btn[data-day="2"], #dayPills .day-pill-btn[data-day="4"]').forEach(p => p.classList.add("active"));
+        await loadAll();
+      } catch (err) {
+        alert("Network error submitting class");
+      }
+    }
+
+    async function deleteClass(id) {
+      try {
+        await fetch(`/api/classes/${id}`, { method: "DELETE" });
+        await loadAll();
+      } catch (err) {
+        console.error("Failed to delete class:", err);
+      }
+    }
+
+    async function clearAllClasses() {
+      if (!confirm("Are you sure you want to clear all active classes?")) return;
+      try {
+        await fetch("/api/classes", { method: "DELETE" });
+        await loadAll();
+      } catch (err) {
+        console.error("Failed to clear classes:", err);
+      }
+    }
+
+    async function loadAll() {
+      await loadClasses();
+      await loadEvents();
+    }
+
+    loadAll();
+  </script>
+</body>
+</html>
