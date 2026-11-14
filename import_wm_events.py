@@ -22,23 +22,29 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
-from wm_data import ICalendarError, ensure_schema, import_calendar
+from wm_data import (
+    ALLOWED_HOSTS,
+    ICalendarError,
+    MAX_ICAL_BYTES,
+    ensure_schema,
+    import_calendar,
+    is_allowed_feed_url,
+)
 
 HOST = "events.wm.edu"
 DIRECTORY = f"https://{HOST}/search/all_calendars"
-MAX_BYTES = 15 * 1024 * 1024
+MAX_BYTES = MAX_ICAL_BYTES
 USER_AGENT = "WMEventsLocalImporter/1.0 (public calendar feed importer)"
+DEFAULT_DISCOVERY_FEEDS = [
+    ("tribelink", "TribeLink Campus Events", "https://tribelink.wm.edu/events.ics"),
+    ("wm-main", "William & Mary Master Calendar", "https://events.wm.edu/calendar/upcoming_ical/wm"),
+]
 
 
 class SameHostRedirects(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        parsed = urlparse(newurl)
-        try:
-            safe_port = parsed.port in (None, 443)
-        except ValueError:
-            safe_port = False
-        if parsed.scheme != "https" or parsed.hostname != HOST or not safe_port:
-            raise URLError("refused redirect away from events.wm.edu HTTPS")
+        if not is_allowed_feed_url(newurl):
+            raise URLError(f"refused redirect away from allowed W&M HTTPS feeds: {newurl}")
         return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
@@ -81,15 +87,15 @@ def _same_host_https(url: str) -> bool:
 
 
 def _get(url: str, delay: float) -> tuple[bytes, str]:
-    if not _same_host_https(url):
+    if not is_allowed_feed_url(url):
         raise ValueError(f"refused non-W&M HTTPS URL: {url}")
     if delay:
         time.sleep(delay)
     req = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,text/calendar,*/*"})
     with build_opener(SameHostRedirects()).open(req, timeout=20) as response:
         final_url = response.geturl()
-        if not _same_host_https(final_url):
-            raise ValueError(f"refused final URL outside events.wm.edu: {final_url}")
+        if not is_allowed_feed_url(final_url):
+            raise ValueError(f"refused final URL outside allowed W&M hosts: {final_url}")
         data = response.read(MAX_BYTES + 1)
         if len(data) > MAX_BYTES:
             raise ValueError(f"response exceeded {MAX_BYTES} bytes")
@@ -98,6 +104,15 @@ def _get(url: str, delay: float) -> tuple[bytes, str]:
 
 def _decode(data: bytes) -> str:
     return data.decode("utf-8-sig", errors="strict")
+
+
+def _read_local_feed(path: Path, max_bytes: int = MAX_BYTES) -> str:
+    """Read a saved feed without allowing it to exceed the live-feed cap."""
+    with path.open("rb") as feed:
+        data = feed.read(max_bytes + 1)
+    if len(data) > max_bytes:
+        raise ValueError(f"file exceeded {max_bytes} bytes")
+    return _decode(data)
 
 
 def _calendar_pages(html: str, base: str) -> list[tuple[str, str, str]]:
@@ -127,11 +142,22 @@ def _feed_links(html: str, base: str) -> list[str]:
     parser.feed(html)
     found: list[str] = []
     for link in parser.links:
-        url = urljoin(base, link["href"])
-        if not _same_host_https(url):
+        raw_href = link.get("href", "").strip()
+        if not raw_href:
             continue
-        searchable = " ".join((link.get(k, "") for k in ("href", "text", "title", "aria-label"))).lower()
-        if re.search(r"(?:\.ics(?:$|[?#])|ical|i-calendar|export)", searchable):
+        url = urljoin(base, raw_href)
+        if not is_allowed_feed_url(url):
+            continue
+        parsed = urlparse(url)
+        url_lower = url.lower()
+        path_lower = parsed.path.lower()
+        is_ics_ext = path_lower.endswith(".ics") or re.search(r"\.ics(?:$|[?#])", url_lower) is not None
+        is_ical_route = (
+            "/upcoming_ical/" in path_lower
+            or "/view_ical/" in path_lower
+            or "format=ics" in url_lower
+        )
+        if is_ics_ext or is_ical_route:
             if url not in found:
                 found.append(url)
     return found
@@ -140,15 +166,26 @@ def _feed_links(html: str, base: str) -> list[str]:
 def discover_and_import(conn: sqlite3.Connection, delay: float = 1.0) -> tuple[int, int]:
     """Attempt public directory discovery; return (successful feeds, failures)."""
     successes = failures = 0
+    # First, import default discovery feeds
+    for slug, name, feed_url in DEFAULT_DISCOVERY_FEEDS:
+        try:
+            feed_data, _ = _get(feed_url, delay)
+            result = import_calendar(conn, slug, name, _decode(feed_data))
+            successes += 1
+            print(f"IMPORTED {slug}: {result['seen']} events ({feed_url})")
+        except Exception as exc:
+            failures += 1
+            print(f"INACCESSIBLE/UNRECOGNIZED: {slug} feed {feed_url}: {exc}", file=sys.stderr)
+
     try:
         directory_data, _ = _get(DIRECTORY, delay)
         pages = _calendar_pages(_decode(directory_data), DIRECTORY)
         if not pages:
             print(f"UNRECOGNIZED: no same-host calendar page links found at {DIRECTORY}", file=sys.stderr)
-            return 0, 1
+            return successes, failures + 1
     except Exception as exc:
         print(f"INACCESSIBLE: directory {DIRECTORY}: {exc}", file=sys.stderr)
-        return 0, 1
+        return successes, failures + 1
 
     print(f"Discovered {len(pages)} candidate calendar pages from {DIRECTORY}.")
     for slug, name, page_url in pages:
@@ -215,7 +252,7 @@ def main(argv: list[str] | None = None) -> int:
             continue
         path = Path(filename).expanduser()
         try:
-            content = _decode(path.read_bytes())
+            content = _read_local_feed(path)
             count = import_calendar(conn, slug.strip(), slug.strip(), content)
             successes += 1
             print(f"IMPORTED {slug.strip()}: {count['seen']} events from {path}")

@@ -1,7 +1,8 @@
 import os
 import json
+import re
 import sqlite3
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -9,7 +10,54 @@ from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-from wm_data import ensure_schema
+from wm_data import ensure_schema, normalize_wm_location
+
+TAG_KEYWORDS: dict[str, list[str]] = {
+    "CS": ["cs", "csci", "computer", "software", "code", "coding", "linux", "kernel", "ai", "machine learning", "hardware", "robotics", "cybersecurity", "web", "hackathon"],
+    "DATA": ["data", "analytics", "statistics", "math", "datascience", "dataset", "database", "sql"],
+    "PHIL": ["phil", "philosophy", "ethics", "logic", "socrates", "epistemology"],
+    "ART": ["art", "arts", "painting", "drawing", "music", "theater", "theatre", "design", "creative", "craft", "choir", "band", "orchestra"],
+    "BIOL": ["biol", "biology", "bio", "wildlife", "botany", "genetics", "ecology", "pre-med"],
+    "BUSINESS": ["business", "finance", "economics", "econ", "consulting", "marketing", "entrepreneurship", "management", "mba"],
+    "SPORTS": ["sports", "recreation", "rec", "swim", "polo", "soccer", "basketball", "volleyball", "running", "fitness", "climbing", "tennis"],
+    "WELLNESS": ["wellness", "mindfulness", "health", "meditation", "yoga", "stress", "mental health"],
+}
+
+
+def match_tags(event_data: dict[str, Any], student_tags: list[str]) -> list[str]:
+    if not student_tags:
+        return []
+    cats = event_data.get("categories") or []
+    if isinstance(cats, str):
+        try:
+            cats = json.loads(cats)
+        except Exception:
+            cats = [cats]
+    corpus = " ".join([
+        str(event_data.get("title") or ""),
+        str(event_data.get("club_name") or ""),
+        str(event_data.get("category") or ""),
+        str(event_data.get("summary") or ""),
+        str(event_data.get("description") or ""),
+        str(event_data.get("location") or ""),
+        " ".join(cats) if isinstance(cats, list) else str(cats),
+    ]).lower()
+
+    matched: list[str] = []
+    for tag in student_tags:
+        tag_clean = tag.strip().lstrip("#").upper()
+        if not tag_clean:
+            continue
+        tag_lower = tag_clean.lower()
+        if re.search(r"\b" + re.escape(tag_lower) + r"\b", corpus):
+            matched.append(f"#{tag_clean}")
+            continue
+        keywords = TAG_KEYWORDS.get(tag_clean, [])
+        for kw in keywords:
+            if re.search(r"\b" + re.escape(kw) + r"\b", corpus):
+                matched.append(f"#{tag_clean}")
+                break
+    return matched
 
 # Content directory configuration matching &EDU db.py pattern
 CONTENT_ROOT = Path(os.environ.get("SCIEDU_CONTENT_DIR") or Path(__file__).resolve().parent)
@@ -236,11 +284,31 @@ def get_events(
 def get_now_and_next(
     sim_day: Optional[int] = Query(None, ge=0, le=6),
     sim_time: Optional[str] = Query(None, pattern=r"^([01]\d|2[0-3]):([0-5]\d)$"),
+    tags: Optional[str] = Query(None),
 ):
-    now = datetime.now()
-    current_day = sim_day if sim_day is not None else now.weekday()
-    current_time = sim_time if sim_time else now.strftime("%H:%M")
+    now_campus = datetime.now(CAMPUS_TZ)
+    current_day = sim_day if sim_day is not None else now_campus.weekday()
+    current_time = sim_time if sim_time else now_campus.strftime("%H:%M")
     curr_mins = time_to_minutes(current_time)
+
+    # Date anchor for dated W&M events:
+    day_diff = current_day - now_campus.weekday()
+    current_date = now_campus.date() + timedelta(days=day_diff)
+    today_d = current_date
+    today_iso = current_date.isoformat()
+
+    h, m = map(int, current_time.split(":"))
+    now_dt = datetime(current_date.year, current_date.month, current_date.day, h, m, 0, tzinfo=CAMPUS_TZ)
+    now_iso = now_dt.isoformat()
+    in_3h_dt = now_dt + timedelta(hours=3)
+    in_3h_iso = in_3h_dt.isoformat()
+
+    student_tags: list[str] = []
+    if tags:
+        for t in re.split(r"[,\s]+", tags):
+            clean = t.strip().lstrip("#").upper()
+            if clean:
+                student_tags.append(clean)
 
     conn = get_db()
     cur = conn.cursor()
@@ -267,11 +335,16 @@ def get_now_and_next(
         (current_day,),
     )
     events = [dict(r) for r in cur.fetchall()]
+
+    # Query dated wm_events
+    cur.execute("SELECT * FROM wm_events ORDER BY start_at ASC")
+    all_wm_rows = [dict(r) for r in cur.fetchall()]
     conn.close()
 
     happening_now = []
     starting_soon = []
     upcoming_today = []
+    wm_processed = []
 
     for ev in events:
         ev_start = time_to_minutes(ev["start_time"])
@@ -284,16 +357,84 @@ def get_now_and_next(
                 break
         ev["has_conflict"] = conflict_course is not None
         ev["conflicting_course"] = conflict_course
+        ev["matched_tags"] = match_tags(ev, student_tags)
 
         if ev_start <= curr_mins <= ev_end:
             ev["minutes_remaining"] = ev_end - curr_mins
+            ev["status_label"] = f"In Session · {ev_end - curr_mins}m left"
             happening_now.append(ev)
         elif 0 < (ev_start - curr_mins) <= 180:
             ev["starts_in_minutes"] = ev_start - curr_mins
+            ev["status_label"] = f"Starts in {ev_start - curr_mins}m"
             starting_soon.append(ev)
         elif ev_start > curr_mins:
             ev["starts_in_minutes"] = ev_start - curr_mins
+            ev["status_label"] = f"Starts in {ev_start - curr_mins}m"
             upcoming_today.append(ev)
+
+    for r in all_wm_rows:
+        try:
+            r["categories"] = json.loads(r["categories"]) if isinstance(r["categories"], str) else (r["categories"] or [])
+        except Exception:
+            r["categories"] = []
+        r["is_all_day"] = bool(r["is_all_day"])
+
+        if r["is_all_day"]:
+            try:
+                ev_start_d = date.fromisoformat(r["start_at"][:10])
+                ev_end_d = date.fromisoformat(r["end_at"][:10]) if r.get("end_at") else (ev_start_d + timedelta(days=1))
+                if not (ev_start_d <= today_d < ev_end_d):
+                    continue
+            except Exception:
+                continue
+            r["status_label"] = "All Day Today"
+            r["is_wm_event"] = True
+            r["has_conflict"] = False
+            r["conflicting_course"] = None
+            r["matched_tags"] = match_tags(r, student_tags)
+            happening_now.append(r)
+            wm_processed.append(r)
+        else:
+            try:
+                st = datetime.fromisoformat(r["start_at"].replace("Z", "+00:00")).astimezone(CAMPUS_TZ)
+                en = datetime.fromisoformat(r["end_at"].replace("Z", "+00:00")).astimezone(CAMPUS_TZ) if r.get("end_at") else st
+            except Exception:
+                continue
+
+            is_active = (st <= now_dt < en)
+            is_soon = (st > now_dt and (st - now_dt).total_seconds() <= 3 * 3600 and st.date() == today_d)
+            if not (is_active or is_soon):
+                continue
+
+            r["is_wm_event"] = True
+            r["matched_tags"] = match_tags(r, student_tags)
+
+            # Conflict check with today's classes
+            r["has_conflict"] = False
+            r["conflicting_course"] = None
+            ev_start_str = st.strftime("%H:%M")
+            ev_end_str = en.strftime("%H:%M")
+            for cl in classes:
+                if ev_start_str < cl["end_time"] and ev_end_str > cl["start_time"]:
+                    r["has_conflict"] = True
+                    r["conflicting_course"] = cl["course_name"]
+                    break
+
+            if is_active:
+                if (en.date() - st.date()).days >= 1:
+                    r["status_label"] = "Ongoing"
+                else:
+                    m_left = max(0, int((en - now_dt).total_seconds() / 60))
+                    r["status_label"] = f"In Session · {m_left}m left"
+                    r["minutes_remaining"] = m_left
+                happening_now.append(r)
+            elif is_soon:
+                m_start = max(0, int((st - now_dt).total_seconds() / 60))
+                r["status_label"] = f"Starts in {m_start}m"
+                r["starts_in_minutes"] = m_start
+                starting_soon.append(r)
+
+            wm_processed.append(r)
 
     days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     return {
@@ -306,6 +447,7 @@ def get_now_and_next(
         "happening_now": happening_now,
         "starting_soon": starting_soon,
         "upcoming_today": upcoming_today,
+        "wm_events": wm_processed,
     }
 
 
@@ -550,9 +692,11 @@ def check_creator_conflicts(
     loc_clash = False
     clash_event_title = None
     if location and location.strip():
-        loc_clean = location.strip().lower()
+        norm_requested = normalize_wm_location(location).strip().lower()
         for ev in competing_events:
-            if ev.get("location") and ev["location"].strip().lower() == loc_clean:
+            ev_loc = ev.get("location") or ""
+            norm_ev_loc = normalize_wm_location(ev_loc).strip().lower()
+            if norm_ev_loc and norm_ev_loc == norm_requested:
                 loc_clash = True
                 clash_event_title = ev["title"]
                 break

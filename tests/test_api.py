@@ -168,6 +168,55 @@ class TestCampusScheduleAPI(unittest.TestCase):
         now_titles = [e["title"] for e in data["happening_now"]]
         self.assertTrue(any("Kernel" in t for t in now_titles))
 
+    def test_08_now_and_next_with_tags_and_wm_events(self):
+        from datetime import datetime, timedelta, timezone as dt_tz
+        from zoneinfo import ZoneInfo
+        campus_tz = ZoneInfo("America/New_York")
+        now_campus = datetime.now(campus_tz)
+        mon_date = now_campus.date() + timedelta(days=(0 - now_campus.weekday()))
+        st_utc = datetime(mon_date.year, mon_date.month, mon_date.day, 17, 0, tzinfo=campus_tz).astimezone(dt_tz.utc).isoformat()
+        en_utc = datetime(mon_date.year, mon_date.month, mon_date.day, 18, 30, tzinfo=campus_tz).astimezone(dt_tz.utc).isoformat()
+
+        conn = get_db()
+        conn.execute(
+            """INSERT OR REPLACE INTO wm_events (uid, title, summary, description, start_at, end_at, timezone, location, source_url, categories, is_all_day)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                "test-wm-utc-now",
+                "Machine Learning & Data Science Colloquium",
+                "Advanced AI seminar",
+                "Neural networks and transformers.",
+                st_utc,
+                en_utc,
+                "UTC",
+                "ISC 1127",
+                "https://events.wm.edu",
+                '["Technology", "Computer Science"]',
+                0,
+            ),
+        )
+        conn.commit()
+        conn.close()
+
+        # Query with sim time matching Monday 17:15 EST and student tags CS,DATA
+        res = client.get("/api/now-and-next?sim_day=0&sim_time=17:15&tags=CS,DATA")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+
+        # Should match our UTC event despite stored +00:00 offset
+        happening = data["happening_now"]
+        ml_ev = next((e for e in happening if e.get("uid") == "test-wm-utc-now"), None)
+        self.assertIsNotNone(ml_ev)
+        self.assertEqual(ml_ev["status_label"], "In Session · 75m left")
+        self.assertIn("#CS", ml_ev["matched_tags"])
+        self.assertIn("#DATA", ml_ev["matched_tags"])
+
+        # Clean up
+        conn = get_db()
+        conn.execute("DELETE FROM wm_events WHERE uid = ?", ("test-wm-utc-now",))
+        conn.commit()
+        conn.close()
+
 
 if __name__ == "__main__":
     unittest.main()

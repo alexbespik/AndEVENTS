@@ -187,11 +187,6 @@
       <span class="brand-mark">.events</span>
     </button>
 
-    <button type="button" class="mode only-narrow" id="mobileSidebarToggle" aria-label="Toggle schedule panel" onclick="toggleSidebar()">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-      <span>Classes</span>
-    </button>
-
     <nav class="modes" aria-label="View Modes">
       <button type="button" class="mode" id="tabLive" aria-pressed="true" onclick="switchMode('live')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
@@ -217,136 +212,186 @@
         <span id="liveDayDisplay" style="color: var(--brand-ink-soft); margin-left: 4px;">---</span>
       </div>
 
-      <!-- Preview time controls -->
-      <label class="conn" style="cursor: pointer; font-size: 0.78rem;">
-        <input type="checkbox" id="simToggle" onchange="toggleDemoMode()" style="cursor: pointer;">
-        <span>Preview time</span>
-      </label>
+      <!-- Corner Three-line Menu for Settings & Appearance (matches &EDU Navbar) -->
+      <div class="mode-group" style="position: relative;">
+        <button type="button" class="btn btn-quiet btn-sm" id="cornerMenuBtn" aria-expanded="false" aria-haspopup="true" onclick="toggleCornerMenu()" title="Preferences &amp; Settings" style="color: var(--brand-ink); border-color: var(--brand-line); width: 34px; height: 34px; padding: 0; min-height: 34px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+          <span class="visually-hidden">Menu</span>
+        </button>
 
-      <div id="demoControls" style="display: none; align-items: center; gap: 4px;">
-        <select id="simDay" class="select" style="height: 28px; padding: 0 4px; font-size: 0.75rem; font-family: var(--font-mono); background: var(--brand); color: var(--brand-ink); border-color: var(--brand-line);" onchange="loadAll()">
-          <option value="0">Mon</option>
-          <option value="1">Tue</option>
-          <option value="2">Wed</option>
-          <option value="3">Thu</option>
-          <option value="4">Fri</option>
-          <option value="5">Sat</option>
-          <option value="6">Sun</option>
-        </select>
-        <input type="time" id="simTime" value="17:15" class="input" style="height: 28px; width: 85px; padding: 0 4px; font-size: 0.75rem; font-family: var(--font-mono); background: var(--brand); color: var(--brand-ink); border-color: var(--brand-line);" onchange="loadAll()">
-      </div>
+        <div id="cornerMenuDropdown" class="menu mode-pop-right" style="display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 50; min-width: 260px; padding: var(--space-3); background: var(--surface); border: 1px solid var(--rule-strong); border-radius: var(--radius); box-shadow: var(--shadow-raised);">
+          <div style="font-family: var(--font-mono); font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Appearance</div>
+          <div class="theme-switch" role="group" aria-label="Color theme" style="width: 100%; display: flex; justify-content: space-between; border-color: var(--rule); margin-bottom: var(--space-3);">
+            <button type="button" id="themeBtnSystem" style="flex: 1; justify-content: center; color: var(--ink-soft);" title="System theme" onclick="setTheme('system')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+              <span>Auto</span>
+            </button>
+            <button type="button" id="themeBtnLight" style="flex: 1; justify-content: center; color: var(--ink-soft);" title="Light theme" onclick="setTheme('light')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+              <span>Light</span>
+            </button>
+            <button type="button" id="themeBtnDark" style="flex: 1; justify-content: center; color: var(--ink-soft);" title="Dark theme" onclick="setTheme('dark')">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+              <span>Dark</span>
+            </button>
+          </div>
 
-      <!-- AndEDU Theme Switcher -->
-      <div class="theme-switch" role="group" aria-label="Color theme">
-        <button type="button" id="themeBtnSystem" title="System theme" onclick="setTheme('system')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-          <span class="visually-hidden">System</span>
-        </button>
-        <button type="button" id="themeBtnLight" title="Light theme" onclick="setTheme('light')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-          <span class="visually-hidden">Light</span>
-        </button>
-        <button type="button" id="themeBtnDark" title="Dark theme" onclick="setTheme('dark')">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-          <span class="visually-hidden">Dark</span>
-        </button>
+          <div style="font-family: var(--font-mono); font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Simulation</div>
+          <div style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2); background: var(--sunk); border-radius: var(--radius-sm); margin-bottom: var(--space-3);">
+            <label class="conn" style="cursor: pointer; font-size: 0.8rem; color: var(--ink);">
+              <input type="checkbox" id="simToggle" onchange="toggleDemoMode()" style="cursor: pointer;">
+              <span>Preview simulated time</span>
+            </label>
+            <div id="demoControls" style="display: none; align-items: center; gap: 6px; margin-top: 4px;">
+              <select id="simDay" class="select" style="height: 28px; padding: 0 4px; font-size: 0.75rem; font-family: var(--font-mono);" onchange="loadAll()">
+                <option value="0">Mon</option>
+                <option value="1">Tue</option>
+                <option value="2">Wed</option>
+                <option value="3">Thu</option>
+                <option value="4">Fri</option>
+                <option value="5">Sat</option>
+                <option value="6">Sun</option>
+              </select>
+              <input type="time" id="simTime" value="17:15" class="input" style="height: 28px; width: 85px; padding: 0 4px; font-size: 0.75rem; font-family: var(--font-mono);" onchange="loadAll()">
+            </div>
+          </div>
+
+          <div style="font-family: var(--font-mono); font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Preferences &amp; Schedule</div>
+          <button type="button" class="btn btn-quiet btn-sm" onclick="closeCornerMenu(); openFiltersModal();" style="width: 100%; justify-content: flex-start;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+            <span>Open Schedule &amp; Preferences</span>
+          </button>
+        </div>
       </div>
     </div>
   </header>
 
-  <!-- Workspace: L-frame (Sidebar + Main) -->
-  <div class="workspace">
-    <!-- Backdrop scrim for mobile drawer -->
-    <div id="sidebarScrim" class="agy-scrim" style="display:none;" onclick="toggleSidebar(false)"></div>
-
-    <!-- Deep Griffin Green Sidebar (#0b3b2c) -->
-    <nav id="appSidebar" class="sidebar" aria-label="Student Class Timetable">
-      <!-- Search in Directory + Filters Button -->
-      <div class="sidebar-search">
-        <div style="display: flex; gap: var(--space-2); align-items: center;">
-          <label for="searchInput" class="visually-hidden">Search clubs and events</label>
-          <input id="searchInput" class="input" type="search" placeholder="Search events..." oninput="handleSearchInput()" style="flex: 1;" />
-          <button type="button" class="btn btn-quiet btn-sm" id="toggleFiltersBtn" onclick="toggleSidebarFilters()" title="Toggle directory filters" style="color: var(--side-ink); border-color: var(--side-field-line); min-height: var(--control-h); padding: 0 var(--space-3); gap: 4px;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-            <span>Filters</span>
-          </button>
-        </div>
+  <!-- Clean Filters Modal Dialog -->
+  <dialog id="filtersModal" class="filters-modal" aria-labelledby="filtersModalTitle">
+    <div class="filters-modal-inner">
+      <div class="filters-modal-head">
+        <h3 id="filtersModalTitle">Filters &amp; Schedule</h3>
+        <button type="button" class="btn btn-quiet btn-sm" onclick="closeFiltersModal()" aria-label="Close dialog" style="font-size: 1.1rem; min-height: 28px; width: 28px; padding: 0;">✕</button>
       </div>
 
-      <!-- Collapsible Filters Section (Clean & uncluttered) -->
-      <div id="sidebarFiltersSection" class="sidebar-group" style="display: none; border-bottom: 1px solid var(--side-field-line); padding-bottom: var(--space-3);">
-        <h3>Filters</h3>
-        <div class="folder-pill-row" style="margin-bottom: var(--space-3);">
-          <button type="button" class="folder-pill active" id="dayPillAll" onclick="setQuickDayFilter('')">All</button>
-          <button type="button" class="folder-pill" id="dayPill0" onclick="setQuickDayFilter('0')">Mon</button>
-          <button type="button" class="folder-pill" id="dayPill1" onclick="setQuickDayFilter('1')">Tue</button>
-          <button type="button" class="folder-pill" id="dayPill2" onclick="setQuickDayFilter('2')">Wed</button>
-          <button type="button" class="folder-pill" id="dayPill3" onclick="setQuickDayFilter('3')">Thu</button>
-          <button type="button" class="folder-pill" id="dayPill4" onclick="setQuickDayFilter('4')">Fri</button>
-          <button type="button" class="folder-pill" id="dayPill5" onclick="setQuickDayFilter('5')">Sat</button>
-          <button type="button" class="folder-pill" id="dayPill6" onclick="setQuickDayFilter('6')">Sun</button>
+      <div class="filters-modal-body">
+        <!-- Search -->
+        <div class="field">
+          <label for="searchInput">Search campus &amp; club events</label>
+          <input id="searchInput" class="input" type="search" placeholder="Search by title, club, room..." oninput="handleSearchInput()" />
         </div>
 
-        <select id="categoryFilter" class="select" style="background: var(--side-field); border-color: var(--side-field-line); color: var(--side-ink); margin-bottom: var(--space-2);" onchange="loadEvents()">
-          <option value="ALL">All Categories</option>
-          <option value="Academic">Academic</option>
-          <option value="Technology">Technology</option>
-          <option value="Arts">Arts</option>
-          <option value="Sports">Sports</option>
-          <option value="Social">Social</option>
-          <option value="Service">Service</option>
-        </select>
-
-        <label class="conn" style="color: var(--side-ink); cursor: pointer; font-size: 0.82rem;">
-          <input type="checkbox" id="hideConflictsFilter" onchange="loadEvents()" style="cursor: pointer;">
-          <span>Hide my class conflicts</span>
-        </label>
-      </div>
-
-      <!-- Class Schedule Manager (Compact & Collapsible) -->
-      <div class="sidebar-classes">
-        <div class="sidebar-classes-head">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <h3>Your classes</h3>
-            <span id="classCountBadge" class="chip" style="font-size: 0.72rem; padding: 1px 6px; background: var(--side-field); color: var(--side-muted); border-color: var(--side-field-line);">0</span>
-          </div>
-          <div style="display: flex; gap: 4px;">
-            <button type="button" id="toggleAddClassBtn" class="btn btn-quiet btn-sm" onclick="toggleAddClassForm()" style="color: var(--side-ink); border-color: var(--side-field-line); font-size: 0.72rem; min-height: 22px; padding: 0 6px;">+ Add</button>
-            <button type="button" class="btn btn-quiet btn-sm" onclick="clearAllClasses()" style="color: var(--side-muted); border-color: var(--side-field-line); font-size: 0.72rem; min-height: 22px; padding: 0 6px;">Clear</button>
+        <!-- Quick Day Filters -->
+        <div class="field">
+          <label>Filter by day</label>
+          <div class="folder-pill-row">
+            <button type="button" class="folder-pill active" id="dayPillAll" onclick="setQuickDayFilter('')">All</button>
+            <button type="button" class="folder-pill" id="dayPill0" onclick="setQuickDayFilter('0')">Mon</button>
+            <button type="button" class="folder-pill" id="dayPill1" onclick="setQuickDayFilter('1')">Tue</button>
+            <button type="button" class="folder-pill" id="dayPill2" onclick="setQuickDayFilter('2')">Wed</button>
+            <button type="button" class="folder-pill" id="dayPill3" onclick="setQuickDayFilter('3')">Thu</button>
+            <button type="button" class="folder-pill" id="dayPill4" onclick="setQuickDayFilter('4')">Fri</button>
+            <button type="button" class="folder-pill" id="dayPill5" onclick="setQuickDayFilter('5')">Sat</button>
+            <button type="button" class="folder-pill" id="dayPill6" onclick="setQuickDayFilter('6')">Sun</button>
           </div>
         </div>
 
-        <!-- Collapsible Add Class Form -->
-        <div id="classAddFormWrap" style="display: none; padding-top: var(--space-2); border-top: 1px dashed var(--side-field-line);">
-          <form id="classForm" onsubmit="submitClass(event)" style="display: flex; flex-direction: column; gap: var(--space-2);">
-            <div class="field">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); align-items: end;">
+          <div class="field">
+            <label for="categoryFilter">Category</label>
+            <select id="categoryFilter" class="select" onchange="loadEvents(); updateFilterBadge();">
+              <option value="ALL">All Categories</option>
+              <option value="Academic">Academic</option>
+              <option value="Technology">Technology</option>
+              <option value="Arts">Arts</option>
+              <option value="Sports">Sports</option>
+              <option value="Social">Social</option>
+              <option value="Service">Service</option>
+            </select>
+          </div>
+
+          <label class="conn" style="cursor: pointer; font-size: 0.84rem; padding-bottom: 8px;">
+            <input type="checkbox" id="hideConflictsFilter" onchange="loadEvents(); updateFilterBadge();" style="cursor: pointer;">
+            <span>Hide class conflicts</span>
+          </label>
+        </div>
+
+        <!-- Your Tags & Interests Section -->
+        <div class="field" style="border-top: 1px solid var(--rule); padding-top: var(--space-3);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label style="font-weight: 700;">Your Tags / Interests</label>
+            <span class="hint" style="font-size: 0.78rem;">Saved in browser</span>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: var(--space-2);" id="interestPresetChips">
+            <button type="button" class="interest-chip" data-tag="#CS" onclick="toggleInterestTag('#CS')">#CS</button>
+            <button type="button" class="interest-chip" data-tag="#DATA" onclick="toggleInterestTag('#DATA')">#DATA</button>
+            <button type="button" class="interest-chip" data-tag="#PHIL" onclick="toggleInterestTag('#PHIL')">#PHIL</button>
+            <button type="button" class="interest-chip" data-tag="#ART" onclick="toggleInterestTag('#ART')">#ART</button>
+            <button type="button" class="interest-chip" data-tag="#BIOL" onclick="toggleInterestTag('#BIOL')">#BIOL</button>
+            <button type="button" class="interest-chip" data-tag="#BUSINESS" onclick="toggleInterestTag('#BUSINESS')">#BUSINESS</button>
+            <button type="button" class="interest-chip" data-tag="#SPORTS" onclick="toggleInterestTag('#SPORTS')">#SPORTS</button>
+            <button type="button" class="interest-chip" data-tag="#WELLNESS" onclick="toggleInterestTag('#WELLNESS')">#WELLNESS</button>
+          </div>
+
+          <!-- Custom tag input -->
+          <div style="display: flex; gap: 6px; margin-top: 4px;">
+            <input type="text" id="customTagInput" class="input" placeholder="Add custom tag (e.g. #CHESS or AI)..." style="min-height: 30px; font-size: 0.82rem;" onkeydown="if(event.key==='Enter'){event.preventDefault();addCustomTag();}">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="addCustomTag()" style="min-height: 30px;">+ Add Tag</button>
+          </div>
+          <div id="activeTagsRow" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;"></div>
+        </div>
+
+        <!-- Class Schedule Manager -->
+        <div class="field" style="border-top: 1px solid var(--rule); padding-top: var(--space-3);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <label style="font-weight: 700;">Enrolled Classes</label>
+              <span id="classCountBadge" class="chip" style="font-size: 0.72rem; padding: 1px 6px;">0</span>
+            </div>
+            <div style="display: flex; gap: 4px;">
+              <button type="button" id="toggleAddClassBtn" class="btn btn-quiet btn-sm" onclick="toggleAddClassForm()" style="font-size: 0.74rem; min-height: 24px; padding: 0 8px;">+ Add Class</button>
+              <button type="button" class="btn btn-quiet btn-sm" onclick="clearAllClasses()" style="font-size: 0.74rem; min-height: 24px; padding: 0 8px; color: var(--bad-ink);">Clear</button>
+            </div>
+          </div>
+
+          <div id="classAddFormWrap" style="display: none; padding: var(--space-3); background: var(--sunk); border-radius: var(--radius-sm); margin-bottom: var(--space-2);">
+            <form id="classForm" onsubmit="submitClass(event)" style="display: flex; flex-direction: column; gap: var(--space-2);">
               <input type="text" id="courseName" class="input" style="min-height: 30px; font-size: 0.82rem;" required placeholder="e.g. CSCI 241: Data Structures">
-            </div>
-            <div class="folder-pill-row" id="dayPills" role="group" aria-label="Days of class">
-              <label class="folder-pill"><input type="checkbox" name="days" value="0" checked><span>M</span></label>
-              <label class="folder-pill"><input type="checkbox" name="days" value="1"><span>T</span></label>
-              <label class="folder-pill"><input type="checkbox" name="days" value="2" checked><span>W</span></label>
-              <label class="folder-pill"><input type="checkbox" name="days" value="3"><span>R</span></label>
-              <label class="folder-pill"><input type="checkbox" name="days" value="4" checked><span>F</span></label>
-              <label class="folder-pill"><input type="checkbox" name="days" value="5"><span>S</span></label>
-              <label class="folder-pill"><input type="checkbox" name="days" value="6"><span>U</span></label>
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-              <input type="time" id="classStart" class="input" style="min-height: 30px; font-size: 0.82rem;" value="14:00" required>
-              <input type="time" id="classEnd" class="input" style="min-height: 30px; font-size: 0.82rem;" value="15:15" required>
-            </div>
-            <input type="text" id="classLoc" class="input" style="min-height: 30px; font-size: 0.82rem;" placeholder="Location (e.g. Jones 301)">
-            <button type="submit" class="btn btn-gold btn-sm" style="font-weight: 600; width: 100%;">Save to Schedule</button>
-          </form>
-        </div>
+              <div class="folder-pill-row" id="dayPills" role="group" aria-label="Days of class">
+                <label class="folder-pill"><input type="checkbox" name="days" value="0" checked><span>M</span></label>
+                <label class="folder-pill"><input type="checkbox" name="days" value="1"><span>T</span></label>
+                <label class="folder-pill"><input type="checkbox" name="days" value="2" checked><span>W</span></label>
+                <label class="folder-pill"><input type="checkbox" name="days" value="3"><span>R</span></label>
+                <label class="folder-pill"><input type="checkbox" name="days" value="4" checked><span>F</span></label>
+                <label class="folder-pill"><input type="checkbox" name="days" value="5"><span>S</span></label>
+                <label class="folder-pill"><input type="checkbox" name="days" value="6"><span>U</span></label>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                <input type="time" id="classStart" class="input" style="min-height: 30px; font-size: 0.82rem;" value="14:00" required>
+                <input type="time" id="classEnd" class="input" style="min-height: 30px; font-size: 0.82rem;" value="15:15" required>
+              </div>
+              <input type="text" id="classLoc" class="input" style="min-height: 30px; font-size: 0.82rem;" placeholder="Location (e.g. Jones 301)">
+              <button type="submit" class="btn btn-gold btn-sm" style="font-weight: 600; width: 100%;">Save to Schedule</button>
+            </form>
+          </div>
 
-        <!-- Enrolled Classes List -->
-        <div id="classList" style="max-height: 280px; overflow-y: auto; margin-top: var(--space-1);">
-          <!-- Dynamic classes loaded here -->
+          <div id="classList" style="max-height: 180px; overflow-y: auto;"></div>
         </div>
       </div>
-    </nav>
 
+      <div class="filters-modal-foot">
+        <button type="button" class="btn btn-quiet btn-sm" onclick="resetAllFilters()">Reset Filters</button>
+        <button type="button" class="btn btn-gold btn-sm" onclick="closeFiltersModal()">Apply &amp; Close</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Workspace: 100% full width with zero sidebar clutter -->
+  <div class="workspace no-sidebar">
     <!-- Main Workspace Area with Stone Paper and Faint 32px Grid Background -->
     <main class="main">
       <div class="page page-wide">
@@ -370,6 +415,24 @@
           <!-- Schedule status -->
           <div id="studentStatusBox" class="notice notice-ok">
             <strong>Your Schedule:</strong> <span id="studentStatusText">Checking schedule...</span>
+          </div>
+
+          <!-- Interests / Tags Strip & Recommended Filter -->
+          <div class="panel" style="padding: var(--space-3) var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;">
+              <span style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; color: var(--ink);">Your Interests:</span>
+              <div id="frontPageTagsList" style="display: inline-flex; gap: 6px; flex-wrap: wrap;"></div>
+              <button type="button" class="btn btn-quiet btn-sm" onclick="openFiltersModal('tags')" style="padding: 0 10px; min-height: 26px; font-size: 0.78rem; font-family: var(--font-ui); font-weight: 600;">
+                + Edit
+                <span id="activeFilterBadge" class="filter-count-badge" style="display: none; margin-left: 4px;">0</span>
+              </button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <button type="button" id="recommendedOnlyBtn" class="btn btn-quiet btn-sm" onclick="toggleRecommendedFilter()">
+                <span style="color: var(--gold-text); font-weight: 700;">★</span>
+                <span>Recommended for You</span>
+              </button>
+            </div>
           </div>
 
           <!-- Section: Happening Right Now -->
@@ -397,6 +460,24 @@
 
         <!-- VIEW 2: Directory Mode (Searchable full catalog) -->
         <div id="viewDirectory" class="stack view-container" style="display: none;">
+          <!-- Interests / Recommended Filter for Directory -->
+          <div class="panel" style="padding: var(--space-3) var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;">
+              <span style="font-family: var(--font-mono); font-size: 0.82rem; font-weight: 700; color: var(--ink);">Your Interests:</span>
+              <div id="dirPageTagsList" style="display: inline-flex; gap: 6px; flex-wrap: wrap;"></div>
+              <button type="button" class="btn btn-quiet btn-sm" onclick="openFiltersModal('tags')" style="padding: 0 10px; min-height: 26px; font-size: 0.78rem; font-family: var(--font-ui); font-weight: 600;">
+                + Edit
+                <span id="dirActiveFilterBadge" class="filter-count-badge" style="display: none; margin-left: 4px;">0</span>
+              </button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span id="directoryActiveFiltersSummary" class="chip" style="font-size: 0.76rem;">All Events</span>
+              <button type="button" id="dirRecommendedOnlyBtn" class="btn btn-quiet btn-sm" onclick="toggleRecommendedFilter()">
+                <span style="color: var(--gold-text); font-weight: 700;">★</span>
+                <span>Recommended for You</span>
+              </button>
+            </div>
+          </div>
           <!-- W&M Feeds Section -->
           <div class="panel">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-3); border-bottom: 1px solid var(--rule); padding-bottom: var(--space-2);">
@@ -532,6 +613,8 @@
     const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     const SHORT_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     const THEME_KEY = 'andedu_lab_theme';
+    const PRESET_TAGS = ["#CS", "#DATA", "#PHIL", "#ART", "#BIOL", "#BUSINESS", "#SPORTS", "#WELLNESS"];
+    let recommendedOnly = false;
 
     // Theme Switcher matching AndEDU ThemeSwitch.jsx
     function getTheme() {
@@ -558,14 +641,6 @@
 
     applyTheme(getTheme());
 
-    function toggleSidebar(forceState) {
-      const sidebar = document.getElementById("appSidebar");
-      const scrim = document.getElementById("sidebarScrim");
-      const isOpen = forceState !== undefined ? forceState : !sidebar.classList.contains("open");
-      sidebar.classList.toggle("open", isOpen);
-      scrim.style.display = isOpen ? "block" : "none";
-    }
-
     function escapeHtml(str) {
       if (!str) return "";
       return String(str)
@@ -574,6 +649,257 @@
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+    }
+
+    // Modal controls for clean no-sidebar workspace
+    function toggleCornerMenu() {
+      const menu = document.getElementById("cornerMenuDropdown");
+      const btn = document.getElementById("cornerMenuBtn");
+      if (!menu) return;
+      const isClosed = menu.style.display === "none";
+      menu.style.display = isClosed ? "flex" : "none";
+      if (btn) btn.setAttribute("aria-expanded", isClosed ? "true" : "false");
+    }
+
+    function closeCornerMenu() {
+      const menu = document.getElementById("cornerMenuDropdown");
+      const btn = document.getElementById("cornerMenuBtn");
+      if (menu) menu.style.display = "none";
+      if (btn) btn.setAttribute("aria-expanded", "false");
+    }
+
+    function openFiltersModal(focusSection) {
+      const modal = document.getElementById("filtersModal");
+      if (modal) {
+        modal.showModal();
+        if (focusSection === "tags") {
+          const input = document.getElementById("customTagInput");
+          if (input) setTimeout(() => input.focus(), 60);
+        }
+      }
+    }
+
+    function closeFiltersModal() {
+      const modal = document.getElementById("filtersModal");
+      if (modal) modal.close();
+    }
+
+    // Backdrop click closes dialog
+    document.addEventListener("DOMContentLoaded", () => {
+      const modal = document.getElementById("filtersModal");
+      if (modal) {
+        modal.addEventListener("click", (e) => {
+          if (e.target === modal) modal.close();
+        });
+      }
+      document.addEventListener("click", (e) => {
+        const menu = document.getElementById("cornerMenuDropdown");
+        const btn = document.getElementById("cornerMenuBtn");
+        if (menu && menu.style.display !== "none" && !menu.contains(e.target) && !btn.contains(e.target)) {
+          closeCornerMenu();
+        }
+      });
+    });
+
+    // Student Tags / Interests feature
+    function getStudentTags() {
+      try {
+        const raw = localStorage.getItem("student_interest_tags");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {}
+      return ["#CS", "#DATA"];
+    }
+
+    function saveStudentTags(tags) {
+      try {
+        localStorage.setItem("student_interest_tags", JSON.stringify(tags));
+      } catch (e) {}
+      renderTagsUI();
+      loadAll();
+    }
+
+    function toggleInterestTag(tag) {
+      let tags = getStudentTags();
+      if (tags.includes(tag)) {
+        tags = tags.filter(t => t !== tag);
+      } else {
+        tags.push(tag);
+      }
+      saveStudentTags(tags);
+    }
+
+    function addCustomTag() {
+      const input = document.getElementById("customTagInput");
+      let val = input.value.trim();
+      if (!val) return;
+      if (!val.startsWith("#")) val = "#" + val.toUpperCase();
+      else val = "#" + val.substring(1).toUpperCase();
+      let tags = getStudentTags();
+      if (!tags.includes(val)) {
+        tags.push(val);
+        saveStudentTags(tags);
+      }
+      input.value = "";
+    }
+
+    function removeTag(tag) {
+      let tags = getStudentTags().filter(t => t !== tag);
+      saveStudentTags(tags);
+    }
+
+    function toggleRecommendedFilter() {
+      recommendedOnly = !recommendedOnly;
+      const btns = [document.getElementById("recommendedOnlyBtn"), document.getElementById("dirRecommendedOnlyBtn")];
+      btns.forEach(btn => {
+        if (btn) {
+          btn.classList.toggle("btn-gold", recommendedOnly);
+          btn.classList.toggle("btn-quiet", !recommendedOnly);
+        }
+      });
+      updateFilterBadge();
+      loadNowAndNext();
+      loadEvents();
+      loadWmEvents();
+    }
+
+    function renderTagsUI() {
+      const tags = getStudentTags();
+
+      const chips = document.querySelectorAll("#interestPresetChips .interest-chip");
+      chips.forEach(chip => {
+        const tag = chip.dataset.tag;
+        chip.classList.toggle("active", tags.includes(tag));
+      });
+
+      const activeRow = document.getElementById("activeTagsRow");
+      if (activeRow) {
+        activeRow.innerHTML = tags.map(t => `
+          <span class="chip" style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600; background: var(--gold-tint); border-color: var(--gold-rule); color: var(--gold-text);">
+            ${escapeHtml(t)}
+            <button type="button" data-tag="${escapeHtml(t)}" onclick="removeTag(this.dataset.tag)" style="background:none;border:none;cursor:pointer;font-weight:700;margin-left:4px;color:var(--gold-text);" title="Remove tag">×</button>
+          </span>
+        `).join("");
+      }
+
+      const renderTagChips = (tagList) => tagList.map(t => `
+        <span class="chip" style="font-family: var(--font-mono); font-size: 0.76rem; font-weight: 600; background: var(--accent-tint); color: var(--ok-ink); border-color: var(--accent-tint-2);">
+          ${escapeHtml(t)}
+        </span>
+      `).join("");
+
+      const frontList = document.getElementById("frontPageTagsList");
+      if (frontList) {
+        frontList.innerHTML = renderTagChips(tags);
+      }
+      const dirList = document.getElementById("dirPageTagsList");
+      if (dirList) {
+        dirList.innerHTML = renderTagChips(tags);
+      }
+    }
+
+    const TAG_KEYWORDS = {
+      "CS": ["cs", "csci", "computer", "software", "code", "coding", "linux", "kernel", "ai", "machine learning", "hardware", "robotics", "cybersecurity", "web", "hackathon"],
+      "DATA": ["data", "analytics", "statistics", "math", "datascience", "dataset", "database", "sql"],
+      "PHIL": ["phil", "philosophy", "ethics", "logic", "socrates", "epistemology"],
+      "ART": ["art", "arts", "painting", "drawing", "music", "theater", "theatre", "design", "creative", "craft", "choir", "band", "orchestra"],
+      "BIOL": ["biol", "biology", "bio", "wildlife", "botany", "genetics", "ecology", "pre-med"],
+      "BUSINESS": ["business", "finance", "economics", "econ", "consulting", "marketing", "entrepreneurship", "management", "mba"],
+      "SPORTS": ["sports", "recreation", "rec", "swim", "polo", "soccer", "basketball", "volleyball", "running", "fitness", "climbing", "tennis"],
+      "WELLNESS": ["wellness", "mindfulness", "health", "meditation", "yoga", "stress", "mental health"]
+    };
+
+    function escapeRegex(str) {
+      return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function matchClientTags(ev, tags) {
+      if (!tags || !tags.length) return [];
+      const corpus = [
+        ev.title || "",
+        ev.club_name || "",
+        ev.category || "",
+        ev.summary || "",
+        ev.description || "",
+        ev.location || "",
+        Array.isArray(ev.categories) ? ev.categories.join(" ") : (ev.categories || "")
+      ].join(" ").toLowerCase();
+
+      const matched = [];
+      for (const rawTag of tags) {
+        const tag = rawTag.replace(/^#/, "").toUpperCase();
+        if (!tag) continue;
+        const tagLower = tag.toLowerCase();
+        const tagPattern = new RegExp(`(^|\\W)${escapeRegex(tagLower)}($|\\W)`, "i");
+        if (tagPattern.test(corpus)) {
+          matched.push("#" + tag);
+          continue;
+        }
+        const kws = TAG_KEYWORDS[tag] || [];
+        for (const kw of kws) {
+          const kwPattern = new RegExp(`(^|\\W)${escapeRegex(kw.toLowerCase())}($|\\W)`, "i");
+          if (kwPattern.test(corpus)) {
+            matched.push("#" + tag);
+            break;
+          }
+        }
+      }
+      return matched;
+    }
+
+    function updateFilterBadge() {
+      let count = 0;
+      const search = (document.getElementById("searchInput")?.value || "").trim();
+      if (search) count++;
+      if (activeQuickDay !== "") count++;
+      const cat = document.getElementById("categoryFilter")?.value;
+      if (cat && cat !== "ALL") count++;
+      const hideConf = document.getElementById("hideConflictsFilter")?.checked;
+      if (hideConf) count++;
+      if (recommendedOnly) count++;
+
+      const badges = [document.getElementById("activeFilterBadge"), document.getElementById("dirActiveFilterBadge")];
+      badges.forEach(badge => {
+        if (badge) {
+          badge.textContent = count;
+          badge.style.display = count > 0 ? "inline-flex" : "none";
+        }
+      });
+      const summary = document.getElementById("directoryActiveFiltersSummary");
+      if (summary) {
+        const parts = [];
+        if (activeQuickDay !== "") parts.push(DAYS[parseInt(activeQuickDay, 10)]);
+        if (cat && cat !== "ALL") parts.push(cat);
+        if (hideConf) parts.push("Free slots only");
+        if (recommendedOnly) parts.push("Recommended");
+        if (search) parts.push(`"${search}"`);
+        summary.textContent = parts.length ? parts.join(" · ") : "All Events";
+      }
+    }
+
+    function resetAllFilters() {
+      const searchInput = document.getElementById("searchInput");
+      if (searchInput) searchInput.value = "";
+      activeQuickDay = "";
+      document.querySelectorAll(".folder-pill-row .folder-pill").forEach(btn => btn.classList.remove("active"));
+      const allPill = document.getElementById("dayPillAll");
+      if (allPill) allPill.classList.add("active");
+      const catFilter = document.getElementById("categoryFilter");
+      if (catFilter) catFilter.value = "ALL";
+      const hideConf = document.getElementById("hideConflictsFilter");
+      if (hideConf) hideConf.checked = false;
+      recommendedOnly = false;
+      const btns = [document.getElementById("recommendedOnlyBtn"), document.getElementById("dirRecommendedOnlyBtn")];
+      btns.forEach(btn => {
+        if (btn) {
+          btn.classList.remove("btn-gold");
+          btn.classList.add("btn-quiet");
+        }
+      });
+      updateFilterBadge();
+      loadAll();
     }
 
     let activeQuickDay = "";
@@ -585,18 +911,9 @@
       const targetId = dayVal === "" ? "dayPillAll" : `dayPill${dayVal}`;
       const target = document.getElementById(targetId);
       if (target) target.classList.add("active");
+      updateFilterBadge();
       loadEvents();
-    }
-
-    function toggleSidebarFilters() {
-      const section = document.getElementById("sidebarFiltersSection");
-      const btn = document.getElementById("toggleFiltersBtn");
-      const isHidden = section.style.display === "none";
-      section.style.display = isHidden ? "block" : "none";
-      if (btn) {
-        btn.classList.toggle("btn-gold", isHidden);
-        btn.classList.toggle("btn-quiet", !isHidden);
-      }
+      loadWmEvents();
     }
 
     function toggleAddClassForm() {
@@ -605,17 +922,18 @@
       const isHidden = formWrap.style.display === "none";
       formWrap.style.display = isHidden ? "block" : "none";
       if (btn) {
-        btn.textContent = isHidden ? "Close" : "+ Add";
+        btn.textContent = isHidden ? "Close" : "+ Add Class";
       }
     }
 
     function handleSearchInput() {
-      // If searching while on live view, auto-switch to directory to browse
+      updateFilterBadge();
       const currentTab = document.querySelector(".modes button[aria-pressed='true']");
       if (currentTab && currentTab.id === "tabLive" && document.getElementById("searchInput").value.trim()) {
         switchMode("directory");
       } else {
         loadEvents();
+        loadWmEvents();
       }
     }
 
@@ -666,7 +984,6 @@
         subtitle.textContent = "Browse club meetings and William & Mary events. Add your classes to check for time conflicts.";
         loadEvents();
       }
-      toggleSidebar(false);
     }
 
     function toggleDemoMode() {
@@ -777,6 +1094,10 @@
           params.set("sim_day", String(state.day));
           params.set("sim_time", state.time);
         }
+        const studentTags = getStudentTags();
+        if (studentTags.length) {
+          params.set("tags", studentTags.map(t => t.replace("#", "")).join(","));
+        }
 
         const res = await fetch(`/api/now-and-next?${params.toString()}`);
         const data = await res.json();
@@ -795,41 +1116,58 @@
           statusText.textContent = "Free for the rest of today. No further classes scheduled.";
         }
 
+        let happening = data.happening_now || [];
+        let soon = data.starting_soon || [];
+
+        if (recommendedOnly) {
+          happening = happening.filter(ev => ev.matched_tags && ev.matched_tags.length > 0);
+          soon = soon.filter(ev => ev.matched_tags && ev.matched_tags.length > 0);
+        }
+
         // 2. Render Happening Right Now
         const nowBadge = document.getElementById("nowCountBadge");
         const nowContainer = document.getElementById("nowEventsContainer");
-        nowBadge.textContent = `${data.happening_now.length} happening now`;
+        nowBadge.textContent = `${happening.length} happening now`;
 
-        if (!data.happening_now.length) {
+        if (!happening.length) {
           nowContainer.innerHTML = `
             <div class="panel" style="padding: var(--space-4); text-align: center; color: var(--muted);">
-              No club sessions in progress right now.
+              ${recommendedOnly ? "No events matching your tags are in session right now." : "No club or campus sessions in progress right now."}
             </div>
           `;
         } else {
-          nowContainer.innerHTML = data.happening_now.map(ev => {
+          nowContainer.innerHTML = happening.map(ev => {
             const conflictNote = ev.has_conflict
               ? `<span class="status-note conflict">Class Conflict: ${escapeHtml(ev.conflicting_course)}</span>`
               : `<span class="status-note free">No class conflict</span>`;
+
+            const tagPill = (ev.matched_tags && ev.matched_tags.length)
+              ? `<span class="tag-match-pill">Recommended · ${escapeHtml(ev.matched_tags.join(" "))}</span>`
+              : "";
+
+            const statusLabel = ev.status_label || (ev.minutes_remaining ? `In Session · ${ev.minutes_remaining}m left` : (ev.is_all_day ? "All Day Today" : "In Session"));
 
             return `
               <div class="live-event-card in-session ${ev.has_conflict ? 'has-conflict' : ''}">
                 <div class="live-event-head">
                   <div>
-                    <h3 class="live-event-title">${escapeHtml(ev.title)}</h3>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                      <h3 class="live-event-title">${escapeHtml(ev.title)}</h3>
+                      ${tagPill}
+                    </div>
                     <div class="live-event-meta" style="margin-top: 4px;">
-                      <span class="chip" style="font-weight: 600;">${escapeHtml(ev.club_name)}</span>
-                      <span class="chip">${escapeHtml(ev.category)}</span>
-                      <span>${escapeHtml(ev.start_time)}–${escapeHtml(ev.end_time)}</span>
-                      <span>Location: ${escapeHtml(ev.location)}</span>
+                      <span class="chip" style="font-weight: 600;">${escapeHtml(ev.club_name || (ev.is_wm_event ? "W&M Campus" : "Campus"))}</span>
+                      ${ev.category ? `<span class="chip">${escapeHtml(ev.category)}</span>` : ""}
+                      <span>${ev.is_all_day ? "All Day" : `${escapeHtml(ev.start_time || formatWmEventDateTime(ev.start_at, ev.timezone, false))}–${escapeHtml(ev.end_time || formatWmEventDateTime(ev.end_at, ev.timezone, false))}`}</span>
+                      <span>Location: ${escapeHtml(ev.location || "Campus")}</span>
                     </div>
                   </div>
                   <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-                    <span class="status status-ready">In Session · ${ev.minutes_remaining}m left</span>
+                    <span class="status status-ready">${escapeHtml(statusLabel)}</span>
                     ${conflictNote}
                   </div>
                 </div>
-                ${ev.description ? `<p style="font-size: 0.92rem; color: var(--ink-soft); margin-top: 4px;">${escapeHtml(ev.description)}</p>` : ""}
+                ${(ev.description || ev.summary) ? `<p style="font-size: 0.92rem; color: var(--ink-soft); margin-top: 4px;">${escapeHtml(ev.description || ev.summary)}</p>` : ""}
               </div>
             `;
           }).join("");
@@ -838,40 +1176,51 @@
         // 3. Render Starting Soon
         const soonBadge = document.getElementById("soonCountBadge");
         const soonContainer = document.getElementById("soonEventsContainer");
-        soonBadge.textContent = `${data.starting_soon.length} Starting Soon`;
+        soonBadge.textContent = `${soon.length} Starting Soon`;
 
-        if (!data.starting_soon.length) {
+        if (!soon.length) {
           soonContainer.innerHTML = `
             <div class="panel" style="padding: var(--space-4); text-align: center; color: var(--muted);">
-              No other events starting in the next 3 hours today.
+              ${recommendedOnly ? "No events matching your tags starting in the next 3 hours." : "No other events starting in the next 3 hours today."}
             </div>
           `;
         } else {
-          soonContainer.innerHTML = data.starting_soon.map(ev => {
+          soonContainer.innerHTML = soon.map(ev => {
             const conflictNote = ev.has_conflict
               ? `<span class="status-note conflict">Overlaps with ${escapeHtml(ev.conflicting_course)}</span>`
               : `<span class="status-note free">No class conflict</span>`;
+
+            const tagPill = (ev.matched_tags && ev.matched_tags.length)
+              ? `<span class="tag-match-pill">Recommended · ${escapeHtml(ev.matched_tags.join(" "))}</span>`
+              : "";
+
+            const statusLabel = ev.status_label || (ev.starts_in_minutes ? `Starts in ${ev.starts_in_minutes}m` : "Starts Soon");
+
+            const eventTimeStr = ev.start_time || (ev.start_at ? formatWmEventDateTime(ev.start_at, ev.timezone, Boolean(ev.is_all_day)) : "");
 
             return `
               <div class="live-event-card starts-soon ${ev.has_conflict ? 'has-conflict' : ''}">
                 <div class="live-event-head">
                   <div>
-                    <h3 class="live-event-title">${escapeHtml(ev.title)}</h3>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                      <h3 class="live-event-title">${escapeHtml(ev.title)}</h3>
+                      ${tagPill}
+                    </div>
                     <div class="live-event-meta" style="margin-top: 4px;">
-                      <span class="chip" style="font-weight: 600;">${escapeHtml(ev.club_name)}</span>
-                      <span class="chip">${escapeHtml(ev.category)}</span>
-                      <span>Starts at ${escapeHtml(ev.start_time)} (in ${ev.starts_in_minutes}m)</span>
-                      <span>Location: ${escapeHtml(ev.location)}</span>
+                      <span class="chip" style="font-weight: 600;">${escapeHtml(ev.club_name || (ev.is_wm_event ? "W&M Campus" : "Campus"))}</span>
+                      ${ev.category ? `<span class="chip">${escapeHtml(ev.category)}</span>` : ""}
+                      <span>${escapeHtml(statusLabel)}</span>
+                      <span>Location: ${escapeHtml(ev.location || "Campus")}</span>
                     </div>
                   </div>
                   <div style="display: flex; align-items: center; gap: 6px;">
                     ${conflictNote}
-                    <button type="button" class="btn btn-quiet btn-sm" data-title="${escapeHtml(ev.title)}" data-location="${escapeHtml(ev.location)}" data-time="${escapeHtml(ev.start_time)}" onclick="onNotifyClick(this)">
+                    <button type="button" class="btn btn-quiet btn-sm" data-title="${escapeHtml(ev.title)}" data-location="${escapeHtml(ev.location || 'Campus')}" data-time="${escapeHtml(eventTimeStr)}" onclick="onNotifyClick(this)">
                       Notify me
                     </button>
                   </div>
                 </div>
-                ${ev.description ? `<p style="font-size: 0.92rem; color: var(--ink-soft); margin-top: 4px;">${escapeHtml(ev.description)}</p>` : ""}
+                ${(ev.description || ev.summary) ? `<p style="font-size: 0.92rem; color: var(--ink-soft); margin-top: 4px;">${escapeHtml(ev.description || ev.summary)}</p>` : ""}
               </div>
             `;
           }).join("");
@@ -966,10 +1315,15 @@
     async function loadWmEvents() {
       const container = document.getElementById("wmEventsContainer");
       try {
-        const res = await fetch("/api/wm-events");
+        const search = (document.getElementById("searchInput")?.value || "").trim();
+        const params = new URLSearchParams();
+        if (search) params.set("search", search);
+
+        const url = params.toString() ? `/api/wm-events?${params.toString()}` : "/api/wm-events";
+        const res = await fetch(url);
         if (!res.ok) throw new Error(`W&M request failed (${res.status})`);
         const payload = await res.json();
-        const events = Array.isArray(payload) ? payload : payload.events;
+        let events = Array.isArray(payload) ? payload : payload.events;
         container.replaceChildren();
 
         if (!Array.isArray(events) || events.length === 0) {
@@ -983,6 +1337,24 @@
           return;
         }
 
+        const studentTags = getStudentTags();
+        events = events.map(ev => ({
+          ...ev,
+          matched_tags: matchClientTags(ev, studentTags)
+        }));
+
+        if (recommendedOnly) {
+          events = events.filter(ev => ev.matched_tags && ev.matched_tags.length > 0);
+        }
+
+        if (events.length === 0) {
+          const empty = document.createElement("p");
+          empty.className = "hint";
+          empty.textContent = recommendedOnly ? "No W&M campus events match your selected tags." : "No W&M campus events match the current filter.";
+          container.append(empty);
+          return;
+        }
+
         for (const event of events) {
           const card = document.createElement("div");
           card.className = "live-event-card";
@@ -990,9 +1362,23 @@
           const head = document.createElement("div");
           head.className = "live-event-head";
 
+          const titleWrap = document.createElement("div");
+          titleWrap.style.display = "flex";
+          titleWrap.style.alignItems = "center";
+          titleWrap.style.gap = "8px";
+          titleWrap.style.flexWrap = "wrap";
+
           const title = document.createElement("h3");
           title.className = "live-event-title";
           title.textContent = event.title || "Untitled event";
+          titleWrap.append(title);
+
+          if (event.matched_tags && event.matched_tags.length) {
+            const tagPill = document.createElement("span");
+            tagPill.className = "tag-match-pill";
+            tagPill.textContent = `Recommended · ${event.matched_tags.join(" ")}`;
+            titleWrap.append(tagPill);
+          }
 
           const allDay = Boolean(event.is_all_day);
           const start = formatWmEventDateTime(event.start_at, event.timezone, allDay);
@@ -1003,7 +1389,7 @@
           meta.textContent = allDay ? `${start} · All day` : `${start} – ${end}`;
           if (event.location) meta.textContent += ` · Location: ${event.location}`;
 
-          head.append(title);
+          head.append(titleWrap);
           card.append(head, meta);
 
           if (event.has_conflict) {
@@ -1064,7 +1450,17 @@
         }
 
         const res = await fetch(`/api/events?${params.toString()}`);
-        const events = await res.json();
+        let events = await res.json();
+
+        const studentTags = getStudentTags();
+        events = events.map(ev => ({
+          ...ev,
+          matched_tags: matchClientTags(ev, studentTags)
+        }));
+
+        if (recommendedOnly) {
+          events = events.filter(ev => ev.matched_tags && ev.matched_tags.length > 0);
+        }
 
         const countBadge = document.getElementById("clubCountBadge");
         if (countBadge) countBadge.textContent = `${events.length} events`;
@@ -1073,7 +1469,7 @@
         if (!events.length) {
           container.innerHTML = `
             <div class="notice notice-info">
-              No club events match the selected filters or search terms.
+              ${recommendedOnly ? "No club events matching your tags." : "No club events match the selected filters or search terms."}
             </div>
           `;
           return;
@@ -1084,11 +1480,18 @@
             ? `<span class="status-note conflict">Class conflict: ${escapeHtml(ev.conflicting_course)}</span>`
             : `<span class="status-note free">No class conflict</span>`;
 
+          const tagPill = (ev.matched_tags && ev.matched_tags.length)
+            ? `<span class="tag-match-pill">Recommended · ${escapeHtml(ev.matched_tags.join(" "))}</span>`
+            : "";
+
           return `
             <div class="live-event-card ${ev.has_conflict ? 'has-conflict' : ''}">
               <div class="live-event-head">
                 <div>
-                  <h3 class="live-event-title">${escapeHtml(ev.title)}</h3>
+                  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <h3 class="live-event-title">${escapeHtml(ev.title)}</h3>
+                    ${tagPill}
+                  </div>
                   <div class="live-event-meta" style="margin-top: 4px;">
                     <span class="chip" style="font-weight: 600;">${escapeHtml(ev.club_name)}</span>
                     <span>${DAYS[ev.day_of_week]}</span>
@@ -1378,6 +1781,8 @@
     }
 
     async function loadAll() {
+      renderTagsUI();
+      updateFilterBadge();
       await loadClasses();
       await loadNowAndNext();
       await loadEvents();

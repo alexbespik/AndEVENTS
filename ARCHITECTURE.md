@@ -17,29 +17,47 @@ graph TD
     subgraph Backend ["FastAPI Backend (app.py)"]
         API_Events["/api/events (GET, POST, DELETE)"]
         API_Classes["/api/classes (GET, POST, DELETE)"]
+        API_NowNext["/api/now-and-next (GET)"]
+        API_WMEvents["/api/wm-events (GET)"]
         API_Planning_Conflicts["/api/planning/creator-conflicts (GET)"]
         API_Planning_Weekly["/api/planning/weekly-schedule (GET)"]
         Engine["Conflict & Live Calculation Engine"]
     end
 
+    subgraph Ingestion ["Calendar Ingestion (wm_data.py, import_wm_events.py)"]
+        SSRF["SSRF Guard (events.wm.edu, tribelink.wm.edu)"]
+        Parser["RFC 5545 Parser (RRULE, DATE fix, Windows TZID)"]
+        NormLoc["Location Normalizer (normalize_wm_location)"]
+    end
+
     subgraph Storage ["Persistent SQLite (schedule.db)"]
         T_Events[("club_events")]
         T_Classes[("user_classes")]
+        T_WMEvents[("wm_events")]
+        T_WMCals[("wm_event_calendars")]
         T_Meta[("app_meta")]
     end
 
+    UI_Radar -->|GET /api/now-and-next| API_NowNext
     UI_Radar -->|GET /api/events| API_Events
     UI_Sidebar -->|GET, POST /api/classes| API_Classes
     UI_Planner -->|GET /api/planning/weekly-schedule| API_Planning_Weekly
     UI_Organizer -->|GET /api/planning/creator-conflicts| API_Planning_Conflicts
     UI_Organizer -->|POST, DELETE /api/events| API_Events
+    UI_Nav -->|GET /api/wm-events| API_WMEvents
 
+    Ingestion -->|Strict HTTPS / Parse / Expand| T_WMEvents
+    Ingestion -->|Calendar Mapping| T_WMCals
+
+    API_NowNext --> Engine
     API_Events --> Engine
     API_Planning_Conflicts --> Engine
     API_Planning_Weekly --> Engine
+    API_WMEvents --> T_WMEvents
 
     Engine --> T_Events
     Engine --> T_Classes
+    Engine --> T_WMEvents
     Engine --> T_Meta
 ```
 
@@ -47,10 +65,14 @@ graph TD
 | Component | Responsibility | Owned Data / State |
 | :--- | :--- | :--- |
 | **`app.py` (FastAPI Server)** | Boundary validation, schedule indexing, conflict calculations, REST endpoints | `schedule.db` connection lifecycle, business rules |
-| **`club_events` Table** | Authoritative store of campus club meetings, workshops, and sports | Campus events (title, club, category, day 0-6, start/end 24h, location, description) |
+| **`wm_data.py`** | Safe RFC 5545 iCal parser, RRULE expansion, Windows TZID alias resolution, location normalization, SSRF host validation | Pure functions, parser and schema integrity |
+| **`import_wm_events.py`** | Scheduled feed crawler & CLI importer for `events.wm.edu` and `tribelink.wm.edu` | Ingestion lifecycle, savepoint transactions |
+| **`club_events` Table** | Authoritative store of weekly recurring club meetings | Campus events (title, club, category, day 0-6, start/end 24h, location, description) |
 | **`user_classes` Table** | Authoritative store of student course commitments | User lecture sessions (course name, day 0-6, start/end 24h, location) |
+| **`wm_events` Table** | Dated instances from official campus feeds and TribeLink student organizations | Dated event instances (uid, start_at, end_at, timezone, is_all_day, location, source_url, categories) |
+| **`wm_event_calendars` Table** | Many-to-many calendar feed membership tracking | Feed slugs and calendar display names |
 | **`app_meta` Table** | Database migrations and seed execution tracking | Migration version & seed flags |
-| **`static/index.html`** | Zero-build single-page application with 3 distinct operational modes adhering to AndEDU design tokens | Local UI state: active mode tab, theme preference, hackathon demo simulation time |
+| **`static/index.html`** | Zero-build single-page application with distraction-free 100% width Now & Soon view and collapsible Filters & Schedule modal | Local UI state: active view mode, filter modal open state, theme, preview time |
 
 ---
 
@@ -204,6 +226,61 @@ Provides a single, consolidated source of truth for the 7-day academic week.
 }
 ```
 
+#### `GET /api/now-and-next`
+Returns currently active sessions and upcoming events within 3 hours across both student club events and official W&M / TribeLink campus calendar feeds.
+- **Query Parameters**:
+  - `sim_day`: integer (`0..6`, optional)
+  - `sim_time`: string (`HH:MM`, optional)
+- **Response**:
+```json
+{
+  "current_day": 0,
+  "current_day_name": "Monday",
+  "current_time": "17:15",
+  "is_simulated": false,
+  "active_class": null,
+  "next_class": null,
+  "happening_now": [
+    {
+      "id": 1,
+      "title": "Kernel & Dotfiles Workshop",
+      "club_name": "Linux 1991 Club",
+      "category": "Tech",
+      "day_of_week": 0,
+      "start_time": "17:00",
+      "end_time": "18:30",
+      "location": "ISC 1127",
+      "description": "Customizing tiling window managers and shell configs.",
+      "has_conflict": false,
+      "conflicting_course": null,
+      "minutes_remaining": 75,
+      "status_label": "In Session · 75m left",
+      "is_all_day": false,
+      "is_ongoing": false
+    },
+    {
+      "id": "fresh-start-2026::2026-11-14",
+      "title": "Fresh Start Orientation",
+      "club_name": "STEP & Campus Life",
+      "category": "Orientation",
+      "day_of_week": 0,
+      "start_time": "00:00",
+      "end_time": "23:59",
+      "location": "Sadler Center",
+      "description": "Multi-day welcome and campus transition activities.",
+      "has_conflict": false,
+      "conflicting_course": null,
+      "minutes_remaining": null,
+      "status_label": "All Day Today",
+      "is_all_day": true,
+      "is_ongoing": true
+    }
+  ],
+  "starting_soon": [],
+  "upcoming_today": []
+}
+```
+
 ---
 
 ## 3. Database Schema & Indexing
@@ -230,6 +307,27 @@ CREATE TABLE IF NOT EXISTS user_classes (
     location TEXT
 );
 
+CREATE TABLE IF NOT EXISTS wm_events (
+    uid TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL DEFAULT '',
+    description TEXT NOT NULL DEFAULT '',
+    start_at TEXT NOT NULL,
+    end_at TEXT,
+    timezone TEXT NOT NULL,
+    location TEXT NOT NULL DEFAULT '',
+    source_url TEXT NOT NULL DEFAULT '',
+    categories TEXT NOT NULL DEFAULT '[]',
+    is_all_day INTEGER NOT NULL DEFAULT 0 CHECK (is_all_day IN (0, 1))
+);
+
+CREATE TABLE IF NOT EXISTS wm_event_calendars (
+    uid TEXT NOT NULL REFERENCES wm_events(uid) ON DELETE CASCADE,
+    calendar_slug TEXT NOT NULL,
+    calendar_name TEXT NOT NULL,
+    PRIMARY KEY (uid, calendar_slug)
+);
+
 CREATE TABLE IF NOT EXISTS app_meta (
     key TEXT PRIMARY KEY,
     value TEXT
@@ -238,6 +336,8 @@ CREATE TABLE IF NOT EXISTS app_meta (
 -- Compound indexes for zero-latency temporal lookups
 CREATE INDEX IF NOT EXISTS idx_club_events_day_time ON club_events (day_of_week, start_time);
 CREATE INDEX IF NOT EXISTS idx_user_classes_day_time ON user_classes (day_of_week, start_time);
+CREATE INDEX IF NOT EXISTS idx_wm_events_start_at ON wm_events(start_at);
+CREATE INDEX IF NOT EXISTS idx_wm_event_calendars_slug ON wm_event_calendars(calendar_slug, uid);
 ```
 
 ### Overlap Rule
@@ -250,33 +350,32 @@ $$S_1 < E_2 \quad \text{AND} \quad E_1 > S_2$$
 
 The frontend is implemented strictly as a zero-build single page application in `static/index.html`.
 
-### 4.1 3-Mode State Machine
+### 4.1 Mode State Machine & Distraction-Free Layout
 ```mermaid
 stateDiagram-v2
-    [*] --> CampusRadar: Default Load
-    CampusRadar --> WeeklyPlanner: Click "Weekly Planner" Tab
-    CampusRadar --> OrganizerLab: Click "Organizer Lab" Tab
-    WeeklyPlanner --> CampusRadar: Click "Campus Radar" Tab
-    WeeklyPlanner --> OrganizerLab: Click "Organizer Lab" Tab
-    OrganizerLab --> CampusRadar: Click "Campus Radar" Tab
-    OrganizerLab --> WeeklyPlanner: Click "Weekly Planner" Tab
+    [*] --> NowAndSoon: Default Load (100% Width Uncluttered)
+    NowAndSoon --> Directory: Click "Directory" Tab
+    NowAndSoon --> WeeklyPlanner: Click "Weekly Planner" Tab
+    NowAndSoon --> OrganizerLab: Click "Organize" Tab
+    Directory --> NowAndSoon: Click "Now & Soon" Tab
+    WeeklyPlanner --> NowAndSoon: Click "Now & Soon" Tab
+    OrganizerLab --> NowAndSoon: Click "Now & Soon" Tab
 ```
 
-1. **Campus Radar (`radar`)**:
-   - Live 24-hour clock with active scanning pulse.
-   - Engineering lab readout banner ("Attend Right Now / Starting in 60m").
-   - Multi-parameter filter bar (Search, Day, Category, Can Attend Now, Hide Conflicts).
-   - Real-time club events stream.
-2. **Student Weekly Planner (`planner`)**:
-   - Mon–Sun 7-day grid view.
-   - Simultaneous display of academic classes and club events.
-   - Gentle non-creator conflict badges (highlighting when an event conflicts with a course).
-   - Weekly load statistics (total classes, attended events, conflicts).
-3. **Event Organizer Lab (`organizer`)**:
-   - Slot conflict inspector: inputs Day, Start Time, End Time, Location.
-   - Real-time collision tester against existing events (room booking clash vs attendance competition) and student classes.
-   - Event creation form with `POST /api/events`.
-   - Event deletion and catalog management.
+1. **Now & Soon (`live`)**:
+   - 100% width, uncluttered campus pulse.
+   - Shows "Happening Right Now" (including active all-day and ongoing multi-day campus & TribeLink events) and "Starting in the next 3 hours".
+   - The permanent left-hand planning sidebar is completely collapsed into a neat "Filters" modal/drawer button.
+2. **Filters & Schedule Modal (`#filtersModal`)**:
+   - Accessible via the "Filters" button in the masthead/header.
+   - Houses event search, quick day pills (`All`, `Mon`..`Sun`), category filter, conflict toggle, and student course manager.
+   - Closes cleanly via Escape, backdrop click, or Close button so planning controls never compromise the live view.
+3. **Directory Mode (`directory`)**:
+   - Comprehensive searchable view combining imported W&M dated feeds and student club schedules.
+4. **Student Weekly Planner (`planner`)**:
+   - Mon–Sun 7-day grid view comparing academic classes and club events with overlap badges.
+5. **Event Organizer Lab (`organizer`)**:
+   - Propose event time and location; checks for class overlap and room collisions using canonicalized building names.
 
 ### 4.2 AndEDU Design System Tokens
 - **Palette**:
@@ -297,14 +396,24 @@ stateDiagram-v2
 ---
 
 ## 5. Reliability, Performance & Security
-1. **Performance**:
-   - Compound indexes `(day_of_week, start_time)` eliminate table scans.
-   - In-memory time conversions in Python prevent DB-level string parsing overhead.
+
+1. **SSRF Guard & Network Perimeter**:
+   - Host allowlist strictly restricted to `{"events.wm.edu", "tribelink.wm.edu"}`.
+   - Enforces HTTPS scheme, port 443 (or default HTTPS port), and forbids embedded user/password credentials.
+   - Protects crawler and feed imports against private subnet probing and redirect hijacking.
+2. **Deterministic RFC 5545 iCalendar Parsing**:
+   - Recurrence Expansion (`RRULE:FREQ=DAILY|WEEKLY`, `INTERVAL`, `BYDAY`, `UNTIL`, `COUNT`, `EXDATE`) over `[now - 2 days, now + 45 days]`.
+   - Generates deterministic instance UIDs: `{master_uid}::{occ_start}`.
+   - Canonicalizes Windows/Exchange time zones (`"Eastern Standard Time"`, `"EST"`, `"US/Eastern"`) to `"America/New_York"`.
+   - Resolves `VALUE=DATE` all-day bounds: missing or non-positive `DTEND` defaults to `DTSTART + 1 day`.
+3. **Location Normalization & Conflict Accuracy**:
+   - `normalize_wm_location()` canonicalizes building variants (e.g. `"Integrated Science Center"`, `"ISC"`, `"Sadler Center"`, `"Jones Hall"`) and strips extraneous `"Room"` / `"Rm."` noise.
+   - Guarantees room collision detection (`ROOM_CLASH`) regardless of minor differences in address spelling.
+4. **Performance & Concurrency**:
+   - Compound indexes `(day_of_week, start_time)` and `(start_at)` eliminate table scans.
+   - SQLite WAL mode and foreign key integrity.
    - Zero-build vanilla JS ensures instant page load (<50ms) with zero bundle bloat.
-2. **Reliability & Idempotency**:
-   - Strict input validation with Pydantic ensures malformed 24h time strings never reach the database.
-   - Atomic SQLite transactions (`conn.commit()`) ensure integrity across batch operations.
-3. **Security**:
+5. **Security**:
    - Parameterized SQL queries (`?` placeholders) prevent SQL injection across all endpoints.
    - HTML sanitization (`escapeHtml`) on the client prevents Cross-Site Scripting (XSS).
    - Strict 127.0.0.1 default binding for development.

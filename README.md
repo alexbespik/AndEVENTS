@@ -1,18 +1,22 @@
 <div align="center">
   <img src="static/favicon.svg" alt="" width="48" height="48">
   <h1>&amp;.events</h1>
-  <p><strong>Find the campus events that fit your week.</strong></p>
-  <p>FastAPI · SQLite · Vanilla JavaScript</p>
+  <p><strong>Make room for what matters this week.</strong></p>
+  <p>Campus events · Class planning · William &amp; Mary calendars</p>
 </div>
 
-Browse club events, plan around classes, and import public William & Mary calendar feeds.
+&.events brings campus events and your class schedule into one weekly view. Browse student events, add your classes, and check for conflicts.
 
-## What it does
+## What you can do
 
-- Browse and filter weekly club events.
-- Build a class schedule and spot time conflicts.
-- View dated W&amp;M events alongside your weekly plan.
-- Create events and check for schedule conflicts.
+- Find and filter weekly club events.
+- Plan around classes and spot schedule conflicts.
+- Browse dated William &amp; Mary events beside your weekly plan.
+- Add events and see how they fit.
+
+## Where it’s going
+
+&.events is planned to merge with [&amp;EDU](https://github.com/alexbespik/AndEDU), a visual learning workspace for guided study tracks and interactive programming practice. The goal is to bring campus planning and learning tools together in one place.
 
 ## Run locally
 
@@ -31,18 +35,20 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
 ## Import W&amp;M calendars
 
+Discover and import available public calendars:
+
 ```bash
 python import_wm_events.py --discover
 ```
 
-To import a downloaded iCalendar file instead:
+Or import a downloaded iCalendar file:
 
 ```bash
 python import_wm_events.py --file campus=events.ics
 ```
 
-The importer reports feeds it cannot access. It imports available calendar events; recurring rules and exceptions are not expanded.
+Recurring rules and exceptions are not expanded.
 
 ## Data
 
-SQLite stores app data in `schedule.db`. Set `SCIEDU_CONTENT_DIR` to store it in another directory.
+App data is stored in `schedule.db`. Set `SCIEDU_CONTENT_DIR` to use another data directory.
