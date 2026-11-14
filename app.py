@@ -86,6 +86,32 @@ def time_to_minutes(t_str: str) -> int:
     return h * 60 + m
 
 
+def format_12h(time_str: str) -> str:
+    """Converts '14:00' -> '2:00 PM', '09:30' -> '9:30 AM'."""
+    if not time_str or ":" not in time_str:
+        return time_str
+    try:
+        h, m = map(int, time_str.split(":")[:2])
+        period = "PM" if h >= 12 else "AM"
+        hour_12 = h % 12 or 12
+        return f"{hour_12}:{m:02d} {period}"
+    except (ValueError, TypeError):
+        return time_str
+
+
+def format_duration(minutes: int) -> str:
+    """Converts 36 -> '36m', 75 -> '1h 15m', 120 -> '2h'."""
+    minutes = max(0, int(minutes))
+    h = minutes // 60
+    m = minutes % 60
+    if h > 0 and m > 0:
+        return f"{h}h {m}m"
+    elif h > 0:
+        return f"{h}h"
+    else:
+        return f"{m}m"
+
+
 def init_db():
     conn = get_db()
     cur = conn.cursor()
@@ -319,16 +345,51 @@ def get_now_and_next(
     )
     classes = [dict(r) for r in cur.fetchall()]
 
-    active_class = None
+    today_classes = []
+    current_class = None
     next_class = None
+
     for cl in classes:
         cl_start = time_to_minutes(cl["start_time"])
         cl_end = time_to_minutes(cl["end_time"])
-        if cl_start <= curr_mins <= cl_end:
-            active_class = cl
-            break
-        elif cl_start > curr_mins and next_class is None:
-            next_class = cl
+
+        enriched_cl = dict(cl)
+        start_12h = format_12h(cl["start_time"])
+        end_12h = format_12h(cl["end_time"])
+        enriched_cl["start_time_12h"] = start_12h
+        enriched_cl["end_time_12h"] = end_12h
+        enriched_cl["time_range_12h"] = f"{start_12h} – {end_12h}"
+
+        if curr_mins > cl_end:
+            enriched_cl["status"] = "completed"
+            enriched_cl["minutes_remaining"] = None
+            enriched_cl["minutes_until_start"] = None
+            enriched_cl["status_label"] = "Completed"
+        elif cl_start <= curr_mins <= cl_end:
+            enriched_cl["status"] = "current"
+            m_rem = cl_end - curr_mins
+            enriched_cl["minutes_remaining"] = m_rem
+            enriched_cl["minutes_until_start"] = None
+            enriched_cl["status_label"] = f"In Session · {format_duration(m_rem)} left"
+            if current_class is None:
+                current_class = enriched_cl
+        else:
+            enriched_cl["status"] = "upcoming"
+            m_start = cl_start - curr_mins
+            enriched_cl["minutes_remaining"] = None
+            enriched_cl["minutes_until_start"] = m_start
+            enriched_cl["status_label"] = f"Starts in {format_duration(m_start)}"
+            if next_class is None:
+                next_class = enriched_cl
+
+        today_classes.append(enriched_cl)
+
+    academic_summary = {
+        "total_today": len(today_classes),
+        "completed_count": sum(1 for c in today_classes if c["status"] == "completed"),
+        "has_current": current_class is not None,
+        "has_upcoming": next_class is not None,
+    }
 
     cur.execute(
         "SELECT * FROM club_events WHERE day_of_week = ? ORDER BY start_time ASC",
@@ -436,14 +497,28 @@ def get_now_and_next(
 
             wm_processed.append(r)
 
+    # Prioritize events: matched student tags first, then ending soonest (for in-session) or starting soonest
+    happening_now.sort(key=lambda ev: (
+        0 if ev.get("matched_tags") else 1,
+        ev.get("minutes_remaining") if ev.get("minutes_remaining") is not None else 999999
+    ))
+    starting_soon.sort(key=lambda ev: (
+        0 if ev.get("matched_tags") else 1,
+        ev.get("starts_in_minutes") if ev.get("starts_in_minutes") is not None else 999999
+    ))
+
     days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     return {
         "current_day": current_day,
         "current_day_name": days_of_week[current_day],
         "current_time": current_time,
         "is_simulated": sim_day is not None or sim_time is not None,
-        "active_class": active_class,
+        "current_class": current_class,
         "next_class": next_class,
+        # active_class is retained as an alias to current_class for backward compatibility with legacy clients
+        "active_class": current_class,
+        "today_classes": today_classes,
+        "academic_summary": academic_summary,
         "happening_now": happening_now,
         "starting_soon": starting_soon,
         "upcoming_today": upcoming_today,
@@ -586,7 +661,115 @@ def delete_event(event_id: int):
     return {"status": "deleted", "id": event_id}
 
 
-# --- Class Routes ---
+# --- Class Routes & Presets ---
+
+WM_COURSE_PRESETS = [
+    {
+        "course_name": "CSCI 141: Computational Problem Solving",
+        "department": "CSCI",
+        "days": [0, 2, 4],
+        "days_label": "MWF",
+        "start_time": "10:00",
+        "end_time": "10:50",
+        "location": "Jones 100",
+        "time_range_12h": "10:00 AM – 10:50 AM",
+    },
+    {
+        "course_name": "CSCI 241: Data Structures",
+        "department": "CSCI",
+        "days": [0, 2],
+        "days_label": "MW",
+        "start_time": "14:00",
+        "end_time": "15:15",
+        "location": "Jones 301",
+        "time_range_12h": "2:00 PM – 3:15 PM",
+    },
+    {
+        "course_name": "CSCI 303: Algorithms",
+        "department": "CSCI",
+        "days": [1, 3],
+        "days_label": "TR",
+        "start_time": "11:00",
+        "end_time": "12:15",
+        "location": "McGlothlin 020",
+        "time_range_12h": "11:00 AM – 12:15 PM",
+    },
+    {
+        "course_name": "DATA 141: Programming for Data Science",
+        "department": "DATA",
+        "days": [0, 2, 4],
+        "days_label": "MWF",
+        "start_time": "13:00",
+        "end_time": "13:50",
+        "location": "Blow 332",
+        "time_range_12h": "1:00 PM – 1:50 PM",
+    },
+    {
+        "course_name": "MATH 211: Linear Algebra",
+        "department": "MATH",
+        "days": [1, 3],
+        "days_label": "TR",
+        "start_time": "15:30",
+        "end_time": "16:50",
+        "location": "Jones 202",
+        "time_range_12h": "3:30 PM – 4:50 PM",
+    },
+    {
+        "course_name": "PHIL 201: Introduction to Philosophy",
+        "department": "PHIL",
+        "days": [1, 3],
+        "days_label": "TR",
+        "start_time": "09:30",
+        "end_time": "10:50",
+        "location": "Wren 200",
+        "time_range_12h": "9:30 AM – 10:50 AM",
+    },
+    {
+        "course_name": "BIOL 204: Introduction to Biology",
+        "department": "BIOL",
+        "days": [0, 2, 4],
+        "days_label": "MWF",
+        "start_time": "09:00",
+        "end_time": "09:50",
+        "location": "ISC 1127",
+        "time_range_12h": "9:00 AM – 9:50 AM",
+    },
+]
+
+WM_SLOT_PATTERNS = [
+    {
+        "name": "MWF 50m",
+        "days": [0, 2, 4],
+        "days_label": "MWF",
+        "slots": [
+            {"start_time": "09:00", "end_time": "09:50", "label": "09:00–09:50"},
+            {"start_time": "10:00", "end_time": "10:50", "label": "10:00–10:50"},
+            {"start_time": "11:00", "end_time": "11:50", "label": "11:00–11:50"},
+            {"start_time": "13:00", "end_time": "13:50", "label": "13:00–13:50"},
+            {"start_time": "14:00", "end_time": "14:50", "label": "14:00–14:50"},
+        ],
+    },
+    {
+        "name": "MW / TR 75m",
+        "days_label": "MW / TR",
+        "slots": [
+            {"start_time": "09:30", "end_time": "10:50", "label": "09:30–10:50"},
+            {"start_time": "11:00", "end_time": "12:15", "label": "11:00–12:15"},
+            {"start_time": "12:30", "end_time": "13:45", "label": "12:30–13:45"},
+            {"start_time": "14:00", "end_time": "15:15", "label": "14:00–15:15"},
+            {"start_time": "15:30", "end_time": "16:45", "label": "15:30–16:45"},
+        ],
+    },
+]
+
+
+@app.get("/api/classes/presets")
+def get_class_presets():
+    return {
+        "courses": WM_COURSE_PRESETS,
+        "slots": WM_SLOT_PATTERNS,
+    }
+
 
 @app.get("/api/classes")
 def get_classes():
@@ -737,7 +920,7 @@ def check_creator_conflicts(
 
 
 @app.get("/api/planning/weekly-schedule")
-def get_weekly_schedule():
+def get_weekly_schedule(sim_day: Optional[int] = Query(None, ge=0, le=6)):
     """
     Build a seven-day view of classes and recurring club events.
     Overlaps are reported for planning and do not block event creation.
@@ -752,6 +935,7 @@ def get_weekly_schedule():
     events = [dict(r) for r in cur.fetchall()]
     conn.close()
 
+    current_day = sim_day if sim_day is not None else datetime.now(CAMPUS_TZ).weekday()
     days_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     days_data = []
 
@@ -762,6 +946,18 @@ def get_weekly_schedule():
     for d in range(7):
         day_classes = [c for c in classes if c["day_of_week"] == d]
         day_events_raw = [e for e in events if e["day_of_week"] == d]
+
+        enriched_classes = []
+        for cl in day_classes:
+            st_12h = format_12h(cl["start_time"])
+            et_12h = format_12h(cl["end_time"])
+            enriched_classes.append({
+                **cl,
+                "type": "class",
+                "start_time_12h": st_12h,
+                "end_time_12h": et_12h,
+                "time_range_12h": f"{st_12h} – {et_12h}",
+            })
 
         enriched_events = []
         for ev in day_events_raw:
@@ -774,17 +970,31 @@ def get_weekly_schedule():
             if has_conf:
                 conflicted_events += 1
 
+            st_12h = format_12h(ev["start_time"])
+            et_12h = format_12h(ev["end_time"])
             enriched_events.append({
                 **ev,
+                "type": "event",
+                "start_time_12h": st_12h,
+                "end_time_12h": et_12h,
+                "time_range_12h": f"{st_12h} – {et_12h}",
                 "has_conflict": has_conf,
                 "conflicting_course": conflicts[0]["course_name"] if has_conf else None,
                 "conflicting_classes": conflicts,
             })
 
+        timeline = sorted(
+            enriched_classes + enriched_events,
+            key=lambda item: (item["start_time"], item["end_time"], 0 if item.get("type") == "class" else 1),
+        )
+
         days_data.append({
             "day_index": d,
             "day_name": days_names[d],
-            "classes": day_classes,
+            "is_today": (d == current_day),
+            "total_commitments": len(timeline),
+            "timeline": timeline,
+            "classes": enriched_classes,
             "events": enriched_events,
         })
 

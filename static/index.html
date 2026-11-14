@@ -5,10 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#0b3b2c" />
   <script>
-    // Apply saved theme before first paint (prevents light flash in dark mode)
+    // Apply saved theme and major before first paint (prevents flash)
     try {
       var t = localStorage.getItem('andedu_lab_theme');
       if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+      var m = localStorage.getItem('student_major') || 'auto';
+      if (m !== 'auto') {
+        document.documentElement.dataset.major = m;
+      } else {
+        var rawTags = localStorage.getItem('student_interest_tags');
+        if (rawTags) {
+          var parsed = JSON.parse(rawTags);
+          if (Array.isArray(parsed) && parsed.length) {
+            var c = parsed[0].replace('#', '').toUpperCase();
+            if (c === 'CS' || c === 'TECH') document.documentElement.dataset.major = 'cs';
+            else if (c === 'DATA' || c === 'MATH') document.documentElement.dataset.major = 'data';
+            else if (c === 'PHYSICS' || c === 'ENGINEERING') document.documentElement.dataset.major = 'physics';
+            else if (c === 'ART' || c === 'ARTS' || c === 'DESIGN') document.documentElement.dataset.major = 'arts';
+            else if (c === 'PHIL' || c === 'ETHICS') document.documentElement.dataset.major = 'humanities';
+            else if (c === 'BIOL' || c === 'PRE-MED') document.documentElement.dataset.major = 'biol';
+          }
+        }
+      }
     } catch (e) {}
   </script>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -240,6 +258,17 @@
             </button>
           </div>
 
+          <div style="font-family: var(--font-mono); font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;">Major Frame Theme</div>
+          <select id="majorThemeSelect" class="select" style="width: 100%; height: 30px; font-size: 0.78rem; font-family: var(--font-mono); margin-bottom: var(--space-3);" onchange="setStudentMajor(this.value)">
+            <option value="auto">Auto (Matches Interests)</option>
+            <option value="cs">CS &amp; Tech (Technical Blue)</option>
+            <option value="data">Data &amp; Math (Cyber Emerald)</option>
+            <option value="physics">Physics &amp; Engineering (Crimson)</option>
+            <option value="arts">Liberal Arts &amp; Design (Creative Violet)</option>
+            <option value="humanities">Humanities &amp; Phil (Classical Bronze)</option>
+            <option value="biol">Biology &amp; Pre-Med (Sage Teal)</option>
+          </select>
+
           <div style="font-family: var(--font-mono); font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Simulation</div>
           <div style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2); background: var(--sunk); border-radius: var(--radius-sm); margin-bottom: var(--space-3);">
             <label class="conn" style="cursor: pointer; font-size: 0.8rem; color: var(--ink);">
@@ -343,6 +372,19 @@
             <button type="button" class="btn btn-secondary btn-sm" onclick="addCustomTag()" style="min-height: 30px;">+ Add Tag</button>
           </div>
           <div id="activeTagsRow" style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px;"></div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--rule);">
+            <span style="font-family: var(--font-mono); font-size: 0.74rem; font-weight: 700; color: var(--muted); text-transform: uppercase;">Major Frame Theme:</span>
+            <select id="modalMajorThemeSelect" class="select" style="height: 28px; font-size: 0.75rem; font-family: var(--font-mono);" onchange="setStudentMajor(this.value)">
+              <option value="auto">Auto (Matches Interests)</option>
+              <option value="cs">CS &amp; Tech (Technical Blue)</option>
+              <option value="data">Data &amp; Math (Cyber Emerald)</option>
+              <option value="physics">Physics &amp; Engineering (Crimson)</option>
+              <option value="arts">Liberal Arts &amp; Design (Creative Violet)</option>
+              <option value="humanities">Humanities &amp; Phil (Classical Bronze)</option>
+              <option value="biol">Biology &amp; Pre-Med (Sage Teal)</option>
+            </select>
+          </div>
         </div>
 
         <!-- Class Schedule Manager -->
@@ -358,6 +400,15 @@
             </div>
           </div>
 
+          <!-- Quick W&M Presets Chips Row -->
+          <div style="margin-bottom: var(--space-2);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <span style="font-family: var(--font-mono); font-size: 0.74rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;">Quick W&amp;M Presets</span>
+              <span class="hint" style="font-size: 0.72rem;">Click to pre-fill</span>
+            </div>
+            <div id="coursePresetChips" style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px;"></div>
+          </div>
+
           <div id="classAddFormWrap" style="display: none; padding: var(--space-3); background: var(--sunk); border-radius: var(--radius-sm); margin-bottom: var(--space-2);">
             <form id="classForm" onsubmit="submitClass(event)" style="display: flex; flex-direction: column; gap: var(--space-2);">
               <input type="text" id="courseName" class="input" style="min-height: 30px; font-size: 0.82rem;" required placeholder="e.g. CSCI 241: Data Structures">
@@ -370,6 +421,13 @@
                 <label class="folder-pill"><input type="checkbox" name="days" value="5"><span>S</span></label>
                 <label class="folder-pill"><input type="checkbox" name="days" value="6"><span>U</span></label>
               </div>
+
+              <!-- Standard Time Blocks -->
+              <div>
+                <div style="font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; margin-bottom: 4px;">Standard Time Blocks</div>
+                <div id="slotPresetPills" style="display: flex; flex-wrap: wrap; gap: 4px;"></div>
+              </div>
+
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
                 <input type="time" id="classStart" class="input" style="min-height: 30px; font-size: 0.82rem;" value="14:00" required>
                 <input type="time" id="classEnd" class="input" style="min-height: 30px; font-size: 0.82rem;" value="15:15" required>
@@ -412,9 +470,17 @@
 
         <!-- VIEW 1: NOW & SOON (Focused, zero-clutter live front page) -->
         <div id="viewLive" class="stack view-container">
-          <!-- Schedule status -->
-          <div id="studentStatusBox" class="notice notice-ok">
-            <strong>Your Schedule:</strong> <span id="studentStatusText">Checking schedule...</span>
+          <!-- Academic Schedule Priority Hero -->
+          <div id="academicPriorityHero" aria-live="polite">
+            <div class="academic-hero all-clear">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                <span class="academic-hero-badge clear">ACADEMIC SCHEDULE · TODAY</span>
+              </div>
+              <div class="academic-hero-title">Checking Schedule…</div>
+              <div class="academic-hero-meta">
+                <span>Connecting to campus schedule engine</span>
+              </div>
+            </div>
           </div>
 
           <!-- Interests / Tags Strip & Recommended Filter -->
@@ -503,11 +569,18 @@
 
         <!-- VIEW 3: Weekly schedule -->
         <div id="viewPlanner" class="stack view-container" style="display: none;">
-          <div class="notice notice-info">
-            Compare your classes with weekly club meetings. Overlaps are flagged for review.
+          <div class="cal-summary-bar">
+            <div class="cal-summary-stats">
+              <span id="plannerSummaryStats" class="chip num" style="font-weight: 600;">0 Classes · 0 Club Events</span>
+              <span id="plannerConflictBadge" class="status status-bad" style="display: none; font-size: 0.75rem;">0 Overlaps</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button type="button" class="btn btn-quiet btn-sm" onclick="openFiltersModal('classes')">+ Manage Classes</button>
+              <button type="button" class="btn btn-primary btn-sm" onclick="switchMode('organizer')">+ Propose Event</button>
+            </div>
           </div>
-          <div id="timetableContainer" class="stack">
-            <!-- Dynamically populated 7-day matrix -->
+          <div id="timetableContainer" class="cal-grid-wrapper">
+            <!-- Dynamically populated 7-day calendar grid -->
           </div>
         </div>
 
@@ -668,12 +741,25 @@
       if (btn) btn.setAttribute("aria-expanded", "false");
     }
 
-    function openFiltersModal(focusSection) {
+    function openFiltersModal(focusSection, targetDay) {
       const modal = document.getElementById("filtersModal");
       if (modal) {
         modal.showModal();
         if (focusSection === "tags") {
           const input = document.getElementById("customTagInput");
+          if (input) setTimeout(() => input.focus(), 60);
+        } else if (focusSection === "classes") {
+          const wrap = document.getElementById("classAddFormWrap");
+          if (wrap) wrap.style.display = "block";
+          const btn = document.getElementById("toggleAddClassBtn");
+          if (btn) btn.textContent = "Close";
+          if (targetDay !== undefined && targetDay !== null) {
+            const dayCheckboxes = document.querySelectorAll('#dayPills input[name="days"]');
+            dayCheckboxes.forEach(cb => {
+              cb.checked = parseInt(cb.value, 10) === targetDay;
+            });
+          }
+          const input = document.getElementById("courseName");
           if (input) setTimeout(() => input.focus(), 60);
         }
       }
@@ -701,6 +787,49 @@
       });
     });
 
+    // Major Frame Theme Feature
+    function inferMajorFromTags(tags) {
+      if (!tags || !tags.length) return "cs";
+      for (const t of tags) {
+        const clean = t.replace("#", "").toUpperCase();
+        if (clean === "CS" || clean === "TECH" || clean === "TECHNOLOGY") return "cs";
+        if (clean === "DATA" || clean === "MATH" || clean === "STATISTICS") return "data";
+        if (clean === "PHYSICS" || clean === "ENGINEERING") return "physics";
+        if (clean === "ART" || clean === "ARTS" || clean === "DESIGN" || clean === "MUSIC") return "arts";
+        if (clean === "PHIL" || clean === "PHILOSOPHY" || clean === "ETHICS" || clean === "HUMANITIES") return "humanities";
+        if (clean === "BIOL" || clean === "BIOLOGY" || clean === "PRE-MED" || clean === "SCI") return "biol";
+      }
+      return "cs";
+    }
+
+    function applyMajorTheme() {
+      let saved = null;
+      try {
+        saved = localStorage.getItem("student_major") || "auto";
+      } catch (e) {
+        saved = "auto";
+      }
+
+      const s1 = document.getElementById("majorThemeSelect");
+      const s2 = document.getElementById("modalMajorThemeSelect");
+      if (s1) s1.value = saved;
+      if (s2) s2.value = saved;
+
+      let effectiveMajor = saved;
+      if (saved === "auto") {
+        const tags = getStudentTags();
+        effectiveMajor = inferMajorFromTags(tags);
+      }
+      document.documentElement.dataset.major = effectiveMajor;
+    }
+
+    function setStudentMajor(major) {
+      try {
+        localStorage.setItem("student_major", major);
+      } catch (e) {}
+      applyMajorTheme();
+    }
+
     // Student Tags / Interests feature
     function getStudentTags() {
       try {
@@ -718,6 +847,7 @@
         localStorage.setItem("student_interest_tags", JSON.stringify(tags));
       } catch (e) {}
       renderTagsUI();
+      applyMajorTheme();
       loadAll();
     }
 
@@ -765,6 +895,36 @@
       loadWmEvents();
     }
 
+    function getTagThemeClass(tagStr) {
+      if (!tagStr) return "tag-theme-default";
+      const clean = tagStr.replace("#", "").toUpperCase();
+      if (clean === "CS" || clean === "TECH" || clean === "TECHNOLOGY") return "tag-theme-cs";
+      if (clean === "DATA" || clean === "MATH" || clean === "STATISTICS") return "tag-theme-data";
+      if (clean === "PHIL" || clean === "ETHICS" || clean === "PHILOSOPHY") return "tag-theme-phil";
+      if (clean === "ART" || clean === "ARTS" || clean === "DESIGN" || clean === "MUSIC") return "tag-theme-art";
+      if (clean === "BIOL" || clean === "SCI" || clean === "BIOLOGY") return "tag-theme-biol";
+      if (clean === "BUSINESS" || clean === "FINANCE" || clean === "ECON") return "tag-theme-business";
+      if (clean === "SPORTS" || clean === "REC" || clean === "WELLNESS" || clean === "HEALTH") return "tag-theme-sports";
+      return "tag-theme-default";
+    }
+
+    function getEventPrimaryTagTheme(ev) {
+      if (ev.matched_tags && ev.matched_tags.length) {
+        return getTagThemeClass(ev.matched_tags[0]);
+      }
+      if (ev.category) {
+        const cat = ev.category.toUpperCase();
+        if (cat.includes("TECH") || cat.includes("CS")) return "tag-theme-cs";
+        if (cat.includes("DATA") || cat.includes("MATH")) return "tag-theme-data";
+        if (cat.includes("PHIL") || cat.includes("ACADEMIC")) return "tag-theme-phil";
+        if (cat.includes("ART")) return "tag-theme-art";
+        if (cat.includes("BIO")) return "tag-theme-biol";
+        if (cat.includes("BUSI")) return "tag-theme-business";
+        if (cat.includes("SPORT") || cat.includes("WELL")) return "tag-theme-sports";
+      }
+      return "tag-theme-default";
+    }
+
     function renderTagsUI() {
       const tags = getStudentTags();
 
@@ -776,19 +936,25 @@
 
       const activeRow = document.getElementById("activeTagsRow");
       if (activeRow) {
-        activeRow.innerHTML = tags.map(t => `
-          <span class="chip" style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600; background: var(--gold-tint); border-color: var(--gold-rule); color: var(--gold-text);">
-            ${escapeHtml(t)}
-            <button type="button" data-tag="${escapeHtml(t)}" onclick="removeTag(this.dataset.tag)" style="background:none;border:none;cursor:pointer;font-weight:700;margin-left:4px;color:var(--gold-text);" title="Remove tag">×</button>
-          </span>
-        `).join("");
+        activeRow.innerHTML = tags.map(t => {
+          const theme = getTagThemeClass(t);
+          return `
+            <span class="chip ${theme}" style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600;">
+              ${escapeHtml(t)}
+              <button type="button" data-tag="${escapeHtml(t)}" onclick="removeTag(this.dataset.tag)" style="background:none;border:none;cursor:pointer;font-weight:700;margin-left:4px;color:inherit;" title="Remove tag">×</button>
+            </span>
+          `;
+        }).join("");
       }
 
-      const renderTagChips = (tagList) => tagList.map(t => `
-        <span class="chip" style="font-family: var(--font-mono); font-size: 0.76rem; font-weight: 600; background: var(--accent-tint); color: var(--ok-ink); border-color: var(--accent-tint-2);">
-          ${escapeHtml(t)}
-        </span>
-      `).join("");
+      const renderTagChips = (tagList) => tagList.map(t => {
+        const theme = getTagThemeClass(t);
+        return `
+          <span class="chip ${theme}" style="font-family: var(--font-mono); font-size: 0.76rem; font-weight: 600;">
+            ${escapeHtml(t)}
+          </span>
+        `;
+      }).join("");
 
       const frontList = document.getElementById("frontPageTagsList");
       if (frontList) {
@@ -1085,6 +1251,16 @@
       alert(`Notification set for ${title} at ${timeStr} in ${location}.`);
     }
 
+    function formatDurationJs(minutes) {
+      if (minutes == null) return "";
+      const mins = Math.max(0, Math.floor(minutes));
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      if (h > 0 && m > 0) return `${h}h ${m}m`;
+      if (h > 0) return `${h}h`;
+      return `${m}m`;
+    }
+
     // LOAD NOW & NEXT (Front page view)
     async function loadNowAndNext() {
       try {
@@ -1102,18 +1278,104 @@
         const res = await fetch(`/api/now-and-next?${params.toString()}`);
         const data = await res.json();
 
-        // 1. Update Student Status Box
-        const statusBox = document.getElementById("studentStatusBox");
-        const statusText = document.getElementById("studentStatusText");
-        if (data.active_class) {
-          statusBox.className = "notice notice-bad";
-          statusText.textContent = `In class now: ${data.active_class.course_name} (${data.active_class.start_time}–${data.active_class.end_time} in ${data.active_class.location || "TBA"}).`;
-        } else if (data.next_class) {
-          statusBox.className = "notice notice-ok";
-          statusText.textContent = `Free right now. Next class is ${data.next_class.course_name} at ${data.next_class.start_time} in ${data.next_class.location || "TBA"}.`;
-        } else {
-          statusBox.className = "notice notice-ok";
-          statusText.textContent = "Free for the rest of today. No further classes scheduled.";
+        // 1. Update Academic Priority Hero
+        const heroContainer = document.getElementById("academicPriorityHero");
+        if (heroContainer) {
+          let stripHtml = "";
+          if (data.today_classes && data.today_classes.length > 0) {
+            stripHtml = `
+              <div class="today-classes-strip" role="list" aria-label="Today's Classes Timeline">
+                ${data.today_classes.map(cl => {
+                  let icon = "⏳";
+                  let statusCls = "upcoming";
+                  if (cl.status === "completed") {
+                    icon = "✓";
+                    statusCls = "completed";
+                  } else if (cl.status === "current") {
+                    icon = "▶";
+                    statusCls = "current";
+                  }
+                  const shortName = cl.course_name.split(":")[0].trim();
+                  return `<span class="today-class-pill ${statusCls}" role="listitem" title="${escapeHtml(cl.course_name)} (${escapeHtml(cl.time_range_12h || cl.start_time)})">${icon} ${escapeHtml(shortName)} ${escapeHtml(cl.start_time)}</span>`;
+                }).join("")}
+              </div>
+            `;
+          }
+
+          if (data.current_class) {
+            const cl = data.current_class;
+            const remMins = cl.minutes_remaining != null ? `${cl.minutes_remaining}m left` : "In Session";
+            const timeRange = cl.time_range_12h || `${cl.start_time} – ${cl.end_time}`;
+            heroContainer.innerHTML = `
+              <div class="academic-hero in-class">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                  <span class="academic-hero-badge badge-in-class">
+                    <span class="academic-pulse-dot" aria-hidden="true"></span>
+                    IN SESSION · ${escapeHtml(remMins)}
+                  </span>
+                  <span class="academic-hero-meta">Active Now</span>
+                </div>
+                <h2 class="academic-hero-title">${escapeHtml(cl.course_name)}</h2>
+                <div class="academic-hero-meta">
+                  <span>📍 ${escapeHtml(cl.location || "TBA")}</span>
+                  <span>·</span>
+                  <span>${escapeHtml(timeRange)}</span>
+                </div>
+                ${stripHtml}
+              </div>
+            `;
+          } else if (data.next_class) {
+            const cl = data.next_class;
+            const durStr = cl.minutes_until_start != null ? formatDurationJs(cl.minutes_until_start) : "";
+            const tagText = durStr ? `NEXT CLASS · in ${durStr}` : "NEXT CLASS";
+            const startDisplay = cl.start_time_12h || cl.start_time;
+            heroContainer.innerHTML = `
+              <div class="academic-hero upcoming">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                  <span class="academic-hero-badge badge-upcoming">${escapeHtml(tagText)}</span>
+                  <span class="academic-hero-meta">${escapeHtml(cl.time_range_12h || startDisplay)}</span>
+                </div>
+                <h2 class="academic-hero-title">${escapeHtml(cl.course_name)}</h2>
+                <div class="academic-hero-meta">
+                  <span>📍 ${escapeHtml(cl.location || "TBA")}</span>
+                  <span>·</span>
+                  <span>Starts at ${escapeHtml(startDisplay)}</span>
+                </div>
+                ${stripHtml}
+              </div>
+            `;
+          } else if (data.today_classes && data.today_classes.length > 0) {
+            const total = data.today_classes.length;
+            heroContainer.innerHTML = `
+              <div class="academic-hero all-clear">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                  <span class="academic-hero-badge clear">ACADEMIC SCHEDULE · TODAY</span>
+                  <span class="academic-hero-meta">${total} ${total === 1 ? 'class' : 'classes'} completed</span>
+                </div>
+                <div class="academic-hero-title">Classes Clear for Today</div>
+                <div class="academic-hero-meta">
+                  <span>All ${total} scheduled ${total === 1 ? 'class has' : 'classes have'} finished for today.</span>
+                  <span style="margin: 0 6px;">·</span>
+                  <button type="button" class="btn btn-quiet btn-xs" onclick="openFiltersModal('classes')" style="padding: 2px 8px; font-weight: 600; min-height: 24px;">+ Manage Classes</button>
+                </div>
+                ${stripHtml}
+              </div>
+            `;
+          } else {
+            heroContainer.innerHTML = `
+              <div class="academic-hero all-clear">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                  <span class="academic-hero-badge clear">ACADEMIC SCHEDULE · TODAY</span>
+                </div>
+                <div class="academic-hero-title">No Classes Scheduled</div>
+                <div class="academic-hero-meta">
+                  <span>Your academic schedule is completely clear today.</span>
+                  <span style="margin: 0 6px;">·</span>
+                  <button type="button" class="btn btn-quiet btn-xs" onclick="openFiltersModal('classes')" style="padding: 2px 8px; font-weight: 600; min-height: 24px;">+ Add Classes</button>
+                </div>
+              </div>
+            `;
+          }
         }
 
         let happening = data.happening_now || [];
@@ -1123,6 +1385,29 @@
           happening = happening.filter(ev => ev.matched_tags && ev.matched_tags.length > 0);
           soon = soon.filter(ev => ev.matched_tags && ev.matched_tags.length > 0);
         }
+
+        // Prioritize:
+        // 1. Matched student hashtags shine first at the top
+        // 2. Happening now: ending soonest (minutes_remaining ASC) so things finishing in 10m/20m take priority
+        happening.sort((a, b) => {
+          const matchA = (a.matched_tags && a.matched_tags.length) ? 1 : 0;
+          const matchB = (b.matched_tags && b.matched_tags.length) ? 1 : 0;
+          if (matchB !== matchA) return matchB - matchA;
+          const remA = a.minutes_remaining != null ? a.minutes_remaining : 999999;
+          const remB = b.minutes_remaining != null ? b.minutes_remaining : 999999;
+          return remA - remB;
+        });
+
+        // 1. Matched student hashtags shine first at the top
+        // 2. Starting soon: kicking off soonest (starts_in_minutes ASC) so things starting in 5m/15m are right at top
+        soon.sort((a, b) => {
+          const matchA = (a.matched_tags && a.matched_tags.length) ? 1 : 0;
+          const matchB = (b.matched_tags && b.matched_tags.length) ? 1 : 0;
+          if (matchB !== matchA) return matchB - matchA;
+          const startA = a.starts_in_minutes != null ? a.starts_in_minutes : 999999;
+          const startB = b.starts_in_minutes != null ? b.starts_in_minutes : 999999;
+          return startA - startB;
+        });
 
         // 2. Render Happening Right Now
         const nowBadge = document.getElementById("nowCountBadge");
@@ -1141,14 +1426,17 @@
               ? `<span class="status-note conflict">Class Conflict: ${escapeHtml(ev.conflicting_course)}</span>`
               : `<span class="status-note free">No class conflict</span>`;
 
+            const primaryTheme = getEventPrimaryTagTheme(ev);
+            const accentClass = primaryTheme !== "tag-theme-default" ? primaryTheme.replace("tag-theme-", "accent-tag-") : "";
+
             const tagPill = (ev.matched_tags && ev.matched_tags.length)
-              ? `<span class="tag-match-pill">Recommended · ${escapeHtml(ev.matched_tags.join(" "))}</span>`
+              ? `<span class="tag-match-pill ${getTagThemeClass(ev.matched_tags[0])}">★ Recommended · ${escapeHtml(ev.matched_tags.join(" "))}</span>`
               : "";
 
             const statusLabel = ev.status_label || (ev.minutes_remaining ? `In Session · ${ev.minutes_remaining}m left` : (ev.is_all_day ? "All Day Today" : "In Session"));
 
             return `
-              <div class="live-event-card in-session ${ev.has_conflict ? 'has-conflict' : ''}">
+              <div class="live-event-card in-session ${accentClass} ${ev.has_conflict ? 'has-conflict' : ''}">
                 <div class="live-event-head">
                   <div>
                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -1190,8 +1478,11 @@
               ? `<span class="status-note conflict">Overlaps with ${escapeHtml(ev.conflicting_course)}</span>`
               : `<span class="status-note free">No class conflict</span>`;
 
+            const primaryTheme = getEventPrimaryTagTheme(ev);
+            const accentClass = primaryTheme !== "tag-theme-default" ? primaryTheme.replace("tag-theme-", "accent-tag-") : "";
+
             const tagPill = (ev.matched_tags && ev.matched_tags.length)
-              ? `<span class="tag-match-pill">Recommended · ${escapeHtml(ev.matched_tags.join(" "))}</span>`
+              ? `<span class="tag-match-pill ${getTagThemeClass(ev.matched_tags[0])}">★ Recommended · ${escapeHtml(ev.matched_tags.join(" "))}</span>`
               : "";
 
             const statusLabel = ev.status_label || (ev.starts_in_minutes ? `Starts in ${ev.starts_in_minutes}m` : "Starts Soon");
@@ -1199,7 +1490,7 @@
             const eventTimeStr = ev.start_time || (ev.start_at ? formatWmEventDateTime(ev.start_at, ev.timezone, Boolean(ev.is_all_day)) : "");
 
             return `
-              <div class="live-event-card starts-soon ${ev.has_conflict ? 'has-conflict' : ''}">
+              <div class="live-event-card starts-soon ${accentClass} ${ev.has_conflict ? 'has-conflict' : ''}">
                 <div class="live-event-head">
                   <div>
                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
@@ -1514,63 +1805,100 @@
 
     async function loadWeeklyPlanner() {
       try {
-        const res = await fetch("/api/planning/weekly-schedule");
+        const sim = getSimulatedState();
+        let url = "/api/planning/weekly-schedule";
+        if (sim && sim.isSim && typeof sim.day === "number") {
+          url += `?sim_day=${sim.day}`;
+        }
+        const res = await fetch(url);
         const data = await res.json();
         const { stats, days } = data;
 
+        const statsEl = document.getElementById("plannerSummaryStats");
+        if (statsEl && stats) {
+          statsEl.textContent = `${stats.total_classes} Classes · ${stats.total_events} Club Events`;
+        }
+        const conflictEl = document.getElementById("plannerConflictBadge");
+        if (conflictEl && stats) {
+          if (stats.conflicted_events > 0) {
+            conflictEl.textContent = `⚠️ ${stats.conflicted_events} Overlap${stats.conflicted_events > 1 ? 's' : ''}`;
+            conflictEl.style.display = "inline-flex";
+          } else {
+            conflictEl.style.display = "none";
+          }
+        }
+
         const container = document.getElementById("timetableContainer");
-        container.innerHTML = days.map(d => {
-          const classesHtml = d.classes.length
-            ? d.classes.map(c => `
-                <div class="course-card" style="padding: var(--space-3); margin-bottom: var(--space-2);">
-                  <div style="font-weight: 600; font-size: 0.9rem; color: var(--ink);">${escapeHtml(c.course_name)}</div>
-                  <div class="meta num" style="font-size: 0.8rem; margin-top: 2px;">
-                    ${escapeHtml(c.start_time)}–${escapeHtml(c.end_time)} · ${escapeHtml(c.location || "TBA")}
-                  </div>
-                </div>
-              `).join("")
-            : `<div class="hint" style="font-style: italic;">No classes added.</div>`;
+        if (!container) return;
 
-          const eventsHtml = d.events.length
-            ? d.events.map(ev => {
-                const note = ev.has_conflict
-                  ? `<div class="status-note conflict" style="margin-top: 4px; font-size: 0.75rem;">Planning note: overlaps with ${escapeHtml(ev.conflicting_course)}</div>`
-                  : `<div class="status-note free" style="margin-top: 4px; font-size: 0.75rem;">No class conflict</div>`;
+        container.innerHTML = `
+          <div class="cal-grid">
+            ${days.map(d => {
+              const isToday = !!d.is_today;
+              const todayBadge = isToday ? `<span class="cal-today-pill">Today</span>` : "";
+              const totalCount = d.total_commitments !== undefined ? d.total_commitments : (d.timeline ? d.timeline.length : (d.classes.length + d.events.length));
+              const countLabel = `${totalCount} item${totalCount === 1 ? '' : 's'}`;
 
-                return `
-                  <div class="course-card ${ev.has_conflict ? 'has-conflict' : ''}" style="padding: var(--space-3); margin-bottom: var(--space-2);">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
-                      <div style="font-weight: 700; font-size: 0.92rem; color: var(--ink);">${escapeHtml(ev.title)}</div>
-                      <span class="chip" style="font-size: 0.75rem;">${escapeHtml(ev.category)}</span>
-                    </div>
-                    <div class="meta num" style="font-size: 0.8rem; margin-top: 2px;">
-                      ${escapeHtml(ev.club_name)} · ${escapeHtml(ev.start_time)}–${escapeHtml(ev.end_time)} · ${escapeHtml(ev.location)}
-                    </div>
-                    ${note}
+              const timeline = d.timeline || [];
+              let timelineContent = "";
+
+              if (!timeline.length) {
+                timelineContent = `
+                  <div class="cal-empty">
+                    <span class="cal-empty-text">No commitments</span>
+                    <button type="button" class="btn btn-quiet btn-xs" onclick="openFiltersModal('classes', ${d.day_index})" style="font-size: 0.75rem;">+ Add</button>
                   </div>
                 `;
-              }).join("")
-            : `<div class="hint" style="font-style: italic;">No scheduled club events.</div>`;
+              } else {
+                timelineContent = timeline.map(item => {
+                  const timeRange = item.time_range_12h || `${item.start_time_12h || item.start_time} – ${item.end_time_12h || item.end_time}`;
+                  if (item.type === "class") {
+                    return `
+                      <div class="cal-item is-class">
+                        <div class="cal-item-title">${escapeHtml(item.course_name)}</div>
+                        <div class="cal-item-time">${escapeHtml(timeRange)}</div>
+                        ${item.location ? `<div class="cal-item-loc">${escapeHtml(item.location)}</div>` : ""}
+                      </div>
+                    `;
+                  } else {
+                    const conflictBadge = item.has_conflict
+                      ? `<div class="cal-conflict-badge">⚠️ Overlaps ${escapeHtml(item.conflicting_course || "class")}</div>`
+                      : "";
+                    return `
+                      <div class="cal-item is-event ${item.has_conflict ? 'has-conflict' : ''}">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 4px;">
+                          <div class="cal-item-title">${escapeHtml(item.title)}</div>
+                          ${item.category ? `<span class="chip" style="font-size: 0.68rem; padding: 1px 5px;">${escapeHtml(item.category)}</span>` : ""}
+                        </div>
+                        <div class="cal-item-time">${escapeHtml(timeRange)}</div>
+                        <div class="cal-item-meta">
+                          ${item.club_name ? `<span>${escapeHtml(item.club_name)}</span>` : ""}
+                          ${item.location ? `<span>${escapeHtml(item.location)}</span>` : ""}
+                        </div>
+                        ${conflictBadge}
+                      </div>
+                    `;
+                  }
+                }).join("");
+              }
 
-          return `
-            <div class="panel" style="padding: var(--space-4);">
-              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--rule); padding-bottom: var(--space-2); margin-bottom: var(--space-3);">
-                <span style="font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; color: var(--ink);">${d.day_name}</span>
-                <span class="chip num">${d.classes.length} Classes · ${d.events.length} Club Events</span>
-              </div>
-              <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: var(--space-4);">
-                <div>
-                  <div style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; border-bottom: 1px solid var(--rule); padding-bottom: 4px;">Classes</div>
-                  ${classesHtml}
+              return `
+                <div class="cal-day-col ${isToday ? 'is-today' : ''}">
+                  <div class="cal-day-header ${isToday ? 'is-today' : ''}">
+                    <div class="cal-day-name">
+                      <span>${escapeHtml(d.day_name)}</span>
+                      ${todayBadge}
+                    </div>
+                    <div class="cal-day-meta">${countLabel}</div>
+                  </div>
+                  <div class="cal-day-timeline">
+                    ${timelineContent}
+                  </div>
                 </div>
-                <div>
-                  <div style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700; color: var(--muted); margin-bottom: 8px; border-bottom: 1px solid var(--rule); padding-bottom: 4px;">Club meetings</div>
-                  ${eventsHtml}
-                </div>
-              </div>
-            </div>
-          `;
-        }).join("");
+              `;
+            }).join("")}
+          </div>
+        `;
 
       } catch (err) {
         console.error("Failed to load weekly planner:", err);
@@ -1780,15 +2108,150 @@
       }
     }
 
+    const FALLBACK_COURSE_PRESETS = [
+      { course_name: "CSCI 141: Computational Problem Solving", department: "CSCI", days: [0, 2, 4], days_label: "MWF", start_time: "10:00", end_time: "10:50", location: "Jones 100" },
+      { course_name: "CSCI 241: Data Structures", department: "CSCI", days: [0, 2], days_label: "MW", start_time: "14:00", end_time: "15:15", location: "Jones 301" },
+      { course_name: "CSCI 303: Algorithms", department: "CSCI", days: [1, 3], days_label: "TR", start_time: "11:00", end_time: "12:15", location: "McGlothlin 020" },
+      { course_name: "DATA 141: Programming for Data Science", department: "DATA", days: [0, 2, 4], days_label: "MWF", start_time: "13:00", end_time: "13:50", location: "Blow 332" },
+      { course_name: "MATH 211: Linear Algebra", department: "MATH", days: [1, 3], days_label: "TR", start_time: "15:30", end_time: "16:50", location: "Jones 202" },
+      { course_name: "PHIL 201: Introduction to Philosophy", department: "PHIL", days: [1, 3], days_label: "TR", start_time: "09:30", end_time: "10:50", location: "Wren 200" },
+      { course_name: "BIOL 204: Introduction to Biology", department: "BIOL", days: [0, 2, 4], days_label: "MWF", start_time: "09:00", end_time: "09:50", location: "ISC 1127" }
+    ];
+
+    const FALLBACK_SLOTS = [
+      { label: "MWF 09:00–09:50", start: "09:00", end: "09:50", days: [0, 2, 4] },
+      { label: "MWF 10:00–10:50", start: "10:00", end: "10:50", days: [0, 2, 4] },
+      { label: "MWF 11:00–11:50", start: "11:00", end: "11:50", days: [0, 2, 4] },
+      { label: "MWF 13:00–13:50", start: "13:00", end: "13:50", days: [0, 2, 4] },
+      { label: "MWF 14:00–14:50", start: "14:00", end: "14:50", days: [0, 2, 4] },
+      { label: "TR 09:30–10:50", start: "09:30", end: "10:50", days: [1, 3] },
+      { label: "TR 11:00–12:15", start: "11:00", end: "12:15", days: [1, 3] },
+      { label: "TR 12:30–13:45", start: "12:30", end: "13:45", days: [1, 3] },
+      { label: "TR 14:00–15:15", start: "14:00", end: "15:15", days: [1, 3] },
+      { label: "TR 15:30–16:45", start: "15:30", end: "16:45", days: [1, 3] }
+    ];
+
+    let classPresetsData = null;
+
+    async function loadClassPresets() {
+      try {
+        const res = await fetch("/api/classes/presets");
+        if (res.ok) {
+          classPresetsData = await res.json();
+        }
+      } catch (err) {
+        console.warn("Using fallback presets:", err);
+      }
+      renderClassPresets();
+    }
+
+    function renderClassPresets() {
+      const coursesContainer = document.getElementById("coursePresetChips");
+      const slotsContainer = document.getElementById("slotPresetPills");
+      if (!coursesContainer) return;
+
+      const courses = (classPresetsData && classPresetsData.courses) || FALLBACK_COURSE_PRESETS;
+      coursesContainer.innerHTML = courses.map((c, i) => `
+        <button type="button" class="preset-chip" onclick="applyCoursePresetByIndex(${i})">
+          <span>${escapeHtml(c.course_name.split(':')[0])}</span>
+          <span style="color: var(--muted); font-size: 0.72rem;">${escapeHtml(c.days_label || "")} ${escapeHtml(c.start_time)}</span>
+        </button>
+      `).join("");
+
+      if (slotsContainer) {
+        let slotsList = [];
+        if (classPresetsData && classPresetsData.slots) {
+          classPresetsData.slots.forEach(grp => {
+            const d = grp.days || (grp.days_label === "MWF" ? [0, 2, 4] : (grp.days_label === "TR" ? [1, 3] : null));
+            (grp.slots || []).forEach(s => {
+              slotsList.push({
+                label: `${grp.days_label ? grp.days_label + ' ' : ''}${s.label || (s.start_time + '–' + s.end_time)}`,
+                start: s.start_time,
+                end: s.end_time,
+                days: d
+              });
+            });
+          });
+        } else {
+          slotsList = FALLBACK_SLOTS;
+        }
+
+        slotsContainer.innerHTML = slotsList.map((s, idx) => `
+          <button type="button" class="slot-pill" onclick="applySlotPresetByIndex(${idx})" title="Set time to ${escapeHtml(s.start)}–${escapeHtml(s.end)}">
+            ${escapeHtml(s.label)}
+          </button>
+        `).join("");
+        window._currentSlotsList = slotsList;
+      }
+      window._currentCoursesList = courses;
+    }
+
+    function applyCoursePresetByIndex(idx) {
+      const courses = window._currentCoursesList || FALLBACK_COURSE_PRESETS;
+      const course = courses[idx];
+      if (!course) return;
+
+      const wrap = document.getElementById("classAddFormWrap");
+      if (wrap) wrap.style.display = "block";
+      const addBtn = document.getElementById("toggleAddClassBtn");
+      if (addBtn) addBtn.textContent = "Close";
+
+      const nameInput = document.getElementById("courseName");
+      const startInput = document.getElementById("classStart");
+      const endInput = document.getElementById("classEnd");
+      const locInput = document.getElementById("classLoc");
+
+      if (nameInput) nameInput.value = course.course_name;
+      if (startInput) startInput.value = course.start_time;
+      if (endInput) endInput.value = course.end_time;
+      if (locInput) locInput.value = course.location || "";
+
+      if (Array.isArray(course.days)) {
+        const dayCheckboxes = document.querySelectorAll('#dayPills input[name="days"]');
+        dayCheckboxes.forEach(cb => {
+          cb.checked = course.days.includes(parseInt(cb.value, 10));
+        });
+      }
+
+      if (nameInput) nameInput.focus();
+    }
+
+    function applySlotPresetByIndex(idx) {
+      const slots = window._currentSlotsList || FALLBACK_SLOTS;
+      const slot = slots[idx];
+      if (!slot) return;
+
+      const wrap = document.getElementById("classAddFormWrap");
+      if (wrap) wrap.style.display = "block";
+      const addBtn = document.getElementById("toggleAddClassBtn");
+      if (addBtn) addBtn.textContent = "Close";
+
+      const startInput = document.getElementById("classStart");
+      const endInput = document.getElementById("classEnd");
+      if (startInput) startInput.value = slot.start;
+      if (endInput) endInput.value = slot.end;
+
+      if (Array.isArray(slot.days) && slot.days.length) {
+        const dayCheckboxes = document.querySelectorAll('#dayPills input[name="days"]');
+        dayCheckboxes.forEach(cb => {
+          cb.checked = slot.days.includes(parseInt(cb.value, 10));
+        });
+      }
+    }
+
     async function loadAll() {
+      applyMajorTheme();
       renderTagsUI();
       updateFilterBadge();
+      await loadClassPresets();
       await loadClasses();
       await loadNowAndNext();
       await loadEvents();
       await loadWmEvents();
+      await loadWeeklyPlanner();
     }
 
+    applyMajorTheme();
     loadAll();
   </script>
 </body>

@@ -17,6 +17,7 @@ graph TD
     subgraph Backend ["FastAPI Backend (app.py)"]
         API_Events["/api/events (GET, POST, DELETE)"]
         API_Classes["/api/classes (GET, POST, DELETE)"]
+        API_ClassPresets["/api/classes/presets (GET)"]
         API_NowNext["/api/now-and-next (GET)"]
         API_WMEvents["/api/wm-events (GET)"]
         API_Planning_Conflicts["/api/planning/creator-conflicts (GET)"]
@@ -227,19 +228,91 @@ Provides a single, consolidated source of truth for the 7-day academic week.
 ```
 
 #### `GET /api/now-and-next`
-Returns currently active sessions and upcoming events within 3 hours across both student club events and official W&M / TribeLink campus calendar feeds.
+Returns currently active sessions, upcoming events within 3 hours across club and official W&M feeds, and the student's prioritized academic schedule for the day.
 - **Query Parameters**:
   - `sim_day`: integer (`0..6`, optional)
   - `sim_time`: string (`HH:MM`, optional)
+  - `tags`: string (comma-separated student interest tags, e.g. `CS,DATA`, optional)
 - **Response**:
 ```json
 {
   "current_day": 0,
   "current_day_name": "Monday",
-  "current_time": "17:15",
+  "current_time": "14:15",
   "is_simulated": false,
-  "active_class": null,
-  "next_class": null,
+  "academic_summary": {
+    "total_today": 2,
+    "completed_count": 0,
+    "has_current": true,
+    "has_upcoming": true
+  },
+  "current_class": {
+    "id": 1,
+    "course_name": "CSCI 241: Data Structures",
+    "day_of_week": 0,
+    "start_time": "14:00",
+    "end_time": "15:15",
+    "start_time_12h": "2:00 PM",
+    "end_time_12h": "3:15 PM",
+    "location": "Jones Hall 301",
+    "status": "current",
+    "minutes_remaining": 60,
+    "status_label": "In Session · 60m left"
+  },
+  "active_class": {
+    "id": 1,
+    "course_name": "CSCI 241: Data Structures",
+    "day_of_week": 0,
+    "start_time": "14:00",
+    "end_time": "15:15",
+    "start_time_12h": "2:00 PM",
+    "end_time_12h": "3:15 PM",
+    "location": "Jones Hall 301",
+    "status": "current",
+    "minutes_remaining": 60,
+    "status_label": "In Session · 60m left"
+  },
+  "next_class": {
+    "id": 2,
+    "course_name": "MATH 211: Linear Algebra",
+    "day_of_week": 0,
+    "start_time": "15:30",
+    "end_time": "16:45",
+    "start_time_12h": "3:30 PM",
+    "end_time_12h": "4:45 PM",
+    "location": "Jones Hall 202",
+    "status": "upcoming",
+    "minutes_until_start": 75,
+    "status_label": "Starts in 1h 15m"
+  },
+  "today_classes": [
+    {
+      "id": 1,
+      "course_name": "CSCI 241: Data Structures",
+      "day_of_week": 0,
+      "start_time": "14:00",
+      "end_time": "15:15",
+      "start_time_12h": "2:00 PM",
+      "end_time_12h": "3:15 PM",
+      "location": "Jones Hall 301",
+      "status": "current",
+      "minutes_remaining": 60,
+      "status_label": "In Session · 60m left"
+    },
+    {
+      "id": 2,
+      "course_name": "MATH 211: Linear Algebra",
+      "day_of_week": 0,
+      "start_time": "15:30",
+      "end_time": "16:45",
+      "start_time_12h": "3:30 PM",
+      "end_time_12h": "4:45 PM",
+      "location": "Jones Hall 202",
+      "status": "upcoming",
+      "minutes_until_start": 75,
+      "status_label": "Starts in 1h 15m"
+    }
+  ],
   "happening_now": [
     {
       "id": 1,
@@ -257,27 +330,41 @@ Returns currently active sessions and upcoming events within 3 hours across both
       "status_label": "In Session · 75m left",
       "is_all_day": false,
       "is_ongoing": false
-    },
-    {
-      "id": "fresh-start-2026::2026-11-14",
-      "title": "Fresh Start Orientation",
-      "club_name": "STEP & Campus Life",
-      "category": "Orientation",
-      "day_of_week": 0,
-      "start_time": "00:00",
-      "end_time": "23:59",
-      "location": "Sadler Center",
-      "description": "Multi-day welcome and campus transition activities.",
-      "has_conflict": false,
-      "conflicting_course": null,
-      "minutes_remaining": null,
-      "status_label": "All Day Today",
-      "is_all_day": true,
-      "is_ongoing": true
     }
   ],
   "starting_soon": [],
   "upcoming_today": []
+}
+```
+
+#### `GET /api/classes/presets`
+Returns static, curated William & Mary course presets across departments (CSCI, DATA, MATH, PHIL, BIOL, CHEM) and standard academic meeting time blocks (MWF 50m, TR 75m) for fast 1-click schedule enrollment.
+- **Query Parameters**: None
+- **Response**:
+```json
+{
+  "courses": [
+    {
+      "course_name": "CSCI 241: Data Structures",
+      "department": "CSCI",
+      "days": [0, 2],
+      "days_label": "MW",
+      "start_time": "14:00",
+      "end_time": "15:15",
+      "location": "Jones Hall 301",
+      "time_range_12h": "2:00 PM – 3:15 PM"
+    }
+  ],
+  "slots": [
+    {
+      "name": "MWF 50m",
+      "days": [0, 2, 4],
+      "days_label": "MWF",
+      "slots": [
+        {"start_time": "10:00", "end_time": "10:50", "label": "10:00–10:50"}
+      ]
+    }
+  ]
 }
 ```
 
