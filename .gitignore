@@ -61,3 +61,7 @@ NEXT_STEPS.md
 SECURITY_FINDINGS*.md
 *HANDOFF*.md
 CLAUDE.local.md
+.codex/
+AGENTS.md
+AgentPrompt.md
+GEMINI_WRITEUP.md
