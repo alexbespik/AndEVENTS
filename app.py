@@ -888,8 +888,8 @@ async def run_calendar_parser():
     async with _PARSER_LOCK:
         try:
             successes, failures = await asyncio.wait_for(
-                asyncio.to_thread(_run_parser_worker, 0.0, 4.0),
-                timeout=8.0,
+                asyncio.to_thread(_run_parser_worker, 0.0, 14.0),
+                timeout=20.0,
             )
         except asyncio.TimeoutError:
             successes, failures = 0, 1

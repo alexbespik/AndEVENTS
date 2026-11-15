@@ -166,7 +166,7 @@ def _feed_links(html: str, base: str) -> list[str]:
 def discover_and_import(
     conn: sqlite3.Connection,
     delay: float = 0.5,
-    timeout: float = 6.0,
+    timeout: float = 14.0,
     discover_directory: bool = False,
 ) -> tuple[int, int]:
     """Attempt public feed sync; crawl directory only if discover_directory is True."""
