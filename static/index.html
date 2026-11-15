@@ -39,6 +39,24 @@
   <link rel="stylesheet" href="/static/lab.css" />
   <style>
     /* Clean, understated extensions adhering strictly to lab.css design tokens */
+    #cornerMenuDropdown .theme-switch {
+      border-color: var(--rule);
+    }
+    #cornerMenuDropdown .theme-switch button {
+      color: var(--ink-soft);
+    }
+    #cornerMenuDropdown .theme-switch button + button {
+      border-left-color: var(--rule);
+    }
+    #cornerMenuDropdown .theme-switch button:hover {
+      background: var(--sunk);
+      color: var(--ink);
+    }
+    #cornerMenuDropdown .theme-switch button[aria-pressed="true"] {
+      background: var(--accent) !important;
+      color: var(--on-accent) !important;
+    }
+
     .sidebar-classes {
       padding: var(--space-4) var(--space-4) var(--space-3);
       display: flex;
@@ -589,7 +607,7 @@
                 <input type="time" id="classStart" class="input" style="min-height: 30px; font-size: 0.82rem;" value="14:00" required>
                 <input type="time" id="classEnd" class="input" style="min-height: 30px; font-size: 0.82rem;" value="15:15" required>
               </div>
-              <input type="text" id="classLoc" class="input" style="min-height: 30px; font-size: 0.82rem;" placeholder="Location (e.g. Jones 301)">
+              <input type="text" id="classLoc" class="input" style="min-height: 30px; font-size: 0.82rem;" placeholder="Location (e.g. Jones 301)" list="campusLocationsList">
               <button type="submit" class="btn btn-gold btn-sm" style="font-weight: 600; width: 100%;">Save to Schedule</button>
             </form>
           </div>
@@ -798,7 +816,7 @@
 
                 <div class="field">
                   <label for="evClub">Host organization</label>
-                  <input type="text" id="evClub" class="input" required placeholder="e.g. Association for Computing Machinery" oninput="inspectProposedSlot()">
+                  <input type="text" id="evClub" class="input" required placeholder="e.g. Association for Computing Machinery" list="campusRsoList" oninput="inspectProposedSlot()">
                 </div>
 
                 <div class="field">
@@ -839,7 +857,7 @@
 
                 <div class="field">
                   <label for="evLocation">Location</label>
-                  <input type="text" id="evLocation" class="input" required placeholder="e.g. ISC 1127" oninput="inspectProposedSlot()">
+                  <input type="text" id="evLocation" class="input" required placeholder="e.g. ISC 1127" list="campusLocationsList" oninput="inspectProposedSlot()">
                 </div>
 
                 <div class="field">
@@ -877,6 +895,9 @@
       </div>
     </main>
   </div>
+
+  <datalist id="campusLocationsList"></datalist>
+  <datalist id="campusRsoList"></datalist>
 
   <script>
     const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -2784,6 +2805,32 @@
         console.warn("Using fallback presets:", err);
       }
       renderClassPresets();
+      loadAutocompletePresets().catch(console.warn);
+    }
+
+    async function loadAutocompletePresets() {
+      try {
+        const [locRes, rsoRes] = await Promise.all([
+          fetch("/api/presets/locations").then(r => r.ok ? r.json() : null),
+          fetch("/api/presets/rsos").then(r => r.ok ? r.json() : null)
+        ]);
+
+        if (locRes && Array.isArray(locRes.locations)) {
+          const locDatalist = document.getElementById("campusLocationsList");
+          if (locDatalist) {
+            locDatalist.innerHTML = locRes.locations.map(loc => `<option value="${escapeHtml(loc)}"></option>`).join("");
+          }
+        }
+
+        if (rsoRes && Array.isArray(rsoRes.rsos)) {
+          const rsoDatalist = document.getElementById("campusRsoList");
+          if (rsoDatalist) {
+            rsoDatalist.innerHTML = rsoRes.rsos.map(rso => `<option value="${escapeHtml(rso)}"></option>`).join("");
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load autocomplete presets:", err);
+      }
     }
 
     function renderClassPresets() {

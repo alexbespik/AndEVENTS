@@ -1092,6 +1092,125 @@ WM_SLOT_PATTERNS = [
 ]
 
 
+CANONICAL_CAMPUS_LOCATIONS = [
+    "Sadler Commonwealth",
+    "Sadler Tidewater AB",
+    "Sadler Lodge One",
+    "Sadler Chesapeake",
+    "Sadler Center 202",
+    "Sadler Atrium",
+    "ISC 1127",
+    "ISC 1221",
+    "ISC 2000",
+    "ISC Atrium",
+    "Small Hall Makerspace",
+    "Small Hall 110",
+    "Small Hall 111",
+    "Blow Memorial Hall 201",
+    "Blow Memorial Hall 332",
+    "McGlothlin-Street Hall 020",
+    "McGlothlin-Street Hall 101",
+    "Jones Hall 301",
+    "Jones Hall 202",
+    "Wren Chapel",
+    "Wren Building Great Hall",
+    "Wren Building 200",
+    "Swem Library Read & Relax",
+    "Swem Library Ford Classroom",
+    "Swem Library Makerspace",
+    "Campus Center Trinkle Hall",
+    "Campus Center Little Theatre",
+    "Student Rec Center Pool",
+    "Student Rec Center Gym",
+    "Sunken Garden",
+    "Crim Dell Meadow",
+    "Martha Wren Briggs Amphitheatre",
+]
+
+CANONICAL_CAMPUS_RSOS = [
+    "W&M Linux Users Group (LUG)",
+    "Association for Computing Machinery (ACM)",
+    "Machine Learning & AI Club",
+    "Tribe Cyber",
+    "Women in Computing (WiC)",
+    "Robotics & IoT Club",
+    "Makerspace Guild",
+    "Google Developer Student Club (GDSC)",
+    "W&M Chess Club",
+    "Tabletop Gaming Society",
+    "Alma Mater Productions (AMP)",
+    "The Flat Hat",
+    "WCWM 90.9 FM",
+    "Student Assembly (SA)",
+    "International Relations Club (IRC)",
+    "Debate Society",
+    "Model United Nations",
+    "Black Student Organization (BSO)",
+    "Latin American Student Union (LASU)",
+    "Asian American Student Initiative (AASI)",
+    "South Asian Student Association (SASA)",
+    "Club Swim & Water Polo",
+    "Tribe Triathlon",
+    "Rock Climbing Club",
+    "Society of Physics Students (SPS)",
+    "Chemistry Club",
+    "Philosophy Club",
+    "Pre-Med American Medical Student Association (AMSA)",
+    "Women in Science and Engineering (WISE)",
+    "Salsa & Latin Dance Club",
+]
+
+
+@app.get("/api/presets/locations")
+def get_location_presets():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT DISTINCT location FROM wm_events 
+        WHERE location IS NOT NULL AND TRIM(location) != '' AND LENGTH(location) < 60
+        ORDER BY location ASC LIMIT 120
+    """)
+    db_locs = [r[0].strip() for r in cur.fetchall() if r[0] and not r[0].startswith("http")]
+    conn.close()
+
+    seen = set()
+    merged = []
+    for loc in CANONICAL_CAMPUS_LOCATIONS + db_locs:
+        norm = loc.strip()
+        if norm and norm.lower() not in seen:
+            seen.add(norm.lower())
+            merged.append(norm)
+    return {"locations": merged}
+
+
+@app.get("/api/presets/rsos")
+def get_rso_presets():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT DISTINCT club_name FROM club_events 
+        WHERE club_name IS NOT NULL AND TRIM(club_name) != '' AND LENGTH(club_name) < 80
+        ORDER BY club_name ASC LIMIT 100
+    """)
+    db_clubs = [r[0].strip() for r in cur.fetchall()]
+    cur.execute("""
+        SELECT DISTINCT calendar_name FROM wm_event_calendars 
+        WHERE calendar_name IS NOT NULL AND TRIM(calendar_name) != ''
+        ORDER BY calendar_name ASC LIMIT 100
+    """)
+    db_cals = [r[0].strip() for r in cur.fetchall() if "events" not in r[0].lower()]
+    conn.close()
+
+    seen = set()
+    merged = []
+    for rso in CANONICAL_CAMPUS_RSOS + db_clubs + db_cals:
+        norm = rso.strip()
+        if norm and norm.lower() not in seen:
+            seen.add(norm.lower())
+            merged.append(norm)
+    return {"rsos": merged}
+
+
 @app.get("/api/classes/presets")
 def get_class_presets():
     return {
