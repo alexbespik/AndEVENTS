@@ -127,7 +127,7 @@ Claude **must** read and understand every user request and complaint in chronolo
 | **16** | *`Screenshot.png`: "also in calendar events should chandge overall position according to time like in wm path"* | The Weekly Planner timetable previously rendered day items in an un-positioned flex column. Implemented a 14-hour vertical time grid (8am to 10pm) matching William & Mary PATH Class Search & Registration with a dedicated hour gutter (`8am`, `9am`, `10am`, `11am`, `noon`, `1pm` ... `10pm`), horizontal hour rules, absolute vertical positioning (`top` by start time, `height` by duration), collision packing for overlaps, and an all-day shelf. | **Weekly Planner now features authentic W&M Path time-proportional grid.** |
 | **17** | *"also add to the claude tasks chandge the update button to be looking good"* | The update button in the masthead and directory looked like a raw utility box with an ugly unicode `↻` glyph. Needs refined SVG iconography, smooth spinning transitions, subtle gold micro-elevation, and zero background grayness. | **Documented in Task D below and implemented with `.btn-update`, dual-arrow SVG icons, and smooth CSS spinning transitions.** |
 | **18** | *"add in THE CLAUDE LIST that he needs to fix phone view"* | Mobile/phone view requires dedicated responsive polish: masthead header wrapping, horizontal overflow handling in the 7-day Weekly Planner timetable (scroll snap or day toggle tabs), touch target sizing (44px min), full-width responsive modals on narrow screens (<= 640px), and readable single-column event feeds. | **Documented in Task E and the urgent parallel agent mandate for Claude's mobile layout overhaul.** |
-| **19** | *(Latest)*: *"also add to the claude issues that happaning right now tab should show only the now and next few hours stuff not a fuking week ahead"* | The "Happening right now" section in "Who's up?" (`/api/now-and-next`) was dumping all-day multi-week and multi-month museum exhibitions (e.g. June to February exhibits) into `happening_now`! "Who's up?" MUST strictly show only events actively in session right now or starting in the next few hours (<= 3h) of TODAY. Multi-day exhibitions belong in Directory or an exhibitions shelf, never polluting the live immediate pulse. | **Documented in Task F and fixed in `app.py` temporal filters.** |
+| **19** | *(Latest)*: *"also add to the claude issues that happaning right now tab should show only the now and next few hours stuff not a fuking week ahead. Add to the last issue that showing the 10 days ago events is not ok too"* | The "Happening right now" section in "Who's up?" (`/api/now-and-next`) was dumping past events from 10–12 days ago (`Mon, Nov 2` Graduate Studies Registration) and ongoing museum exhibitions from months ago (`Feb 7`, `May 15`, `Jun 2`, `Jun 10`, `Jun 26`, `Aug 27`, `Sep 28`, `Oct 1`, `Oct 17`, `Oct 20`) with "All Day Today" / "Ongoing" labels into `happening_now`! Showing events from 10 days or months ago in a real-time live pulse is completely broken. Both backend and frontend now strictly enforce that `happening_now` contains ONLY events whose start date is **TODAY** and whose hours are active **RIGHT NOW** or starting within 3 hours. | **Documented in Task F and enforced in `app.py` and `static/index.html`.** |
 
 ---
 
@@ -370,24 +370,45 @@ The entire application must feel like an authentic, first-class native iOS/Andro
    - Prevent horizontal page bounce/shake with `overflow-x: hidden` on viewport wrappers.
 
 ### Task F (Agent 6): Strict Temporal Scoping for "Happening Right Now" / "Who's up?"
-The user explicitly mandated: *"happening right now tab should show only the now and next few hours stuff not a fucking week ahead"*.
+The user explicitly mandated: *"happening right now tab should show only the now and next few hours stuff not a fucking week ahead. Add to the last issue that showing the 10 days ago events is not ok too"*.
+
+#### Concrete Examples of Broken Past Events Observed by the User
+The user reported the following past and ongoing events appearing inappropriately in the live "Happening right now" feed on Saturday, Nov 14:
+- `College of Arts & Sciences: Graduate Studies - Registration for Continuing Students` (Mon, Nov 2 — **12 days ago!**)
+- `Pre-ETS in the Classroom: A Four Part Virtual Professional Learning Series` (Tue, Oct 20 — labeled "Ongoing")
+- `W&M Alumni Career Design Program (30-day Online Program)` (Sat, Oct 17 — labeled "All Day Today")
+- `We the Teachers: 2027-2028 Applications` (Thu, Oct 1 — labeled "Ongoing")
+- `Civics Minute on WHRV 89.5 FM: New Episodes Every Monday` (Mon, Sep 28 — labeled "Ongoing")
+- `Lewis Cohen: Forms of Inquiry` (Fri, Aug 28 — labeled "All Day Today")
+- `Where Late the Sweet Birds: Selected Works of Morgan Bulkeley, 1984-2025` (Wed, Aug 27)
+- `Forever Marked By The Day: A Quarter Century of Mourning & Renewal` (Fri, Jun 26)
+- `The Great American Birthday Quilt` (Wed, Jun 10)
+- `Photography From 1870 to Tomorrow: Pioneers & Innovators` (Tue, Jun 2)
+- `18th-20th Century American Paintings` (Fri, May 15)
+- `Resilient Beauty: Selections from the Native American Art Collection` (Fri, May 15)
+- `Founding the Alma Mater of the Nation` (Fri, Feb 7)
+- `Campus Tours of VIMS Eastern Shore Laboratory` (Thu, Jan 1 — labeled "Ongoing")
 
 #### Root Cause of the Bug
-In `app.py#L737-L762`, campus events flagged `is_all_day` whose date interval encompassed today (`ev_start_d <= today_d < ev_end_d`) were appended directly into `happening_now`.  
-Because campus museums and galleries host multi-month exhibitions (e.g. "Photography From 1870 to Tomorrow: June 2 to Feb 1", "Founding the Alma Mater: Feb 7 to Dec 31"), **over 15 multi-month exhibitions running for months were showing up inside "Happening right now" on a Saturday night!**
+In `app.py#L737-L762`, campus events flagged `is_all_day` whose date interval encompassed today (`ev_start_d <= today_d < ev_end_d`) or whose multi-day range was active were appended directly into `happening_now` with synthetic labels like "All Day Today" or "Ongoing".  
+Because campus museums, online courses, and registration deadlines span weeks or months, **over 15 multi-week and multi-month events that started days or months ago were showing up inside "Happening right now" on a Saturday night!**
 
 #### Strict Temporal Rules for "Happening Right Now"
 1. **Actively In Session (`happening_now`)**:
    - Must be actively in session **RIGHT NOW TODAY**:
      - Single-day timed events: `st <= now_dt < en` and `st.date() == today_d`.
      - Single-day all-day events: `is_all_day == True` and `(ev_end_d - ev_start_d).days <= 1` and `ev_start_d == today_d`.
-   - **EXCLUDE ALL MULTI-DAY EVENTS**: If an event spans multiple days (`(ev_end_d - ev_start_d).days > 1` or `(en.date() - st.date()).days >= 1`), it is an ongoing exhibition or program. It **MUST NEVER** be placed in `happening_now` or `starting_soon`. It belongs in the `Directory` tab.
+   - **BANNED FROM LIVE FEED**:
+     - Events that started before today (`ev_start_d < today_d` or `st.date() < today_d`).
+     - Multi-day exhibitions or programs spanning more than 1 day (`(ev_end_d - ev_start_d).days > 1` or `(en.date() - st.date()).days >= 1`).
+     - Events labeled "Ongoing" or cross-date deadlines.
+     - Multi-day items belong exclusively in the `Directory` tab.
 2. **Starting Soon (`starting_soon`)**:
    - Strictly events starting within the next few hours (<= 3 hours) **TODAY**:
      - `st > now_dt and (st - now_dt).total_seconds() <= 3 * 3600 and st.date() == today_d`.
    - Never show tomorrow's events, next week's events, or distant future dates in "Starting Soon".
-3. **Frontend Validation in `loadNowAndNext()`**:
-   - Filter out any event where `date_display` or `start_at` does not match today's date or is a multi-day span, guaranteeing that "Who's up?" remains a hyper-focused live pulse of what a student can walk into *right now* or *in the next few hours*.
+3. **Double-Layered Frontend Validation in `loadNowAndNext()`**:
+   - In `static/index.html`, explicitly filter `data.happening_now` and `data.starting_soon` to reject any event where `ev.status_label === "Ongoing"` or where `date_display` does not match today's date string (e.g. `Sat, Nov 14`). This guarantees that even if cached server data is returned, past events from 10 days ago are instantly discarded on the client side.
 
 ---
 

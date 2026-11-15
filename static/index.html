@@ -2302,6 +2302,20 @@
           matched_tags: matchClientTags(ev, studentTags)
         }));
 
+        // Strict temporal safeguard: Never show events from 10 days ago, past months, or ongoing multi-day programs
+        happening = happening.filter(ev => {
+          if (ev.status_label === "Ongoing") return false;
+          if (ev.is_wm_event && ev.is_all_day && ev.status_label === "All Day Today") {
+            // Reject if it's an exhibition started in past months
+            if (ev.start_at && ev.start_at.substring(0, 10) < new Date().toISOString().substring(0, 10)) return false;
+          }
+          return true;
+        });
+        soon = soon.filter(ev => {
+          if (ev.status_label === "Ongoing") return false;
+          return true;
+        });
+
         if (recommendedOnly) {
           happening = happening.filter(ev => ev.matched_tags && ev.matched_tags.length > 0);
           soon = soon.filter(ev => ev.matched_tags && ev.matched_tags.length > 0);
