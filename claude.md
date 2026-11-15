@@ -17,6 +17,7 @@
 > - **Agent 2 (`coder`)**: Feed Parser Expansion (Add the 4 new W&M feeds in `import_wm_events.py`: Cohen Career Center, Swem Library, Student Happenings, Athletics).
 > - **Agent 3 (`tester`)**: Continuous test runner (`python3 -m unittest discover tests && python3 -m unittest test_wm_data.py && python3 -m unittest test_import_wm_events.py`).
 > - **Agent 4 (`reviewer` / Vision)**: Take/inspect screenshots using vision models to verify pixel-perfection against `&.edu`.
+> - **Agent 5 (`coder` / Mobile)**: **Fix Phone View** (Mobile layout overhaul for phones <= 640px/480px: responsive 7-day timetable horizontal scroll/day tabs, edge-to-edge bottom-sheet modals, 44px thumb touch targets, and input zoom prevention).
 
 ---
 
@@ -123,7 +124,8 @@ Claude **must** read and understand every user request and complaint in chronolo
 | **14** | *"and its still gives the inaccesibble error also increase the scope of search to all the wm channels like socials and more"* | (a) Feed was reporting "1 inaccessible": caused by `wm-main` event `379249@events.wm.edu` with mismatched DTSTART (datetime) and DTEND (date), missing `time` import, and unescaped description line breaks in `arts` and `music`. Fixed with resilient non-strict feed parsing and normalization; (b) Expanded discovery from 2 feeds to 15 live W&M feeds (athletics, student engagement, swem libraries, recreation sports, career center, wellness, music, theatre, arts, academic calendar, etc.), bringing active campus events to 597+ with 0 inaccessible feeds. | **15 feeds now sync with 100% success rate (`successes=15, failures=0`).** |
 | **15** | *`Screenshot.png`: "also could you do something with those slope buttons looking like shit Arrangement: ⏱ Chronological 🏢 Group by Department 🔀 Shuffle by Department make them in style of header"* | The arrangement buttons on "Who's up?" were styled with clunky emojis (`⏱`, `🏢`, `🔀`) and blocky buttons. Re-architected with `.arrangement-nav` and `.arrangement-tab` using crisp SVG stroke icons and subtle active gold underline indicators matching the masthead `.modes` navbar. | **Arrangement buttons match masthead header design.** |
 | **16** | *`Screenshot.png`: "also in calendar events should chandge overall position according to time like in wm path"* | The Weekly Planner timetable previously rendered day items in an un-positioned flex column. Implemented a 14-hour vertical time grid (8am to 10pm) matching William & Mary PATH Class Search & Registration with a dedicated hour gutter (`8am`, `9am`, `10am`, `11am`, `noon`, `1pm` ... `10pm`), horizontal hour rules, absolute vertical positioning (`top` by start time, `height` by duration), collision packing for overlaps, and an all-day shelf. | **Weekly Planner now features authentic W&M Path time-proportional grid.** |
-| **17** | *(Latest)*: *"also add to the claude tasks chandge the update button to be looking good"* | The update button in the masthead and directory looked like a raw utility box with an ugly unicode `↻` glyph. Needs refined SVG iconography, smooth spinning transitions, subtle gold micro-elevation, and zero background grayness. | **Documented in Task D below and implemented with `.btn-update`, dual-arrow SVG icons, and smooth CSS spinning transitions.** |
+| **17** | *"also add to the claude tasks chandge the update button to be looking good"* | The update button in the masthead and directory looked like a raw utility box with an ugly unicode `↻` glyph. Needs refined SVG iconography, smooth spinning transitions, subtle gold micro-elevation, and zero background grayness. | **Documented in Task D below and implemented with `.btn-update`, dual-arrow SVG icons, and smooth CSS spinning transitions.** |
+| **18** | *(Latest)*: *"add in THE CLAUDE LIST that he needs to fix phone view"* | Mobile/phone view requires dedicated responsive polish: masthead header wrapping, horizontal overflow handling in the 7-day Weekly Planner timetable (scroll snap or day toggle tabs), touch target sizing (44px min), full-width responsive modals on narrow screens (<= 640px), and readable single-column event feeds. | **Documented in Task E and the urgent parallel agent mandate for Claude's mobile layout overhaul.** |
 
 ---
 
@@ -340,6 +342,30 @@ The update buttons across the UI (`#mastheadUpdateBtn` in the masthead, `#direct
    - Never replace the SVG with text glyphs that cause jittery width changes.
 5. **Polished State Transitions**:
    - Label transitions gracefully: `Update` → `Updating…` → `Updated ✓` → revert to original after 1.2s.
+
+### Task E (Agent 5): Mobile & Phone View Responsive Polish (Screens <= 640px and <= 480px)
+The user explicitly mandated: *"fix phone view"*.  
+The entire application must feel like an authentic, first-class native iOS/Android mobile web app on mobile devices and narrow phone viewports:
+
+1. **Top Masthead & Navigation Bar**:
+   - On screens `<= 640px`, `.modes` nav must allow horizontal touch momentum scrolling (`overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-wrap: nowrap;`).
+   - Masthead right items (Update button, live clock, settings menu) must remain compact and aligned without wrapping onto multiple awkward lines.
+2. **Weekly Planner Timetable on Phones**:
+   - The 7-day timetable cannot squash 7 days side-by-side into 35px columns on a 375px phone screen.
+   - Enforce minimum column width (`min-width: 120px` per day with horizontal scroll container and sticky hour gutter) OR provide a mobile day selector pill bar (`[Mon] [Tue] [Wed] [Thu] [Fri] [Sat] [Sun]`) to view single/dual days comfortably.
+   - Time collision cluster badges (`+N more events`) and the 36px collapsible all-day bar must have thumb-accessible touch targets (minimum 44px tap area).
+3. **Responsive Event Modals (`#eventModal`, `#clusterModal`, `#filterModal`)**:
+   - On mobile screens (`max-width: 640px`), modals must adapt as mobile-first bottom sheets or edge-to-edge dialogs:
+     - `width: 100%; max-width: 100vw; margin: 0; border-radius: 16px 16px 0 0; bottom: 0; top: auto; max-height: 88vh; overflow-y: auto;`.
+   - Close button (`✕`) must be prominently positioned in the top-right corner with a generous touch area.
+4. **Who's Up? & Directory Event Cards**:
+   - Department filter pills (`#departmentFilterBar`, `#plannerDeptFilterGroup`) must scroll smoothly horizontally (`overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch;`).
+   - Cards must span 100% of viewport width without clipping or overflowing horizontally.
+   - Action buttons (`[ + Add to My Calendar ]`, `[ 📅 Add to System Calendar ]`, `[ Google Calendar ↗ ]`) must wrap cleanly or stack into full-width tap targets on screens `<= 480px`.
+5. **Form Controls & Touch Optimization**:
+   - Replace `<datalist>` or standard OS dropdown overlaps with mobile-safe, full-width touch select menus.
+   - Ensure inputs use `font-size: 16px` minimum to prevent iOS Safari from automatically zooming in on input focus.
+   - Prevent horizontal page bounce/shake with `overflow-x: hidden` on viewport wrappers.
 
 ---
 
