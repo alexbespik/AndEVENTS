@@ -35,7 +35,7 @@
   <title>&amp;.events</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/lab.css" />
   <style>
     /* Clean, understated extensions adhering strictly to lab.css design tokens */
@@ -55,6 +55,33 @@
     #cornerMenuDropdown .theme-switch button[aria-pressed="true"] {
       background: var(--accent) !important;
       color: var(--on-accent) !important;
+    }
+
+    .autocomplete-dropdown {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 4px);
+      max-height: 190px;
+      overflow-y: auto;
+      background: var(--surface);
+      border: 1px solid var(--rule);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-raised);
+      z-index: 100;
+    }
+    .autocomplete-item {
+      padding: 7px 10px;
+      font-size: 0.83rem;
+      font-family: var(--font-body);
+      cursor: pointer;
+      color: var(--ink);
+      border-bottom: 1px solid var(--grid);
+      transition: background 80ms var(--ease);
+    }
+    .autocomplete-item:hover, .autocomplete-item.active {
+      background: var(--sunk);
+      color: var(--accent);
     }
 
     .sidebar-classes {
@@ -372,7 +399,7 @@
     <nav class="modes" aria-label="View Modes">
       <button type="button" class="mode" id="tabLive" aria-pressed="true" onclick="switchMode('live')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-        Now &amp; Soon
+        Who's up?
       </button>
       <button type="button" class="mode" id="tabDirectory" aria-pressed="false" onclick="switchMode('directory')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
@@ -607,12 +634,15 @@
                 <input type="time" id="classStart" class="input" style="min-height: 30px; font-size: 0.82rem;" value="14:00" required>
                 <input type="time" id="classEnd" class="input" style="min-height: 30px; font-size: 0.82rem;" value="15:15" required>
               </div>
-              <input type="text" id="classLoc" class="input" style="min-height: 30px; font-size: 0.82rem;" placeholder="Location (e.g. Jones 301)" list="campusLocationsList">
+              <input type="text" id="classLoc" class="input" style="min-height: 30px; font-size: 0.82rem;" placeholder="Location (e.g. Jones 301)" autocomplete="off">
               <button type="submit" class="btn btn-gold btn-sm" style="font-weight: 600; width: 100%;">Save to Schedule</button>
             </form>
           </div>
 
           <div id="classList" style="max-height: 180px; overflow-y: auto;"></div>
+          <button type="button" class="btn btn-quiet btn-xs" onclick="resetDefaultClasses()" style="margin-top: 8px; width: 100%; justify-content: center; font-size: 0.78rem;">
+            ↻ Restore 5-Day W&amp;M Standard Schedule
+          </button>
         </div>
       </div>
 
@@ -631,9 +661,9 @@
         <!-- Page Header with signature Breadcrumbs & Gold Accent Bar -->
         <div class="page-head">
           <div>
-            <div class="crumbs"><span id="crumbRoot">events</span> / <span id="currentViewCrumb">live</span></div>
-            <h1 id="pageTitleHeading">Now &amp; Soon</h1>
-            <p id="pageSubtitleText">Events happening now and over the next three hours.</p>
+            <div class="crumbs"><span id="crumbRoot">events</span> / <span id="currentViewCrumb">who's up</span></div>
+            <h1 id="pageTitleHeading">Who's up?</h1>
+            <p id="pageSubtitleText">Campus events happening right now and over the next three hours.</p>
           </div>
           <div id="headerActions" class="btn-row">
             <button type="button" id="notifBtn" class="btn btn-secondary btn-sm" onclick="toggleNotifications()">
@@ -816,7 +846,7 @@
 
                 <div class="field">
                   <label for="evClub">Host organization</label>
-                  <input type="text" id="evClub" class="input" required placeholder="e.g. Association for Computing Machinery" list="campusRsoList" oninput="inspectProposedSlot()">
+                  <input type="text" id="evClub" class="input" required placeholder="e.g. Association for Computing Machinery" autocomplete="off" oninput="inspectProposedSlot()">
                 </div>
 
                 <div class="field">
@@ -857,7 +887,7 @@
 
                 <div class="field">
                   <label for="evLocation">Location</label>
-                  <input type="text" id="evLocation" class="input" required placeholder="e.g. ISC 1127" list="campusLocationsList" oninput="inspectProposedSlot()">
+                  <input type="text" id="evLocation" class="input" required placeholder="e.g. ISC 1127" autocomplete="off" oninput="inspectProposedSlot()">
                 </div>
 
                 <div class="field">
@@ -895,9 +925,6 @@
       </div>
     </main>
   </div>
-
-  <datalist id="campusLocationsList"></datalist>
-  <datalist id="campusRsoList"></datalist>
 
   <script>
     const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -1349,9 +1376,9 @@
       currentMode = mode;
 
       if (mode === 'live') {
-        crumb.textContent = "live";
-        heading.textContent = "Now & Soon";
-        subtitle.textContent = "Events happening now and over the next three hours.";
+        crumb.textContent = "who's up";
+        heading.textContent = "Who's up?";
+        subtitle.textContent = "Campus events happening right now and over the next three hours.";
         loadNowAndNext();
       } else if (mode === 'planner') {
         crumb.textContent = "week";
@@ -2372,8 +2399,8 @@
 
           let dayEvents = [];
           if (plannerScope === "my") {
-            // Strictly show enrolled classes + events explicitly saved/added to personal calendar
-            const dbSaved = (d.events || []).filter(ev => isEventSaved(ev));
+            // Strictly show enrolled classes + events explicitly saved/created by student
+            const dbSaved = (d.events || []).filter(ev => ev.is_user_created || isEventSaved(ev));
             // Also check savedEvents from localStorage for this day of week
             const localSaved = savedEvents.filter(ev => {
               if (ev.day_of_week === dayIndex) return true;
@@ -2677,17 +2704,39 @@
 
         if (!res.ok) {
           const err = await res.json();
-          alert(err.detail || "Failed to create event");
+          showToast(err.detail || "Failed to create event", "info");
           return;
         }
 
-        alert("Club event successfully published!");
+        const createdEvent = await res.json();
+
+        // Auto-save to personal calendar so it immediately appears in My Schedule & bookmarks
+        const saved = getUserSavedEvents();
+        saved.push({
+          id: createdEvent.id,
+          title: payload.title,
+          club_name: payload.club_name,
+          category: payload.category,
+          day_of_week: payload.day_of_week,
+          start_time: payload.start_time,
+          end_time: payload.end_time,
+          location: payload.location,
+          description: payload.description,
+          is_user_saved: true,
+          is_user_created: true
+        });
+        localStorage.setItem("user_saved_events", JSON.stringify(saved));
+
+        showToast("Club event published and added to your weekly schedule!", "success");
         document.getElementById("evTitle").value = "";
         document.getElementById("evDesc").value = "";
         loadOrganizerEvents();
         inspectProposedSlot();
+        loadWeeklyPlanner();
+        loadEvents();
+        loadNowAndNext();
       } catch (err) {
-        alert("Network error publishing club event");
+        showToast("Network error publishing club event", "info");
       }
     }
 
@@ -2696,11 +2745,15 @@
       try {
         const res = await fetch(`/api/events/${id}`, { method: "DELETE" });
         if (res.ok) {
+          const saved = getUserSavedEvents().filter(e => e.id !== id);
+          localStorage.setItem("user_saved_events", JSON.stringify(saved));
           loadOrganizerEvents();
           loadEvents();
           loadNowAndNext();
+          loadWeeklyPlanner();
+          showToast("Club event deleted.", "info");
         } else {
-          alert("Failed to delete club event");
+          showToast("Failed to delete club event", "info");
         }
       } catch (err) {
         console.error("Delete event error:", err);
@@ -2808,6 +2861,9 @@
       loadAutocompletePresets().catch(console.warn);
     }
 
+    let campusLocationsList = [];
+    let campusRsoList = [];
+
     async function loadAutocompletePresets() {
       try {
         const [locRes, rsoRes] = await Promise.all([
@@ -2816,21 +2872,77 @@
         ]);
 
         if (locRes && Array.isArray(locRes.locations)) {
-          const locDatalist = document.getElementById("campusLocationsList");
-          if (locDatalist) {
-            locDatalist.innerHTML = locRes.locations.map(loc => `<option value="${escapeHtml(loc)}"></option>`).join("");
-          }
+          campusLocationsList = locRes.locations;
+        }
+        if (rsoRes && Array.isArray(rsoRes.rsos)) {
+          campusRsoList = rsoRes.rsos;
         }
 
-        if (rsoRes && Array.isArray(rsoRes.rsos)) {
-          const rsoDatalist = document.getElementById("campusRsoList");
-          if (rsoDatalist) {
-            rsoDatalist.innerHTML = rsoRes.rsos.map(rso => `<option value="${escapeHtml(rso)}"></option>`).join("");
-          }
-        }
+        setupCustomAutocomplete("evClub", () => campusRsoList);
+        setupCustomAutocomplete("evLocation", () => campusLocationsList);
+        setupCustomAutocomplete("classLoc", () => campusLocationsList);
       } catch (err) {
         console.warn("Failed to load autocomplete presets:", err);
       }
+    }
+
+    function setupCustomAutocomplete(inputId, getSuggestions) {
+      const input = document.getElementById(inputId);
+      if (!input || input.dataset.autocompleteReady) return;
+      input.dataset.autocompleteReady = "true";
+
+      const wrap = input.parentElement;
+      if (wrap) wrap.style.position = "relative";
+
+      let dropdown = wrap ? wrap.querySelector(".autocomplete-dropdown") : null;
+      if (!dropdown && wrap) {
+        dropdown = document.createElement("div");
+        dropdown.className = "autocomplete-dropdown";
+        dropdown.style.display = "none";
+        wrap.appendChild(dropdown);
+      }
+
+      let isSelecting = false;
+
+      function render(query) {
+        if (!dropdown || isSelecting) return;
+        const q = (query || "").trim().toLowerCase();
+        const all = getSuggestions();
+        const matches = all.filter(item => !q || item.toLowerCase().includes(q)).slice(0, 8);
+
+        if (!matches.length) {
+          dropdown.style.display = "none";
+          return;
+        }
+
+        dropdown.innerHTML = matches.map(item => `
+          <div class="autocomplete-item" data-val="${escapeHtml(item)}">${escapeHtml(item)}</div>
+        `).join("");
+        dropdown.style.display = "block";
+      }
+
+      input.addEventListener("focus", () => render(input.value));
+      input.addEventListener("input", () => render(input.value));
+
+      if (dropdown) {
+        dropdown.addEventListener("mousedown", (e) => {
+          const item = e.target.closest(".autocomplete-item");
+          if (item) {
+            e.preventDefault();
+            isSelecting = true;
+            input.value = item.getAttribute("data-val");
+            dropdown.style.display = "none";
+            input.dispatchEvent(new Event("input"));
+            setTimeout(() => { isSelecting = false; }, 100);
+          }
+        });
+      }
+
+      document.addEventListener("click", (e) => {
+        if (dropdown && wrap && !wrap.contains(e.target)) {
+          dropdown.style.display = "none";
+        }
+      });
     }
 
     function renderClassPresets() {
@@ -2874,6 +2986,32 @@
       window._currentCoursesList = courses;
     }
 
+    function syncDayPillsUI() {
+      document.querySelectorAll('#dayPills .folder-pill').forEach(pill => {
+        const cb = pill.querySelector('input');
+        if (cb && cb.checked) {
+          pill.classList.add('active');
+        } else {
+          pill.classList.remove('active');
+        }
+      });
+    }
+
+    async function resetDefaultClasses() {
+      try {
+        const res = await fetch("/api/classes/reset-default", { method: "POST" });
+        if (res.ok) {
+          showToast("Restored authentic 5-day W&M class schedule!", "success");
+          await loadClasses();
+          await loadWeeklyPlanner();
+        } else {
+          showToast("Failed to reset schedule", "info");
+        }
+      } catch (err) {
+        showToast("Error resetting classes", "info");
+      }
+    }
+
     function applyCoursePresetByIndex(idx) {
       const courses = window._currentCoursesList || FALLBACK_COURSE_PRESETS;
       const course = courses[idx];
@@ -2900,6 +3038,7 @@
           cb.checked = course.days.includes(parseInt(cb.value, 10));
         });
       }
+      syncDayPillsUI();
 
       if (nameInput) nameInput.focus();
     }
@@ -2925,6 +3064,7 @@
           cb.checked = slot.days.includes(parseInt(cb.value, 10));
         });
       }
+      syncDayPillsUI();
     }
 
     async function loadAll() {

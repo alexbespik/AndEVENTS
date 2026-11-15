@@ -67,7 +67,7 @@
   --shadow-raised: 0 10px 28px rgba(23, 32, 28, 0.16);
   --scrim: rgba(10, 20, 15, 0.45);
 
-  --font-display: "IBM Plex Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --font-display: "Libre Caslon Text", Georgia, "Times New Roman", serif;
   --font-body: "IBM Plex Sans", "Segoe UI", -apple-system, Roboto, sans-serif;
   --font-mono: "IBM Plex Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   --font-ui: var(--font-mono);

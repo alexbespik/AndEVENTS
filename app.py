@@ -291,6 +291,27 @@ def format_duration(minutes: int) -> str:
         return f"{m}m"
 
 
+AUTHENTIC_WM_CLASSES = [
+    # Monday (0)
+    ("CSCI 141: Computational Problem Solving", 0, "10:00", "10:50", "McGlothlin-Street 020"),
+    ("DATA 141: Programming for Data Science", 0, "13:00", "13:50", "Blow 332"),
+    ("CSCI 241: Data Structures", 0, "14:00", "15:15", "Jones Hall 301"),
+    # Tuesday (1)
+    ("PHIL 201: Introduction to Philosophy", 1, "09:30", "10:50", "Wren 200"),
+    ("MATH 211: Linear Algebra", 1, "15:30", "16:50", "Jones Hall 202"),
+    # Wednesday (2)
+    ("CSCI 141: Computational Problem Solving", 2, "10:00", "10:50", "McGlothlin-Street 020"),
+    ("DATA 141: Programming for Data Science", 2, "13:00", "13:50", "Blow 332"),
+    ("CSCI 241: Data Structures", 2, "14:00", "15:15", "Jones Hall 301"),
+    # Thursday (3)
+    ("PHIL 201: Introduction to Philosophy", 3, "09:30", "10:50", "Wren 200"),
+    ("MATH 211: Linear Algebra", 3, "15:30", "16:50", "Jones Hall 202"),
+    # Friday (4)
+    ("CSCI 141: Computational Problem Solving", 4, "10:00", "10:50", "McGlothlin-Street 020"),
+    ("DATA 141: Programming for Data Science", 4, "13:00", "13:50", "Blow 332"),
+]
+
+
 def init_db():
     conn = get_db()
     cur = conn.cursor()
@@ -354,33 +375,12 @@ def init_db():
     # - CSCI 241: Data Structures (MW 14:00-15:15, Jones 301)
     # - PHIL 201: Introduction to Philosophy (TR 09:30-10:50, Wren 200)
     # - MATH 211: Linear Algebra (TR 15:30-16:50, Jones 202)
-    authentic_classes = [
-        # Monday (0)
-        ("CSCI 141: Computational Problem Solving", 0, "10:00", "10:50", "McGlothlin-Street 020"),
-        ("DATA 141: Programming for Data Science", 0, "13:00", "13:50", "Blow 332"),
-        ("CSCI 241: Data Structures", 0, "14:00", "15:15", "Jones Hall 301"),
-        # Tuesday (1)
-        ("PHIL 201: Introduction to Philosophy", 1, "09:30", "10:50", "Wren 200"),
-        ("MATH 211: Linear Algebra", 1, "15:30", "16:50", "Jones Hall 202"),
-        # Wednesday (2)
-        ("CSCI 141: Computational Problem Solving", 2, "10:00", "10:50", "McGlothlin-Street 020"),
-        ("DATA 141: Programming for Data Science", 2, "13:00", "13:50", "Blow 332"),
-        ("CSCI 241: Data Structures", 2, "14:00", "15:15", "Jones Hall 301"),
-        # Thursday (3)
-        ("PHIL 201: Introduction to Philosophy", 3, "09:30", "10:50", "Wren 200"),
-        ("MATH 211: Linear Algebra", 3, "15:30", "16:50", "Jones Hall 202"),
-        # Friday (4)
-        ("CSCI 141: Computational Problem Solving", 4, "10:00", "10:50", "McGlothlin-Street 020"),
-        ("DATA 141: Programming for Data Science", 4, "13:00", "13:50", "Blow 332"),
-    ]
-
-    cur.execute("SELECT value FROM app_meta WHERE key = 'wm_authentic_schedule_v2'")
-    if not cur.fetchone():
-        cur.execute("DELETE FROM user_classes")
+    cur.execute("SELECT COUNT(*) FROM user_classes")
+    if cur.fetchone()[0] == 0:
         cur.executemany("""
             INSERT INTO user_classes (course_name, day_of_week, start_time, end_time, location)
             VALUES (?, ?, ?, ?, ?)
-        """, authentic_classes)
+        """, AUTHENTIC_WM_CLASSES)
         cur.execute("INSERT OR REPLACE INTO app_meta (key, value) VALUES ('wm_authentic_schedule_v2', '1')")
         cur.execute("INSERT OR REPLACE INTO app_meta (key, value) VALUES ('initial_seeded', '1')")
 
@@ -1264,6 +1264,20 @@ def delete_class(class_id: int):
     return {"status": "deleted"}
 
 
+@app.post("/api/classes/reset-default")
+def reset_default_classes():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM user_classes")
+    cur.executemany("""
+        INSERT INTO user_classes (course_name, day_of_week, start_time, end_time, location)
+        VALUES (?, ?, ?, ?, ?)
+    """, AUTHENTIC_WM_CLASSES)
+    conn.commit()
+    conn.close()
+    return {"status": "ok", "message": "Restored authentic William & Mary schedule."}
+
+
 @app.delete("/api/classes")
 def clear_classes():
     conn = get_db()
@@ -1458,6 +1472,7 @@ def get_weekly_schedule(
             enriched_events.append({
                 **ev,
                 "type": "event",
+                "is_user_created": True,
                 "start_time_12h": st_12h,
                 "end_time_12h": et_12h,
                 "time_range_12h": f"{st_12h} – {et_12h}",
