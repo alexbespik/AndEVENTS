@@ -230,6 +230,57 @@ code, kbd, pre, .num { font-family: var(--font-mono); }
 .theme-switch button:hover { color: var(--brand-ink); background: var(--brand-hover); }
 .theme-switch button[aria-pressed="true"] { color: var(--brand-ink); background: var(--brand-strong); }
 
+/* Polished Update / Sync button - micro-elevated with gold hover and smooth SVG spin */
+.btn-update {
+  background: transparent;
+  color: var(--brand-ink-soft);
+  border: 1px solid var(--brand-line);
+  font-family: var(--font-ui);
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  min-height: 28px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 120ms var(--ease), border-color 120ms var(--ease), color 120ms var(--ease), background 120ms var(--ease);
+}
+.btn-update:hover {
+  background: var(--brand-hover);
+  border-color: var(--gold);
+  color: var(--brand-ink);
+  transform: translateY(-1px);
+}
+.btn-update:hover .sync-icon {
+  color: var(--gold);
+}
+.btn-update:active {
+  transform: translateY(0);
+}
+.btn-update:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+.btn-update.btn-loading,
+.btn.btn-loading {
+  pointer-events: none;
+  opacity: 0.9;
+}
+.btn-update.btn-loading .sync-icon,
+.btn.btn-loading .sync-icon,
+.spin-indicator {
+  animation: spin 900ms linear infinite;
+  display: inline-block;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Arrangement subnav matching masthead .modes and .mode design language (floating, zero background grayness, pure gold underline) */
 .arrangement-nav {
   display: inline-flex;

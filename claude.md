@@ -122,7 +122,8 @@ Claude **must** read and understand every user request and complaint in chronolo
 | **13** | *"really empasithe that claude should use as much agents as possible to do the task fast because I will have like 30 min on everything... also recommend for you giving nothing out... if you click the logo you will get to now and soon... AND ALSO WHY THE FUCK YOU RETURNED THAT RETARDED FONT"* | (a) Claude must parallelize with subagents for 30m deadline; (b) "Recommended for You" gave nothing out because `loadNowAndNext` never called `matchClientTags`; (c) Logo click must reset and open Who's up; (d) All headings MUST be `IBM Plex Sans`, never serif or monospace. | **Documented in this master plan.** |
 | **14** | *"and its still gives the inaccesibble error also increase the scope of search to all the wm channels like socials and more"* | (a) Feed was reporting "1 inaccessible": caused by `wm-main` event `379249@events.wm.edu` with mismatched DTSTART (datetime) and DTEND (date), missing `time` import, and unescaped description line breaks in `arts` and `music`. Fixed with resilient non-strict feed parsing and normalization; (b) Expanded discovery from 2 feeds to 15 live W&M feeds (athletics, student engagement, swem libraries, recreation sports, career center, wellness, music, theatre, arts, academic calendar, etc.), bringing active campus events to 597+ with 0 inaccessible feeds. | **15 feeds now sync with 100% success rate (`successes=15, failures=0`).** |
 | **15** | *`Screenshot.png`: "also could you do something with those slope buttons looking like shit Arrangement: ⏱ Chronological 🏢 Group by Department 🔀 Shuffle by Department make them in style of header"* | The arrangement buttons on "Who's up?" were styled with clunky emojis (`⏱`, `🏢`, `🔀`) and blocky buttons. Re-architected with `.arrangement-nav` and `.arrangement-tab` using crisp SVG stroke icons and subtle active gold underline indicators matching the masthead `.modes` navbar. | **Arrangement buttons match masthead header design.** |
-| **16** | *(Latest)*: *`Screenshot.png`: "also in calendar events should chandge overall position according to time like in wm path"* | The Weekly Planner timetable previously rendered day items in an un-positioned flex column. Implemented a 14-hour vertical time grid (8am to 10pm) matching William & Mary PATH Class Search & Registration with a dedicated hour gutter (`8am`, `9am`, `10am`, `11am`, `noon`, `1pm` ... `10pm`), horizontal hour rules, absolute vertical positioning (`top` by start time, `height` by duration), collision packing for overlaps, and an all-day shelf. | **Weekly Planner now features authentic W&M Path time-proportional grid.** |
+| **16** | *`Screenshot.png`: "also in calendar events should chandge overall position according to time like in wm path"* | The Weekly Planner timetable previously rendered day items in an un-positioned flex column. Implemented a 14-hour vertical time grid (8am to 10pm) matching William & Mary PATH Class Search & Registration with a dedicated hour gutter (`8am`, `9am`, `10am`, `11am`, `noon`, `1pm` ... `10pm`), horizontal hour rules, absolute vertical positioning (`top` by start time, `height` by duration), collision packing for overlaps, and an all-day shelf. | **Weekly Planner now features authentic W&M Path time-proportional grid.** |
+| **17** | *(Latest)*: *"also add to the claude tasks chandge the update button to be looking good"* | The update button in the masthead and directory looked like a raw utility box with an ugly unicode `↻` glyph. Needs refined SVG iconography, smooth spinning transitions, subtle gold micro-elevation, and zero background grayness. | **Documented in Task D below and implemented with `.btn-update`, dual-arrow SVG icons, and smooth CSS spinning transitions.** |
 
 ---
 
@@ -312,6 +313,33 @@ Run tests after every change:
 python3 -m unittest discover tests && python3 -m unittest test_wm_data.py && python3 -m unittest test_import_wm_events.py
 ```
 *(All tests must stay green at all times).*
+
+### Task D (Agent 4): Aesthetic & Interactive Overhaul of the Update / Sync Buttons
+The user explicitly requested: *"change the update button to be looking good"*.  
+The update buttons across the UI (`#mastheadUpdateBtn` in the masthead, `#directoryUpdateBtn` in the directory, and `#menuUpdateBtn` in the dropdown menu) must look sleek, modern, and aligned with `&.edu` aesthetic rather than clunky raw boxes:
+1. **Feather/Lucide SVG Vector**:
+   - Replace any raw unicode `↻` or `⟳` glyphs with a clean dual-arrow refresh SVG:
+     ```html
+     <svg class="sync-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+       <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+       <path d="M21 3v5h-5"/>
+       <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+       <path d="M3 21v-5h5"/>
+     </svg>
+     ```
+2. **Masthead Styling (`#mastheadUpdateBtn`)**:
+   - Class `.btn-update`: Minimal, refined micro-elevation on hover (`transform: translateY(-1px)`).
+   - Border: Subtle stroke using `var(--brand-line)` transitioning to `var(--gold)` on hover.
+   - Text & Icon: `color: var(--brand-ink-soft)` transitioning to `var(--brand-ink)` and `var(--gold)` icon on hover.
+   - Typography: Font `var(--font-ui)` (`IBM Plex Sans`), weight 500, size 0.75rem.
+   - Zero background muddiness or gray artifacting (`background: transparent`).
+3. **Directory Sync Button (`#directoryUpdateBtn`)**:
+   - Clean gold accent button (`btn-gold`) with matching SVG refresh icon, crisp padding, and no oversized layout shifts.
+4. **Smooth Keyframe Animation during Sync**:
+   - When `triggerCalendarParser()` fires, spin the SVG smoothly with CSS `animation: spin 900ms linear infinite`.
+   - Never replace the SVG with text glyphs that cause jittery width changes.
+5. **Polished State Transitions**:
+   - Label transitions gracefully: `Update` → `Updating…` → `Updated ✓` → revert to original after 1.2s.
 
 ---
 

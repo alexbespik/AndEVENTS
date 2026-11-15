@@ -416,9 +416,14 @@
     </nav>
 
     <div class="masthead-right">
-      <button type="button" id="mastheadUpdateBtn" class="btn btn-xs btn-quiet" onclick="triggerCalendarParser(this)" title="Re-run calendar parser &amp; refresh campus events" style="color: var(--brand-ink); border-color: var(--brand-line); font-family: var(--font-ui); font-size: 0.74rem; display: inline-flex; align-items: center; gap: 5px; padding: 0 10px; min-height: 28px;">
-        <span class="sync-icon" aria-hidden="true">↻</span>
-        <span>Update</span>
+      <button type="button" id="mastheadUpdateBtn" class="btn-update" onclick="triggerCalendarParser(this)" title="Re-run public iCalendar feed parser &amp; refresh campus events">
+        <svg class="sync-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+          <path d="M21 3v5h-5"/>
+          <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+          <path d="M3 21v-5h5"/>
+        </svg>
+        <span class="btn-update-label">Update</span>
       </button>
 
       <div id="liveClockChip" class="conn num" style="font-family: var(--font-mono); font-size: 0.82rem;">
@@ -486,9 +491,14 @@
           </div>
 
           <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Calendar Sync</div>
-          <button type="button" id="menuUpdateBtn" class="btn btn-quiet btn-sm" onclick="closeCornerMenu(); triggerCalendarParser(this);" style="width: 100%; justify-content: flex-start; margin-bottom: var(--space-3); gap: 6px;">
-            <span class="sync-icon" aria-hidden="true">↻</span>
-            <span>Update / Re-run Calendar Parser</span>
+          <button type="button" id="menuUpdateBtn" class="btn btn-quiet btn-sm" onclick="closeCornerMenu(); triggerCalendarParser(this);" style="width: 100%; justify-content: flex-start; margin-bottom: var(--space-3); gap: 8px;">
+            <svg class="sync-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+              <path d="M21 3v5h-5"/>
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+              <path d="M3 21v-5h5"/>
+            </svg>
+            <span class="btn-update-label">Update / Re-run Calendar Parser</span>
           </button>
 
           <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Preferences &amp; Schedule</div>
@@ -824,9 +834,14 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-3); border-bottom: 1px solid var(--rule); padding-bottom: var(--space-2); flex-wrap: wrap; gap: 8px;">
               <h2 style="font-family: var(--font-body); font-weight: 700; font-size: 1.15rem; margin: 0;">William &amp; Mary Campus Calendar</h2>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <button type="button" id="directoryUpdateBtn" class="btn btn-xs btn-gold" onclick="triggerCalendarParser(this)" title="Re-run public iCalendar feed parser to fetch latest campus events" style="font-size: 0.74rem; display: inline-flex; align-items: center; gap: 5px;">
-                  <span class="sync-icon" aria-hidden="true">↻</span>
-                  <span>Update Feeds</span>
+                <button type="button" id="directoryUpdateBtn" class="btn btn-xs btn-gold" onclick="triggerCalendarParser(this)" title="Re-run public iCalendar feed parser to fetch latest campus events" style="font-size: 0.74rem; display: inline-flex; align-items: center; gap: 6px;">
+                  <svg class="sync-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+                    <path d="M21 3v5h-5"/>
+                    <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+                    <path d="M3 21v-5h5"/>
+                  </svg>
+                  <span class="btn-update-label">Update Feeds</span>
                 </button>
                 <span id="directoryEventCountBadge" class="status status-ready" style="font-size: 0.75rem;">537 events</span>
               </div>
@@ -2591,8 +2606,9 @@
       btns.forEach(b => {
         b.disabled = true;
         b.dataset.origHtml = b.innerHTML;
-        b.innerHTML = `<span class="spin-indicator">⟳</span> <span>Updating…</span>`;
         b.classList.add("btn-loading");
+        const label = b.querySelector(".btn-update-label") || b.querySelector("span:last-child");
+        if (label) label.textContent = "Updating…";
       });
 
       const controller = new AbortController();
@@ -2629,12 +2645,19 @@
         clearTimeout(timeoutId);
         setTimeout(() => {
           btns.forEach(b => {
-            b.disabled = false;
-            b.innerHTML = b.dataset.origHtml || `<span class="sync-icon">↻</span> <span>Update</span>`;
             b.classList.remove("btn-loading");
+            const label = b.querySelector(".btn-update-label") || b.querySelector("span:last-child");
+            if (label) label.textContent = "Updated ✓";
           });
-          isParsingFeeds = false;
-        }, 400);
+          setTimeout(() => {
+            btns.forEach(b => {
+              b.disabled = false;
+              b.innerHTML = b.dataset.origHtml;
+              b.classList.remove("btn-loading");
+            });
+            isParsingFeeds = false;
+          }, 1200);
+        }, 300);
       }
     }
 
