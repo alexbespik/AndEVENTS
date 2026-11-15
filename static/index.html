@@ -880,6 +880,7 @@
               <button type="button" class="cal-dept-pill" data-dept="dept-biol" onclick="setPlannerDeptFilter('dept-biol')">Biology</button>
               <button type="button" class="cal-dept-pill" data-dept="dept-civics" onclick="setPlannerDeptFilter('dept-civics')">Civics</button>
               <button type="button" class="cal-dept-pill" data-dept="dept-life" onclick="setPlannerDeptFilter('dept-life')">Student Life</button>
+              <button type="button" class="cal-dept-pill" data-dept="dept-acad" onclick="setPlannerDeptFilter('dept-acad')">Academic</button>
             </div>
           </div>
           <div id="timetableContainer" class="cal-grid-wrapper">
@@ -2810,8 +2811,11 @@
             const localSaved = savedEvents.filter(ev => {
               if (ev.day_of_week === dayIndex) return true;
               if (ev.start_at) {
-                const dayOfIso = (new Date(ev.start_at).getDay() + 6) % 7;
-                return dayOfIso === dayIndex;
+                const parts = ev.start_at.slice(0, 10).split("-");
+                if (parts.length === 3) {
+                  const dayOfIso = (new Date(+parts[0], +parts[1] - 1, +parts[2]).getDay() + 6) % 7;
+                  return dayOfIso === dayIndex;
+                }
               }
               return false;
             });
