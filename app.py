@@ -330,22 +330,23 @@ def init_db():
     cur.execute("CREATE INDEX IF NOT EXISTS idx_club_events_day_time ON club_events (day_of_week, start_time);")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_user_classes_day_time ON user_classes (day_of_week, start_time);")
 
-    # Seed student organization club meetings if table is empty
-    cur.execute("SELECT COUNT(*) FROM club_events")
-    if cur.fetchone()[0] == 0:
-        events = [
-            ("W&M Linux Users Group", "Kernel & Dotfiles Workshop", "Hands-on compilation, config tweaking, and terminal setups.", 0, "17:00", "18:30", "ISC 1127", "Technology"),
-            ("Machine Learning Club", "AI Paper Reading Group", "Discussion on recent transformer architectures and reasoning papers.", 2, "18:00", "19:30", "McGlothlin 020", "Academic"),
-            ("W&M Club Swim & Water Polo", "Open Lap Swim & Water Polo", "Casual scrimmages and endurance lap lanes.", 1, "19:00", "20:30", "Student Rec Center", "Sports"),
-            ("W&M Chess Club", "Rapid Chess Blitz Night", "Casual and rated 5+3 blitz games. All rating tiers welcome.", 3, "18:30", "20:00", "Sadler Center 202", "Social"),
-            ("Makerspace Guild", "3D Printing & CAD Clinic", "Assisted slicing, filament tuning, and rapid prototyping consultation.", 4, "15:00", "17:00", "Small Hall Makerspace", "Workshop"),
-            ("Robotics & IoT Group", "Embedded Mesh Networking Lab", "Testing ESP32 mesh routing protocols across the academic green.", 5, "13:00", "16:00", "Integrated Science Center", "Technology"),
-            ("Tabletop Gaming Society", "Tabletop Lore & Painting", "Miniature painting, worldbuilding, and campaign session zero.", 6, "14:00", "18:00", "Campus Center", "Social"),
-        ]
-        cur.executemany("""
-            INSERT INTO club_events (club_name, title, description, day_of_week, start_time, end_time, location, category)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, events)
+    # Ensure canonical student organization club meetings are present
+    events = [
+        ("W&M Linux Users Group", "Kernel & Dotfiles Workshop", "Hands-on compilation, config tweaking, and terminal setups.", 0, "17:00", "18:30", "ISC 1127", "Technology"),
+        ("Machine Learning Club", "AI Paper Reading Group", "Discussion on recent transformer architectures and reasoning papers.", 2, "18:00", "19:30", "McGlothlin 020", "Academic"),
+        ("W&M Club Swim & Water Polo", "Open Lap Swim & Water Polo", "Casual scrimmages and endurance lap lanes.", 1, "19:00", "20:30", "Student Rec Center", "Sports"),
+        ("W&M Chess Club", "Rapid Chess Blitz Night", "Casual and rated 5+3 blitz games. All rating tiers welcome.", 3, "18:30", "20:00", "Sadler Center 202", "Social"),
+        ("Makerspace Guild", "3D Printing & CAD Clinic", "Assisted slicing, filament tuning, and rapid prototyping consultation.", 4, "15:00", "17:00", "Small Hall Makerspace", "Workshop"),
+        ("Robotics & IoT Group", "Embedded Mesh Networking Lab", "Testing ESP32 mesh routing protocols across the academic green.", 5, "13:00", "16:00", "Integrated Science Center", "Technology"),
+        ("Tabletop Gaming Society", "Tabletop Lore & Painting", "Miniature painting, worldbuilding, and campaign session zero.", 6, "14:00", "18:00", "Campus Center", "Social"),
+    ]
+    for ev in events:
+        cur.execute("SELECT id FROM club_events WHERE title = ?", (ev[1],))
+        if not cur.fetchone():
+            cur.execute("""
+                INSERT INTO club_events (club_name, title, description, day_of_week, start_time, end_time, location, category)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, ev)
 
     # Authentic William & Mary student schedule across all 5 weekdays (Monday-Friday):
     # - CSCI 141: Computational Problem Solving (MWF 10:00-10:50, McGlothlin-Street 020)

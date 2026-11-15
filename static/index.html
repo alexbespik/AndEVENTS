@@ -884,6 +884,7 @@
     const THEME_KEY = 'andedu_lab_theme';
     const PRESET_TAGS = ["#CS", "#DATA", "#PHIL", "#ART", "#BIOL", "#BUSINESS", "#SPORTS", "#WELLNESS"];
     let recommendedOnly = false;
+    let currentMode = "live";
 
     // Theme Switcher matching AndEDU ThemeSwitch.jsx
     function getTheme() {
@@ -1324,6 +1325,8 @@
       viewPlan.style.display = mode === 'planner' ? "flex" : "none";
       viewOrg.style.display = mode === 'organizer' ? "flex" : "none";
 
+      currentMode = mode;
+
       if (mode === 'live') {
         crumb.textContent = "live";
         heading.textContent = "Now & Soon";
@@ -1345,6 +1348,7 @@
         heading.textContent = "Campus events";
         subtitle.textContent = "Browse club meetings and William & Mary events. Add your classes to check for time conflicts.";
         loadEvents();
+        loadWmEvents();
       }
     }
 
@@ -2880,12 +2884,19 @@
       applyMajorTheme();
       renderTagsUI();
       updateFilterBadge();
-      await loadClassPresets();
-      await loadClasses();
-      await loadNowAndNext();
-      await loadEvents();
-      await loadWmEvents();
-      await loadWeeklyPlanner();
+      try {
+        await loadClassPresets();
+        await loadClasses();
+        await loadNowAndNext();
+      } catch (err) {
+        console.warn("Initial load notice:", err);
+      }
+      // Non-blocking preloading so Now & Soon displays without delay
+      setTimeout(() => {
+        loadEvents().catch(console.error);
+        loadWmEvents().catch(console.error);
+        loadWeeklyPlanner().catch(console.error);
+      }, 50);
     }
 
     applyMajorTheme();
