@@ -2303,16 +2303,31 @@
         }));
 
         // Strict temporal safeguard: Never show events from 10 days ago, past months, or ongoing multi-day programs
+        // Use local calendar date (YYYY-MM-DD) avoiding UTC midnight rollover in Eastern Time (UTC-5)
+        const localNow = new Date();
+        const localTodayIso = [
+          localNow.getFullYear(),
+          String(localNow.getMonth() + 1).padStart(2, '0'),
+          String(localNow.getDate()).padStart(2, '0')
+        ].join('-');
+        const localTodayDisplay = localNow.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }); // e.g. "Sat, Nov 14"
+
         happening = happening.filter(ev => {
           if (ev.status_label === "Ongoing") return false;
-          if (ev.is_wm_event && ev.is_all_day && ev.status_label === "All Day Today") {
-            // Reject if it's an exhibition started in past months
-            if (ev.start_at && ev.start_at.substring(0, 10) < new Date().toISOString().substring(0, 10)) return false;
+          if (ev.is_wm_event) {
+            const evStartIso = (ev.start_at || "").substring(0, 10);
+            if (evStartIso && evStartIso < localTodayIso) return false;
+            if (ev.date_display && ev.date_display !== localTodayDisplay && !ev.day_name && !ev.day_of_week) return false;
           }
           return true;
         });
         soon = soon.filter(ev => {
           if (ev.status_label === "Ongoing") return false;
+          if (ev.is_wm_event) {
+            const evStartIso = (ev.start_at || "").substring(0, 10);
+            if (evStartIso && evStartIso < localTodayIso) return false;
+            if (ev.date_display && ev.date_display !== localTodayDisplay && !ev.day_name && !ev.day_of_week) return false;
+          }
           return true;
         });
 
