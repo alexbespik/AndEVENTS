@@ -807,9 +807,10 @@ def get_now_and_next(
                     r["conflicting_course"] = cl["course_name"]
                     break
 
+            is_multiday = (en - st).total_seconds() >= 24 * 3600
             if is_active:
-                if (en.date() - st.date()).days >= 1:
-                    # Multi-day ongoing event - do not flood the immediate live hourly pulse
+                if is_multiday:
+                    # Multi-day ongoing event (duration >= 24h) - do not flood immediate live hourly pulse
                     pass
                 else:
                     m_left = max(0, int((en - now_dt).total_seconds() / 60))
@@ -817,10 +818,14 @@ def get_now_and_next(
                     r["minutes_remaining"] = m_left
                     happening_now.append(r)
             elif is_soon:
-                m_start = max(0, int((st - now_dt).total_seconds() / 60))
-                r["status_label"] = f"Starts in {m_start}m"
-                r["starts_in_minutes"] = m_start
-                starting_soon.append(r)
+                if is_multiday:
+                    # Multi-day exhibition opening today - keep in wm_processed for directory
+                    pass
+                else:
+                    m_start = max(0, int((st - now_dt).total_seconds() / 60))
+                    r["status_label"] = f"Starts in {m_start}m"
+                    r["starts_in_minutes"] = m_start
+                    starting_soon.append(r)
 
             wm_processed.append(r)
 
