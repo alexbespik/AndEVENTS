@@ -1,16 +1,76 @@
 import os
+import tempfile
 os.environ["TESTING"] = "1"
+if "SCIEDU_CONTENT_DIR" not in os.environ:
+    os.environ["SCIEDU_CONTENT_DIR"] = tempfile.mkdtemp(prefix="andevents-test-")
+import socket
 import unittest
+from datetime import datetime, timedelta, timezone as dt_tz
+from unittest import mock
+from zoneinfo import ZoneInfo
 from fastapi.testclient import TestClient
+import import_wm_events
 from app import app, init_db, get_db
 
 client = TestClient(app)
+CAMPUS_TZ = ZoneInfo("America/New_York")
+
+_network_guard = None
+
+
+def setUpModule():
+    """Fail loudly if any test tries to open a real network connection (feeds, Gemini)."""
+    global _network_guard
+
+    def _refuse(self, address, *args, **kwargs):
+        raise AssertionError(f"tests must not open network connections (attempted {address!r})")
+
+    _network_guard = mock.patch.object(socket.socket, "connect", _refuse)
+    _network_guard.start()
+
+
+def tearDownModule():
+    if _network_guard is not None:
+        _network_guard.stop()
+
+
+def _insert_wm_event(uid, title, start_at, end_at, is_all_day=0, description="", location="ISC 1127", categories='["Academic"]'):
+    conn = get_db()
+    conn.execute(
+        """INSERT OR REPLACE INTO wm_events (uid, title, summary, description, start_at, end_at, timezone, location, source_url, categories, is_all_day)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (uid, title, "", description, start_at, end_at, "America/New_York", location,
+         "https://events.wm.edu", categories, is_all_day),
+    )
+    conn.commit()
+    conn.close()
+
+
+def _delete_by_uid_prefix(prefix):
+    conn = get_db()
+    for table in ("user_ai_alerts", "user_saved_events", "wm_events"):
+        conn.execute(f"DELETE FROM {table} WHERE uid LIKE ?", (prefix + "%",))
+    conn.commit()
+    conn.close()
 
 
 class TestCampusScheduleAPI(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         init_db()
+        # Monday 17:00-18:30 club fixture at ISC 1127 used by the conflict, timetable,
+        # now-and-next and department tests (not part of the init_db seed list).
+        conn = get_db()
+        if not conn.execute("SELECT id FROM club_events WHERE title = ?", ("Kernel & Dotfiles Workshop",)).fetchone():
+            conn.execute(
+                """INSERT INTO club_events (club_name, title, description, day_of_week, start_time, end_time, location, category)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                ("W&M Linux Users Group", "Kernel & Dotfiles Workshop",
+                 "Hands-on compilation, config tweaking, and terminal setups.",
+                 0, "17:00", "18:30", "ISC 1127", "Technology"),
+            )
+            conn.commit()
+        conn.close()
 
     def test_01_static_and_favicon(self):
         res = client.get("/")
@@ -157,7 +217,9 @@ class TestCampusScheduleAPI(unittest.TestCase):
             self.assertLessEqual(curr_sort_key, next_sort_key)
 
     def test_06_wm_events_endpoint(self):
-        # Insert a sample wm event with ISO timestamp into wm_events table
+        # Insert a sample wm event on the next upcoming Monday (Directory hides ended events)
+        today = datetime.now(CAMPUS_TZ).date()
+        next_mon = today + timedelta(days=(7 - today.weekday()))
         conn = get_db()
         conn.execute(
             """INSERT OR REPLACE INTO wm_events (uid, title, summary, description, start_at, end_at, timezone, location, source_url, categories, is_all_day)
@@ -167,8 +229,8 @@ class TestCampusScheduleAPI(unittest.TestCase):
                 "W&M Research Symposium",
                 "Annual research gathering",
                 "All disciplines present.",
-                "2026-11-16T14:30:00-05:00",  # Monday 14:30 EST (overlaps with Monday CSCI 241 class 14:00-15:15)
-                "2026-11-16T16:00:00-05:00",
+                datetime(next_mon.year, next_mon.month, next_mon.day, 14, 30, tzinfo=CAMPUS_TZ).isoformat(),  # Monday 14:30 (overlaps Monday CSCI 241 14:00-15:15)
+                datetime(next_mon.year, next_mon.month, next_mon.day, 16, 0, tzinfo=CAMPUS_TZ).isoformat(),
                 "America/New_York",
                 "Sadler Center",
                 "https://events.wm.edu",
@@ -425,6 +487,7 @@ class TestCampusScheduleAPI(unittest.TestCase):
             self.assertIn("department_color", ev)
 
         # 3. /api/wm-events
+        art_day = datetime.now(CAMPUS_TZ).date() + timedelta(days=5)
         conn = get_db()
         conn.execute(
             """INSERT OR REPLACE INTO wm_events (uid, title, summary, description, start_at, end_at, timezone, location, source_url, categories, is_all_day)
@@ -434,8 +497,8 @@ class TestCampusScheduleAPI(unittest.TestCase):
                 "Muscarelle Museum Art Exhibition",
                 "New gallery collection opening",
                 "Paintings, drawings, and sculptures.",
-                "2026-11-20T10:00:00-05:00",
-                "2026-11-20T18:00:00-05:00",
+                datetime(art_day.year, art_day.month, art_day.day, 10, 0, tzinfo=CAMPUS_TZ).isoformat(),
+                datetime(art_day.year, art_day.month, art_day.day, 18, 0, tzinfo=CAMPUS_TZ).isoformat(),
                 "America/New_York",
                 "Muscarelle Hall",
                 "https://events.wm.edu",
@@ -602,8 +665,10 @@ class TestCampusScheduleAPI(unittest.TestCase):
         self.assertIn("total_events", status_data)
         self.assertGreaterEqual(status_data["total_events"], 0)
 
-        # 2. Trigger parser execution
-        run_res = client.post("/api/parser/run")
+        # 2. Trigger parser execution (feed fetching is mocked: no network in tests)
+        with mock.patch.object(import_wm_events, "discover_and_import", return_value=(3, 0)) as fake_sync:
+            run_res = client.post("/api/parser/run")
+        fake_sync.assert_called_once()
         self.assertEqual(run_res.status_code, 200)
         run_data = run_res.json()
         self.assertIn(run_data["status"], ["success", "partial"])
@@ -611,6 +676,10 @@ class TestCampusScheduleAPI(unittest.TestCase):
         self.assertIn("feeds_succeeded", run_data)
         self.assertIn("feeds_failed", run_data)
         self.assertIn("message", run_data)
+        self.assertEqual(run_data["feeds_succeeded"], 3)
+        self.assertEqual(run_data["feeds_failed"], 0)
+        self.assertIn("ai_new_alerts", run_data)
+        self.assertIn("ai_auto_added", run_data)
 
         # 3. Status check after sync reflects updated state
         after_res = client.get("/api/parser/status")
@@ -734,6 +803,444 @@ class TestCampusScheduleAPI(unittest.TestCase):
         self.assertIn(".cal-gutter-all-day", css_res.text)
         self.assertIn(".cal-overflow-card", css_res.text)
         self.assertIn(".cal-dept-pill", css_res.text)
+
+    def test_17_ai_concierge_intent_and_alerts(self):
+        """Verify AI Concierge intent persistence, auto-scheduling, and alerts."""
+        def _cleanup():
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute("DELETE FROM user_ai_alerts WHERE uid LIKE 'test-cs-hackathon%'")
+            cur.execute("DELETE FROM user_saved_events WHERE uid LIKE 'test-cs-hackathon%'")
+            cur.execute("DELETE FROM wm_events WHERE uid LIKE 'test-cs-hackathon%'")
+            conn.commit()
+            conn.close()
+
+        _cleanup()
+        self.addCleanup(_cleanup)
+
+        # 1. Default intent query
+        res = client.get("/api/ai/intent")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn("prompt", data)
+        self.assertIn("auto_add", data)
+
+        # 2. Set new intent with auto_add enabled
+        set_res = client.post("/api/ai/intent", json={
+            "prompt": "computer science hackathon coding robotics research seminar",
+            "auto_add": True,
+            "notify": True
+        })
+        self.assertEqual(set_res.status_code, 200)
+        set_data = set_res.json()
+        self.assertEqual(set_data["status"], "ok")
+        self.assertTrue(set_data["auto_add"])
+
+        # 3. Insert an upcoming mock event (only future events are matched)
+        hack_start = (datetime.now(CAMPUS_TZ) + timedelta(days=2)).replace(hour=10, minute=0, second=0, microsecond=0)
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT OR REPLACE INTO wm_events (
+                uid, title, description, summary, start_at, end_at, timezone, is_all_day, location, categories, source_url
+            ) VALUES (
+                'test-cs-hackathon-2026',
+                'Tribe Hacks: Autonomous AI & Robotics Sprint',
+                'Join us for a 24-hour coding sprint with autonomous robotics and machine learning research.',
+                'Robotics hackathon for CS students.',
+                ?,
+                ?,
+                'America/New_York',
+                0,
+                'ISC 1127',
+                '["Technology", "Colloquium"]',
+                'https://events.wm.edu/event/test-hackathon'
+            )
+        """, (hack_start.isoformat(), (hack_start + timedelta(hours=8)).isoformat()))
+        conn.commit()
+        conn.close()
+
+        # Re-trigger intent matching
+        client.post("/api/ai/intent", json={
+            "prompt": "robotics hackathon coding",
+            "auto_add": True,
+            "notify": True
+        })
+
+        # 4. Check alerts endpoint
+        alerts_res = client.get("/api/ai/alerts")
+        self.assertEqual(alerts_res.status_code, 200)
+        alerts_data = alerts_res.json()
+        self.assertIn("alerts", alerts_data)
+        matches = [a for a in alerts_data["alerts"] if a["uid"] == "test-cs-hackathon-2026"]
+        self.assertTrue(len(matches) > 0)
+        alert_id = matches[0]["id"]
+
+        # 5. Check user-saved-events
+        saved_res = client.get("/api/user-saved-events")
+        self.assertEqual(saved_res.status_code, 200)
+        saved_data = saved_res.json()
+        saved_uids = [e["uid"] for e in saved_data["saved_events"]]
+        self.assertIn("test-cs-hackathon-2026", saved_uids)
+
+        # 6. Test dismiss action
+        action_res = client.post("/api/ai/alerts/action", json={
+            "alert_id": alert_id,
+            "action": "dismiss"
+        })
+        self.assertEqual(action_res.status_code, 200)
+
+        # 7. Frontend integration check
+        html_res = client.get("/")
+        self.assertEqual(html_res.status_code, 200)
+        self.assertIn("aiConciergeModal", html_res.text)
+        self.assertIn("openAiConciergeModal", html_res.text)
+        self.assertIn("saveAiIntentAndMatch", html_res.text)
+        self.assertIn("loadAiAlerts", html_res.text)
+        self.assertIn("eventModalSaveBtn", html_res.text)
+
+    def test_18_now_and_next_strict_temporal_scoping(self):
+        """Task F: live feed holds only today's single-day sessions; soon = starts within 3h today."""
+        self.addCleanup(_delete_by_uid_prefix, "tf-")
+        now_campus = datetime.now(CAMPUS_TZ)
+        mon = now_campus.date() - timedelta(days=now_campus.weekday())
+
+        def at(day_offset, hh, mm=0):
+            d = mon + timedelta(days=day_offset)
+            return datetime(d.year, d.month, d.day, hh, mm, tzinfo=CAMPUS_TZ).isoformat()
+
+        def day(day_offset):
+            return (mon + timedelta(days=day_offset)).isoformat()
+
+        # Simulated "now" is Monday 12:00 of the current campus week.
+        _insert_wm_event("tf-exhibit-months", "Months Long Museum Exhibition", day(-90), day(30), is_all_day=1)
+        _insert_wm_event("tf-exhibit-opens-today", "Exhibition Opening Today For A Week", day(0), day(5), is_all_day=1)
+        _insert_wm_event("tf-allday-from-yesterday", "Two Day Registration Window", day(-1), day(1), is_all_day=1)
+        _insert_wm_event("tf-allday-today", "Single Day Open House", day(0), day(1), is_all_day=1)
+        _insert_wm_event("tf-past-10d", "Registration For Continuing Students", at(-10, 9), at(-10, 17))
+        _insert_wm_event("tf-timed-from-yesterday", "Overnight Program From Yesterday", at(-1, 10), at(0, 20))
+        _insert_wm_event("tf-timed-into-tomorrow", "Starts Today Ends Tomorrow", at(0, 11), at(1, 11))
+        _insert_wm_event("tf-active", "Midday Lecture In Session", at(0, 11, 30), at(0, 13))
+        _insert_wm_event("tf-soon", "Afternoon Talk In Two Hours", at(0, 14), at(0, 15))
+        _insert_wm_event("tf-overnight-soon", "Late Show Past Midnight", at(0, 14, 30), at(1, 1))
+        _insert_wm_event("tf-later-4h", "Evening Talk In Four Hours", at(0, 16), at(0, 17))
+        _insert_wm_event("tf-tomorrow", "Tomorrow Lunch Talk", at(1, 12, 30), at(1, 13, 30))
+
+        res = client.get("/api/now-and-next?sim_day=0&sim_time=12:00")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        now_uids = {e.get("uid") for e in data["happening_now"] if e.get("uid", "").startswith("tf-")}
+        soon_uids = {e.get("uid") for e in data["starting_soon"] if e.get("uid", "").startswith("tf-")}
+
+        self.assertEqual(now_uids, {"tf-active", "tf-allday-today"})
+        self.assertEqual(soon_uids, {"tf-soon"})
+
+        for ev in data["happening_now"] + data["starting_soon"]:
+            self.assertNotEqual(ev.get("status_label"), "Ongoing")
+            if ev.get("is_wm_event"):
+                self.assertEqual(ev["date_display"], data["today_display"])
+            if ev.get("starts_in_minutes") is not None:
+                self.assertLessEqual(ev["starts_in_minutes"], 180)
+
+        allday = next(e for e in data["happening_now"] if e.get("uid") == "tf-allday-today")
+        self.assertEqual(allday["status_label"], "All Day Today")
+
+    def test_19_ai_interest_pipeline_after_parser_runs(self):
+        """Interest prompt -> keyword match after each parser run -> deduped alerts -> auto-added schedule."""
+        self.addCleanup(_delete_by_uid_prefix, "aip-")
+        self.addCleanup(client.post, "/api/ai/intent", json={"prompt": "", "auto_add": False})
+        now_campus = datetime.now(CAMPUS_TZ)
+        future = (now_campus + timedelta(days=3)).replace(hour=15, minute=0, second=0, microsecond=0)
+        past = now_campus - timedelta(days=10)
+
+        # Gemini must never be contacted in TESTING, even with a key configured.
+        import app as app_module
+        with mock.patch.dict(os.environ, {"GEMINI_API_KEY": "test-key-not-real"}), \
+                mock.patch.object(app_module, "_query_gemini_intent_keywords") as gem_kw:
+            self.assertEqual(app_module._gemini_api_key(), "")
+            set_res = client.post("/api/ai/intent", json={
+                "prompt": "I want to go to astronomy stargazing nights", "auto_add": True, "notify": True,
+            })
+            gem_kw.assert_not_called()
+        self.assertEqual(set_res.status_code, 200)
+        set_data = set_res.json()
+        self.assertEqual(set_data["keyword_source"], "keyword")
+        self.assertIn("astronomy", set_data["keywords"])
+        self.assertNotIn("want", set_data["keywords"])
+        self.assertTrue(set_data["auto_add"])
+
+        stored = client.get("/api/ai/intent").json()
+        self.assertEqual(stored["prompt"], "I want to go to astronomy stargazing nights")
+        self.assertTrue(stored["auto_add"])
+
+        future_ev = ("aip-astro-future", "Astronomy Club Stargazing Night", future.isoformat(),
+                     (future + timedelta(hours=2)).isoformat())
+        past_ev = ("aip-astro-past", "Astronomy Lecture Archive", past.isoformat(),
+                   (past + timedelta(hours=1)).isoformat())
+        unrelated_ev = ("aip-unrelated", "Accounting Office Hours", future.isoformat(),
+                        (future + timedelta(hours=1)).isoformat())
+
+        def fake_sync(conn, delay=0.0, timeout=0.0, discover_directory=False):
+            for uid, title, st, en in (future_ev, past_ev, unrelated_ev):
+                conn.execute(
+                    """INSERT OR REPLACE INTO wm_events (uid, title, summary, description, start_at, end_at, timezone, location, source_url, categories, is_all_day)
+                       VALUES (?, ?, '', '', ?, ?, 'America/New_York', 'Small Hall Roof', 'https://events.wm.edu', '["Science"]', 0)""",
+                    (uid, title, st, en),
+                )
+            return 1, 0
+
+        # Two parser runs: the second must not duplicate alerts.
+        for _ in range(2):
+            with mock.patch.object(import_wm_events, "discover_and_import", side_effect=fake_sync):
+                run_res = client.post("/api/parser/run")
+            self.assertEqual(run_res.status_code, 200)
+            if _ == 0:
+                self.assertEqual(run_res.json()["ai_new_alerts"], 1)
+                self.assertEqual(run_res.json()["ai_auto_added"], 1)
+            else:
+                self.assertEqual(run_res.json()["ai_new_alerts"], 0)
+                self.assertEqual(run_res.json()["ai_auto_added"], 0)
+
+        alerts = [a for a in client.get("/api/ai/alerts").json()["alerts"] if a["uid"].startswith("aip-")]
+        self.assertEqual([a["uid"] for a in alerts], ["aip-astro-future"])  # past + unrelated never matched
+        self.assertTrue(alerts[0]["is_added"])
+        self.assertIn("astronomy", alerts[0]["match_reason"])
+
+        saved = [e for e in client.get("/api/user-saved-events").json()["saved_events"] if e["uid"].startswith("aip-")]
+        self.assertEqual(len(saved), 1)
+        sv = saved[0]
+        self.assertEqual(sv["uid"], "aip-astro-future")
+        self.assertEqual(sv["title"], "Astronomy Club Stargazing Night")
+        self.assertEqual(sv["start_at"], future.isoformat())
+        self.assertEqual(sv["end_at"], (future + timedelta(hours=2)).isoformat())
+        self.assertEqual(sv["location"], "Small Hall Roof")
+        self.assertFalse(sv["is_all_day"])
+        self.assertEqual(sv["source"], "ai_auto")
+        self.assertEqual(sv["time_range_12h"], "3:00 PM – 5:00 PM")
+        for key in ("department_id", "department_color", "date_display", "categories", "is_wm_event", "is_ai_scheduled"):
+            self.assertIn(key, sv)
+
+        # `since` returns only alerts created after a timestamp.
+        self.assertEqual(client.get("/api/ai/alerts", params={"since": datetime.now(CAMPUS_TZ).isoformat()}).json()["alerts"], [])
+
+        # Removing the saved event dismisses its alert so later syncs don't re-add it.
+        del_res = client.delete("/api/user-saved-events/aip-astro-future")
+        self.assertEqual(del_res.status_code, 200)
+        with mock.patch.object(import_wm_events, "discover_and_import", side_effect=fake_sync):
+            self.assertEqual(client.post("/api/parser/run").json()["ai_new_alerts"], 0)
+        self.assertFalse(any(e["uid"].startswith("aip-") for e in client.get("/api/user-saved-events").json()["saved_events"]))
+        self.assertEqual(client.delete("/api/user-saved-events/aip-astro-future").status_code, 404)
+        conn = get_db()
+        alert_row = conn.execute("SELECT id, is_added, is_dismissed FROM user_ai_alerts WHERE uid = 'aip-astro-future'").fetchone()
+        conn.close()
+        self.assertEqual((alert_row["is_added"], alert_row["is_dismissed"]), (0, 1))
+        self.assertNotIn("aip-astro-future", {a["uid"] for a in client.get("/api/ai/alerts").json()["alerts"]})
+
+        # The student can still re-add it manually: "add" un-dismisses and saves again.
+        readd = client.post("/api/ai/alerts/action", json={"alert_id": alert_row["id"], "action": "add"})
+        self.assertEqual(readd.status_code, 200)
+        conn = get_db()
+        alert_row = conn.execute("SELECT is_added, is_dismissed FROM user_ai_alerts WHERE uid = 'aip-astro-future'").fetchone()
+        conn.close()
+        self.assertEqual((alert_row["is_added"], alert_row["is_dismissed"]), (1, 0))
+        readded = [e for e in client.get("/api/user-saved-events").json()["saved_events"] if e["uid"] == "aip-astro-future"]
+        self.assertEqual(len(readded), 1)
+        self.assertEqual(readded[0]["source"], "ai_alert")
+
+    def test_20_ai_alert_actions_without_auto_add(self):
+        """Without auto_add, alerts stay pending until the student adds or dismisses them."""
+        self.addCleanup(_delete_by_uid_prefix, "aia-")
+        self.addCleanup(client.post, "/api/ai/intent", json={"prompt": "", "auto_add": False})
+        future = (datetime.now(CAMPUS_TZ) + timedelta(days=1)).replace(hour=18, minute=0, second=0, microsecond=0)
+        allday = (datetime.now(CAMPUS_TZ) + timedelta(days=2)).date()
+        _insert_wm_event("aia-pottery", "Pottery Wheel Workshop", future.isoformat(), (future + timedelta(hours=1)).isoformat())
+        _insert_wm_event("aia-pottery-fair", "Campus Pottery Fair", allday.isoformat(), (allday + timedelta(days=1)).isoformat(), is_all_day=1)
+
+        res = client.post("/api/ai/intent", json={"prompt": "pottery", "auto_add": False}).json()
+        self.assertEqual(res["new_alerts"], 2)
+        self.assertEqual(res["auto_added_count"], 0)
+        self.assertFalse(any(e["uid"].startswith("aia-") for e in client.get("/api/user-saved-events").json()["saved_events"]))
+
+        alerts = {a["uid"]: a for a in client.get("/api/ai/alerts", params={"unread_only": True}).json()["alerts"] if a["uid"].startswith("aia-")}
+        self.assertEqual(set(alerts), {"aia-pottery", "aia-pottery-fair"})
+
+        add = client.post("/api/ai/alerts/action", json={"alert_id": alerts["aia-pottery-fair"]["id"], "action": "add"})
+        self.assertEqual(add.status_code, 200)
+        dismiss = client.post("/api/ai/alerts/action", json={"alert_id": alerts["aia-pottery"]["id"], "action": "dismiss"})
+        self.assertEqual(dismiss.status_code, 200)
+        self.assertEqual(client.post("/api/ai/alerts/action", json={"alert_id": alerts["aia-pottery"]["id"], "action": "bogus"}).status_code, 400)
+        self.assertEqual(client.post("/api/ai/alerts/action", json={"alert_id": 99999999, "action": "add"}).status_code, 404)
+
+        saved = [e for e in client.get("/api/user-saved-events").json()["saved_events"] if e["uid"].startswith("aia-")]
+        self.assertEqual([e["uid"] for e in saved], ["aia-pottery-fair"])
+        self.assertTrue(saved[0]["is_all_day"])
+        self.assertEqual(saved[0]["time_range_12h"], "All Day")
+        self.assertEqual(saved[0]["source"], "ai_alert")
+
+        visible = {a["uid"] for a in client.get("/api/ai/alerts").json()["alerts"]}
+        self.assertNotIn("aia-pottery", visible)
+        # Re-matching never resurrects a dismissed alert.
+        self.assertEqual(client.post("/api/ai/match-intent", json={"prompt": "pottery"}).json()["new_alerts"], 0)
+        self.assertNotIn("aia-pottery", {a["uid"] for a in client.get("/api/ai/alerts").json()["alerts"]})
+
+    def test_21_keyword_fallback_matching(self):
+        from app import _keyword_fallback
+        kws = _keyword_fallback("I would like to join tech and food events")
+        self.assertIn("tech", kws)
+        self.assertIn("hackathon", kws)
+        self.assertIn("pizza", kws)
+        for stop in ("like", "join", "events", "and"):
+            self.assertNotIn(stop, kws)
+
+    def test_22_enabling_auto_add_schedules_pending_alerts(self):
+        self.addCleanup(_delete_by_uid_prefix, "aup-")
+        self.addCleanup(client.post, "/api/ai/intent", json={"prompt": "", "auto_add": False})
+        future = (datetime.now(CAMPUS_TZ) + timedelta(days=2)).replace(hour=13, minute=0, second=0, microsecond=0)
+        _insert_wm_event("aup-origami", "Origami Folding Circle", future.isoformat(), (future + timedelta(hours=1)).isoformat())
+
+        first = client.post("/api/ai/intent", json={"prompt": "origami", "auto_add": False}).json()
+        self.assertEqual(first["new_alerts"], 1)
+        self.assertEqual(first["auto_added_count"], 0)
+        self.assertFalse(any(e["uid"] == "aup-origami" for e in client.get("/api/user-saved-events").json()["saved_events"]))
+
+        second = client.post("/api/ai/intent", json={"prompt": "origami", "auto_add": True}).json()
+        self.assertEqual(second["new_alerts"], 0)
+        self.assertEqual(second["auto_added_count"], 1)
+        saved = [e for e in client.get("/api/user-saved-events").json()["saved_events"] if e["uid"] == "aup-origami"]
+        self.assertEqual(len(saved), 1)
+        self.assertEqual(saved[0]["source"], "ai_auto")
+        alert = next(a for a in client.get("/api/ai/alerts").json()["alerts"] if a["uid"] == "aup-origami")
+        self.assertTrue(alert["is_added"])
+        # Already scheduled: a further run adds nothing.
+        self.assertEqual(client.post("/api/ai/match-intent", json={"prompt": "origami", "auto_add": True}).json()["auto_added_count"], 0)
+
+    def test_23_alerts_hide_past_events_and_validate_since(self):
+        self.addCleanup(_delete_by_uid_prefix, "apx-")
+        now_campus = datetime.now(CAMPUS_TZ)
+        before = client.get("/api/ai/alerts").json()["unread_count"]
+        conn = get_db()
+        rows = [
+            ("apx-yesterday", (now_campus - timedelta(days=1)).isoformat(), (now_campus - timedelta(days=1) + timedelta(hours=1)).isoformat()),
+            ("apx-ended", (now_campus - timedelta(minutes=2)).isoformat(), (now_campus - timedelta(minutes=1)).isoformat()),
+            ("apx-old-allday", (now_campus.date() - timedelta(days=5)).isoformat(), None),
+            ("apx-upcoming", (now_campus + timedelta(days=1)).isoformat(), (now_campus + timedelta(days=1, hours=1)).isoformat()),
+        ]
+        for uid, st, en in rows:
+            conn.execute(
+                """INSERT INTO user_ai_alerts (uid, title, start_datetime, end_datetime, location, match_reason, score, is_added, is_dismissed, created_at)
+                   VALUES (?, ?, ?, ?, '', 'Matched: test', 0.5, 0, 0, ?)""",
+                (uid, uid, st, en, now_campus.isoformat()),
+            )
+        conn.commit()
+        conn.close()
+
+        data = client.get("/api/ai/alerts").json()
+        uids = {a["uid"] for a in data["alerts"]}
+        self.assertIn("apx-upcoming", uids)
+        for gone in ("apx-yesterday", "apx-ended", "apx-old-allday"):
+            self.assertNotIn(gone, uids)
+        self.assertEqual(data["unread_count"], before + 1)
+
+        earlier_z = (now_campus - timedelta(hours=1)).astimezone(dt_tz.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        later_z = (now_campus + timedelta(hours=1)).astimezone(dt_tz.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        self.assertIn("apx-upcoming", {a["uid"] for a in client.get("/api/ai/alerts", params={"since": earlier_z}).json()["alerts"]})
+        self.assertNotIn("apx-upcoming", {a["uid"] for a in client.get("/api/ai/alerts", params={"since": later_z}).json()["alerts"]})
+        self.assertEqual(client.get("/api/ai/alerts", params={"since": "not-a-date"}).status_code, 400)
+
+    def test_24_gemini_failures_cached_and_network_errors_stop(self):
+        import urllib.error
+        import app as app_module
+        app_module._INTENT_KEYWORD_CACHE.clear()
+        self.addCleanup(app_module._INTENT_KEYWORD_CACHE.clear)
+        with mock.patch.object(app_module, "_gemini_api_key", return_value="test-key-not-real"), \
+                mock.patch.object(app_module, "_query_gemini_intent_keywords", return_value=None) as gem:
+            for _ in range(3):
+                kws, src = app_module._intent_keywords("chess tournaments")
+                self.assertEqual(src, "keyword")
+                self.assertIn("chess", kws)
+            gem.assert_called_once()
+
+        with mock.patch("urllib.request.urlopen", side_effect=urllib.error.URLError("offline")) as fake_open:
+            self.assertIsNone(app_module._query_gemini_intent_keywords("test-key-not-real", "chess"))
+            self.assertEqual(fake_open.call_count, 1)
+
+    def test_25_directory_hides_ended_and_sorts_ongoing_last(self):
+        self.addCleanup(_delete_by_uid_prefix, "dir-")
+        now_campus = datetime.now(CAMPUS_TZ)
+        today = now_campus.date()
+
+        def at(days, hh, mm=0):
+            d = today + timedelta(days=days)
+            return datetime(d.year, d.month, d.day, hh, mm, tzinfo=CAMPUS_TZ).isoformat()
+
+        def day(days):
+            return (today + timedelta(days=days)).isoformat()
+
+        tag = "Zqxdirtest"
+        _insert_wm_event("dir-past-10d", f"{tag} Registration Ten Days Ago", at(-10, 9), at(-10, 17))
+        _insert_wm_event("dir-past-allday", f"{tag} Old Single Day", day(-3), day(-2), is_all_day=1)
+        _insert_wm_event("dir-past-exhibit", f"{tag} Closed Exhibition", day(-120), day(-1), is_all_day=1)
+        _insert_wm_event("dir-ongoing-exhibit", f"{tag} Founding Exhibition Still Running", day(-280), day(60), is_all_day=1)
+        _insert_wm_event("dir-ongoing-timed", f"{tag} Online Program", at(-20, 9), at(10, 17))
+        _insert_wm_event("dir-upcoming-2", f"{tag} Concert In Two Days", at(2, 19), at(2, 21))
+        _insert_wm_event("dir-upcoming-1", f"{tag} Talk Tomorrow", at(1, 12), at(1, 13))
+        _insert_wm_event("dir-future-exhibit", f"{tag} Exhibition Opening Next Week", day(7), day(40), is_all_day=1)
+
+        res = client.get("/api/wm-events", params={"search": tag})
+        self.assertEqual(res.status_code, 200)
+        events = [e for e in res.json() if e["uid"].startswith("dir-")]
+        uids = [e["uid"] for e in events]
+        self.assertEqual(uids, [
+            "dir-upcoming-1", "dir-upcoming-2", "dir-future-exhibit",
+            "dir-ongoing-exhibit", "dir-ongoing-timed",
+        ])
+        by_uid = {e["uid"]: e for e in events}
+        self.assertTrue(by_uid["dir-ongoing-exhibit"]["is_ongoing"])
+        self.assertTrue(by_uid["dir-ongoing-timed"]["is_ongoing"])
+        self.assertFalse(by_uid["dir-upcoming-1"]["is_ongoing"])
+        self.assertFalse(by_uid["dir-future-exhibit"]["is_ongoing"])
+        self.assertTrue(by_uid["dir-future-exhibit"]["is_multi_day"])
+        self.assertFalse(by_uid["dir-upcoming-1"]["is_multi_day"])
+
+        all_res = client.get("/api/wm-events", params={"search": tag, "include_past": "true"}).json()
+        self.assertIn("dir-past-10d", {e["uid"] for e in all_res})
+
+    def test_26_directory_collapses_cross_feed_duplicates(self):
+        """The same event published by two feeds (different UID / UTC offset / entity noise) lists once."""
+        from app import classify_department
+        _delete_by_uid_prefix("dup-")
+        self.addCleanup(_delete_by_uid_prefix, "dup-")
+        start_local = (datetime.now(CAMPUS_TZ) + timedelta(days=2)).replace(hour=18, minute=0, second=0, microsecond=0)
+        end_local = start_local + timedelta(hours=1)
+        tag = "Zzdupcheck"
+        _insert_wm_event("dup-a", f"{tag} Class:&nbsp;Yoga Night", start_local.isoformat(), end_local.isoformat())
+        _insert_wm_event("dup-b", f"{tag} Class: Yoga Night",
+                         start_local.astimezone(dt_tz.utc).isoformat(), end_local.astimezone(dt_tz.utc).isoformat(),
+                         location="Somewhere Else")
+        # Same title an hour later is a different session and must survive.
+        _insert_wm_event("dup-c", f"{tag} Class: Yoga Night",
+                         (start_local + timedelta(hours=1)).isoformat(), (end_local + timedelta(hours=1)).isoformat())
+        conn = get_db()
+        conn.execute("INSERT OR REPLACE INTO wm_event_calendars (uid, calendar_slug, calendar_name) VALUES ('dup-a', 'dup-feed-a', 'Feed A')")
+        conn.execute("INSERT OR REPLACE INTO wm_event_calendars (uid, calendar_slug, calendar_name) VALUES ('dup-b', 'dup-feed-b', 'Feed B')")
+        conn.commit()
+        conn.close()
+
+        def _drop_calendars():
+            c = get_db()
+            c.execute("DELETE FROM wm_event_calendars WHERE uid LIKE 'dup-%'")
+            c.commit()
+            c.close()
+        self.addCleanup(_drop_calendars)
+
+        res = client.get("/api/wm-events", params={"search": tag}).json()
+        self.assertEqual([e["uid"] for e in res], ["dup-a", "dup-c"])
+        self.assertEqual({c["slug"] for c in res[0]["source_calendars"]}, {"dup-feed-a", "dup-feed-b"})
+        self.assertEqual(res[0]["alt_uids"], ["dup-b"])
+
+        # Fitness classes land in Athletics & Recreation whichever feed carried them.
+        yoga = classify_department({"title": "FitWell Class: Candlelight Yoga", "location": "McLeod Tyler Wellness Center, Studio A"})
+        self.assertEqual(yoga["department_id"], "dept-sports")
 
 
 if __name__ == "__main__":

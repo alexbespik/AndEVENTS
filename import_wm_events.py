@@ -40,7 +40,9 @@ DEFAULT_DISCOVERY_FEEDS = [
     ("wm-main", "William & Mary Master Calendar", "https://events.wm.edu/calendar/upcoming_ical/wm"),
     ("studentengagement", "Student Engagement & Activities", "https://events.wm.edu/calendar/upcoming_ical/studentengagement"),
     ("libraries", "Swem Library Events & Workshops", "https://events.wm.edu/calendar/upcoming_ical/libraries"),
+    ("swem", "Swem Library", "https://events.wm.edu/calendar/upcoming_ical/swem"),
     ("athletics", "W&M Tribe Athletics", "https://events.wm.edu/calendar/upcoming_ical/athletics"),
+    ("tribeathletics", "W&M Tribe Athletics (Varsity)", "https://tribeathletics.com/calendar.ashx/calendar.ics"),
     ("recsports", "Campus Recreation & Fitness", "https://events.wm.edu/calendar/upcoming_ical/recsports"),
     ("career", "Cohen Career Center", "https://events.wm.edu/calendar/upcoming_ical/career"),
     ("wellness", "Health & Wellness", "https://events.wm.edu/calendar/upcoming_ical/wellness"),
@@ -50,6 +52,7 @@ DEFAULT_DISCOVERY_FEEDS = [
     ("student-affairs", "Student Affairs & Campus Life", "https://events.wm.edu/calendar/upcoming_ical/student-affairs"),
     ("cce", "Civic & Community Engagement", "https://events.wm.edu/calendar/upcoming_ical/cce"),
     ("computerscience", "Computer Science Colloquia & Events", "https://events.wm.edu/calendar/upcoming_ical/computerscience"),
+    ("studenthappenings", "Sadler & Campus Happenings", "https://events.wm.edu/calendar/upcoming_ical/studenthappenings"),
     ("academiccalendarug", "Undergraduate Academic Calendar", "https://events.wm.edu/calendar/upcoming_ical/academiccalendarug"),
 ]
 

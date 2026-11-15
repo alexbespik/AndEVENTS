@@ -18,7 +18,7 @@ DEFAULT_TIMEZONE = "America/New_York"
 MAX_ICAL_BYTES = 15 * 1024 * 1024
 MAX_ICAL_LINES = 100_000
 
-ALLOWED_HOSTS = frozenset({"events.wm.edu", "tribelink.wm.edu"})
+ALLOWED_HOSTS = frozenset({"events.wm.edu", "tribelink.wm.edu", "tribeathletics.com"})
 
 WINDOWS_TZ_MAP = {
     "eastern standard time": "America/New_York",

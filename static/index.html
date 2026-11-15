@@ -35,7 +35,7 @@
   <title>&amp;.events</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/lab.css" />
   <style>
     /* Clean, understated extensions adhering strictly to lab.css design tokens */
@@ -161,85 +161,6 @@
       opacity: 0;
       pointer-events: none;
     }
-    .live-event-card {
-      padding: var(--space-4) var(--space-5);
-      border: 1px solid var(--rule);
-      border-radius: var(--radius);
-      background: var(--surface);
-      box-shadow: 0 1px 0 var(--rule);
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-2);
-      transition: border-color 120ms var(--ease), box-shadow 120ms var(--ease);
-      cursor: pointer;
-    }
-    .live-event-card:hover {
-      border-color: var(--rule-strong);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    }
-    .live-event-card.in-session {
-      border-left: 5px solid var(--ok);
-    }
-    .live-event-card.starts-soon {
-      border-left: 5px solid var(--gold);
-    }
-    .live-event-card.has-conflict {
-      opacity: 0.82;
-    }
-    .live-event-card .live-event-details {
-      display: none;
-    }
-    .live-event-card.is-expanded .live-event-details {
-      display: block;
-    }
-
-    /* Universal Canonical Department Borders */
-    .live-event-card.dept-card-dept-cs { border-left: 5px solid #2563eb !important; }
-    .live-event-card.dept-card-dept-arts { border-left: 5px solid #9333ea !important; }
-    .live-event-card.dept-card-dept-sports { border-left: 5px solid #d97706 !important; }
-    .live-event-card.dept-card-dept-biol { border-left: 5px solid #0d9488 !important; }
-    .live-event-card.dept-card-dept-civics { border-left: 5px solid #b45309 !important; }
-    .live-event-card.dept-card-dept-life { border-left: 5px solid #eab308 !important; }
-    .live-event-card.dept-card-dept-acad { border-left: 5px solid #64748b !important; }
-
-    /* Department badge pills */
-    .dept-pill {
-      display: inline-flex;
-      align-items: center;
-      padding: 2px 8px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      border-radius: 3px;
-      font-family: var(--font-body);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      white-space: nowrap;
-    }
-    .dept-pill.dept-dept-cs, .dept-pill.dept-cs { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
-    .dept-pill.dept-dept-arts, .dept-pill.dept-arts { background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
-    .dept-pill.dept-dept-sports, .dept-pill.dept-sports { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
-    .dept-pill.dept-dept-biol, .dept-pill.dept-biol { background: #f0fdfa; color: #0f766e; border: 1px solid #99f6e4; }
-    .dept-pill.dept-dept-civics, .dept-pill.dept-civics { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
-    .dept-pill.dept-dept-life, .dept-pill.dept-life { background: #fefce8; color: #a16207; border: 1px solid #fef08a; }
-    .dept-pill.dept-dept-acad, .dept-pill.dept-acad { background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; }
-
-    @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) .dept-pill.dept-dept-cs, :root:not([data-theme="light"]) .dept-pill.dept-cs { background: #11253e; color: #7db4f0; border-color: #1f4270; }
-      :root:not([data-theme="light"]) .dept-pill.dept-dept-arts, :root:not([data-theme="light"]) .dept-pill.dept-arts { background: #291438; color: #d8b4fe; border-color: #4a2166; }
-      :root:not([data-theme="light"]) .dept-pill.dept-dept-sports, :root:not([data-theme="light"]) .dept-pill.dept-sports { background: #332408; color: #e5b35a; border-color: #594014; }
-      :root:not([data-theme="light"]) .dept-pill.dept-dept-biol, :root:not([data-theme="light"]) .dept-pill.dept-biol { background: #0c2728; color: #4ee0cf; border-color: #174d4f; }
-      :root:not([data-theme="light"]) .dept-pill.dept-dept-civics, :root:not([data-theme="light"]) .dept-pill.dept-civics { background: #2e1a0d; color: #e09d73; border-color: #522d17; }
-      :root:not([data-theme="light"]) .dept-pill.dept-dept-life, :root:not([data-theme="light"]) .dept-pill.dept-life { background: #382c0b; color: #f0cc6b; border-color: #5e4a15; }
-      :root:not([data-theme="light"]) .dept-pill.dept-dept-acad, :root:not([data-theme="light"]) .dept-pill.dept-acad { background: #192026; color: #9bb0be; border-color: #2e3a42; }
-    }
-    :root[data-theme="dark"] .dept-pill.dept-dept-cs, :root[data-theme="dark"] .dept-pill.dept-cs { background: #11253e; color: #7db4f0; border-color: #1f4270; }
-    :root[data-theme="dark"] .dept-pill.dept-dept-arts, :root[data-theme="dark"] .dept-pill.dept-arts { background: #291438; color: #d8b4fe; border-color: #4a2166; }
-    :root[data-theme="dark"] .dept-pill.dept-dept-sports, :root[data-theme="dark"] .dept-pill.dept-sports { background: #332408; color: #e5b35a; border-color: #594014; }
-    :root[data-theme="dark"] .dept-pill.dept-dept-biol, :root[data-theme="dark"] .dept-pill.dept-biol { background: #0c2728; color: #4ee0cf; border-color: #174d4f; }
-    :root[data-theme="dark"] .dept-pill.dept-dept-civics, :root[data-theme="dark"] .dept-pill.dept-civics { background: #2e1a0d; color: #e09d73; border-color: #522d17; }
-    :root[data-theme="dark"] .dept-pill.dept-dept-life, :root[data-theme="dark"] .dept-pill.dept-life { background: #382c0b; color: #f0cc6b; border-color: #5e4a15; }
-    :root[data-theme="dark"] .dept-pill.dept-dept-acad, :root[data-theme="dark"] .dept-pill.dept-acad { background: #192026; color: #9bb0be; border-color: #2e3a42; }
-
     /* Calendar item sleek styles */
     .cal-item {
       overflow: hidden;
@@ -276,30 +197,6 @@
       text-overflow: ellipsis;
       max-width: 100%;
     }
-    .live-event-head {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: var(--space-3);
-      flex-wrap: wrap;
-    }
-    .live-event-title {
-      font-family: var(--font-body);
-      font-size: 1.05rem;
-      font-weight: 600;
-      color: var(--ink);
-      margin: 0;
-      line-height: 1.3;
-    }
-    .live-event-meta {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: var(--space-2) var(--space-3);
-      font-family: var(--font-body);
-      font-size: 0.82rem;
-      color: var(--muted);
-    }
     .status-note {
       font-size: 0.82rem;
       padding: 3px 8px;
@@ -324,17 +221,6 @@
       border: 1px solid var(--gold-rule);
       color: var(--gold-text);
     }
-    .section-title {
-      font-family: var(--font-body);
-      font-size: 1.15rem;
-      font-weight: 700;
-      color: var(--ink);
-      margin: 0 0 var(--space-2) 0;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
     @keyframes spinClockwise {
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
@@ -346,45 +232,6 @@
     .btn-loading {
       opacity: 0.8;
       pointer-events: none;
-    }
-    #toastContainer {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 99999;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      max-width: 420px;
-      pointer-events: none;
-    }
-    .app-toast {
-      background: var(--surface);
-      color: var(--ink);
-      border: 1px solid var(--rule-strong);
-      border-left: 4px solid var(--accent);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow-raised);
-      padding: 10px 14px;
-      font-family: var(--font-body);
-      font-size: 0.82rem;
-      line-height: 1.4;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      pointer-events: auto;
-      animation: toastIn 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
-      transition: opacity 180ms ease, transform 180ms ease;
-    }
-    .app-toast.toast-success {
-      border-left-color: var(--ok);
-    }
-    .app-toast.toast-info {
-      border-left-color: var(--info);
-    }
-    @keyframes toastIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
@@ -426,7 +273,15 @@
         <span class="btn-update-label">Update</span>
       </button>
 
-      <div id="liveClockChip" class="conn num" style="font-family: var(--font-mono); font-size: 0.82rem;">
+      <button type="button" id="aiConciergeBtn" class="btn-update" onclick="openAiConciergeModal()" title="Campus concierge: tell us what you're into and get alerts" aria-label="Campus concierge">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="concierge-icon">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <span class="btn-update-label">Interests</span>
+        <span id="aiAlertBadge" class="ai-badge num" hidden>0</span>
+      </button>
+
+      <div id="liveClockChip" class="conn num">
         <span id="liveClockDisplay">--:--:--</span>
         <span id="liveDayDisplay" style="color: var(--brand-ink-soft); margin-left: 4px;">---</span>
       </div>
@@ -472,7 +327,7 @@
 
           <div style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;">Simulation</div>
           <div style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-2); background: var(--sunk); border-radius: var(--radius-sm); margin-bottom: var(--space-3);">
-            <label class="conn" style="cursor: pointer; font-size: 0.8rem; color: var(--ink);">
+            <label class="sim-toggle">
               <input type="checkbox" id="simToggle" onchange="toggleDemoMode()" style="cursor: pointer;">
               <span>Preview simulated time</span>
             </label>
@@ -516,7 +371,7 @@
     <div class="filters-modal-inner">
       <div class="filters-modal-head">
         <h3 id="filtersModalTitle">Filters &amp; Schedule</h3>
-        <button type="button" class="btn btn-quiet btn-sm" onclick="closeFiltersModal()" aria-label="Close dialog" style="font-size: 1.1rem; min-height: 28px; width: 28px; padding: 0;">✕</button>
+        <button type="button" class="btn btn-quiet btn-sm modal-close" onclick="closeFiltersModal()" aria-label="Close dialog">✕</button>
       </div>
 
       <div class="filters-modal-body">
@@ -555,7 +410,7 @@
             </select>
           </div>
 
-          <label class="conn" style="cursor: pointer; font-size: 0.84rem; padding-bottom: 8px;">
+          <label class="sim-toggle" style="padding-bottom: 8px;">
             <input type="checkbox" id="hideConflictsFilter" onchange="loadEvents(); updateFilterBadge();" style="cursor: pointer;">
             <span>Hide class conflicts</span>
           </label>
@@ -650,8 +505,14 @@
           </div>
 
           <div id="classList" style="max-height: 180px; overflow-y: auto;"></div>
-          <button type="button" class="btn btn-quiet btn-xs" onclick="resetDefaultClasses()" style="margin-top: 8px; width: 100%; justify-content: center; font-size: 0.78rem;">
-            ↻ Restore 5-Day W&amp;M Standard Schedule
+          <button type="button" class="btn btn-quiet btn-xs" onclick="resetDefaultClasses()" style="margin-top: 8px; width: 100%; justify-content: center; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 6px;">
+            <svg class="sync-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>
+              <path d="M21 3v5h-5"/>
+              <path d="M21 12a9 9 0 0 1-15 6.7L3 16"/>
+              <path d="M3 21v-5h5"/>
+            </svg>
+            <span>Restore 5-Day W&amp;M Standard Schedule</span>
           </button>
         </div>
       </div>
@@ -659,6 +520,59 @@
       <div class="filters-modal-foot">
         <button type="button" class="btn btn-quiet btn-sm" onclick="resetAllFilters()">Reset Filters</button>
         <button type="button" class="btn btn-gold btn-sm" onclick="closeFiltersModal()">Apply &amp; Close</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- AI Campus Concierge: interests -> alerts -> auto-scheduling -->
+  <dialog id="aiConciergeModal" class="filters-modal concierge-modal" aria-labelledby="aiConciergeModalTitle">
+    <div class="filters-modal-inner">
+      <div class="filters-modal-head">
+        <h3 id="aiConciergeModalTitle">Campus concierge</h3>
+        <button type="button" class="btn btn-quiet btn-sm modal-close" onclick="closeAiConciergeModal()" aria-label="Close dialog">✕</button>
+      </div>
+      <div class="filters-modal-body">
+        <p class="hint">Tell us what you want to take part in. Every time the campus feeds are parsed, the concierge checks new events against it, alerts you, and can put matches straight onto ★ My Calendar.</p>
+
+        <div class="field">
+          <label for="aiIntentPromptInput">What are you into?</label>
+          <textarea id="aiIntentPromptInput" class="textarea" rows="3" placeholder="e.g. hackathons and AI talks, free food, club soccer, jazz concerts, resume workshops"></textarea>
+          <div class="suggest-row" aria-label="Suggestions">
+            <button type="button" class="suggest-chip" onclick="insertAiSuggestion('Tech talks, hackathons, and AI reading groups')">Tech &amp; AI</button>
+            <button type="button" class="suggest-chip" onclick="insertAiSuggestion('Campus recreation, intramurals, swimming, and outdoor sports')">Rec &amp; sports</button>
+            <button type="button" class="suggest-chip" onclick="insertAiSuggestion('Free food, club social nights, and student gatherings')">Social &amp; free food</button>
+            <button type="button" class="suggest-chip" onclick="insertAiSuggestion('Career fairs, resume workshops, and internship info sessions')">Career</button>
+            <button type="button" class="suggest-chip" onclick="insertAiSuggestion('Concerts, theatre, and art exhibitions')">Arts &amp; music</button>
+          </div>
+        </div>
+
+        <div class="toggle-list">
+          <label class="toggle-row">
+            <input type="checkbox" id="aiAutoAddCheckbox">
+            <span><strong>Auto-schedule matches</strong><span class="hint">Put matching events onto ★ My Calendar automatically.</span></span>
+          </label>
+          <label class="toggle-row">
+            <input type="checkbox" id="aiNotifyCheckbox" checked>
+            <span><strong>Alert me</strong><span class="hint">Show a notice when newly parsed events match.</span></span>
+          </label>
+        </div>
+
+        <div class="btn-row">
+          <button type="button" id="saveAiIntentBtn" class="btn btn-primary btn-sm" onclick="saveAiIntentAndMatch()">Save &amp; find matches</button>
+          <span id="aiMatchStatusText" class="hint" aria-live="polite"></span>
+        </div>
+
+        <div class="concierge-alerts-head">
+          <h4>Matches <span class="num">(<span id="aiAlertsCount">0</span>)</span></h4>
+          <button type="button" class="btn btn-quiet btn-xs" onclick="loadAiAlerts({ showFeedback: true, markSeen: true })">Refresh</button>
+        </div>
+        <div id="aiAlertsContainer" class="stack-sm">
+          <p class="hint ai-empty">No matches yet.</p>
+        </div>
+      </div>
+      <div class="filters-modal-foot">
+        <span class="hint">Checked after every feed update.</span>
+        <button type="button" class="btn btn-quiet btn-sm" onclick="closeAiConciergeModal()">Close</button>
       </div>
     </div>
   </dialog>
@@ -671,14 +585,15 @@
           <span id="eventModalDeptPill" class="dept-pill dept-dept-acad">Campus</span>
           <h3 id="eventModalTitle" style="margin: 0; font-size: 1.15rem;">Event Details</h3>
         </div>
-        <button type="button" class="btn btn-quiet btn-sm" onclick="closeEventModal()" aria-label="Close dialog" style="font-size: 1.1rem; min-height: 28px; width: 28px; padding: 0;">✕</button>
+        <button type="button" class="btn btn-quiet btn-sm modal-close" onclick="closeEventModal()" aria-label="Close dialog">✕</button>
       </div>
       <div id="eventModalBody" class="filters-modal-body">
         <!-- Dynamically populated -->
       </div>
       <div class="filters-modal-foot">
         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-          <button type="button" id="eventModalSysCalBtn" class="btn btn-gold btn-sm">📅 Add to System Calendar</button>
+          <button type="button" id="eventModalSaveBtn" class="btn btn-quiet btn-sm">+ Add to My Calendar</button>
+          <button type="button" id="eventModalSysCalBtn" class="btn btn-quiet btn-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg><span>Add to System Calendar</span></button>
           <a id="eventModalGoogleCalLink" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-quiet btn-sm">Google Calendar ↗</a>
         </div>
         <button type="button" class="btn btn-quiet btn-sm" onclick="closeEventModal()">Close</button>
@@ -691,10 +606,9 @@
     <div class="filters-modal-inner" style="max-width: 640px;">
       <div class="filters-modal-head">
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-          <span class="chip" style="font-weight: 600; color: var(--gold-rule);">📅 Weekly Schedule</span>
           <h3 id="clusterModalTitle" style="margin: 0; font-size: 1.15rem;">Overlapping Events</h3>
         </div>
-        <button type="button" class="btn btn-quiet btn-sm" onclick="closeClusterModal()" aria-label="Close dialog" style="font-size: 1.1rem; min-height: 28px; width: 28px; padding: 0;">✕</button>
+        <button type="button" class="btn btn-quiet btn-sm modal-close" onclick="closeClusterModal()" aria-label="Close dialog">✕</button>
       </div>
       <div id="clusterModalBody" class="filters-modal-body" style="max-height: 65vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: var(--space-4);">
         <!-- Dynamically populated -->
@@ -718,7 +632,7 @@
             <p id="pageSubtitleText">Campus events happening right now and over the next three hours.</p>
           </div>
           <div id="headerActions" class="btn-row">
-            <button type="button" id="notifBtn" class="btn btn-secondary btn-sm" onclick="toggleNotifications()">
+            <button type="button" id="notifBtn" class="btn btn-secondary btn-sm" onclick="toggleNotifications()" aria-label="Event notifications">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
               <span id="notifBtnText">Event Notifications</span>
             </button>
@@ -731,9 +645,9 @@
           <div id="academicPriorityHero" aria-live="polite">
             <div class="academic-hero all-clear">
               <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-                <span class="academic-hero-badge clear">ACADEMIC SCHEDULE · TODAY</span>
+                <span class="academic-hero-badge clear">Today's classes</span>
               </div>
-              <div class="academic-hero-title">Checking Schedule…</div>
+              <div class="academic-hero-title">Checking your schedule…</div>
               <div class="academic-hero-meta">
                 <span>Connecting to campus schedule engine</span>
               </div>
@@ -741,9 +655,9 @@
           </div>
 
           <!-- Interests / Tags Strip & Recommended Filter -->
-          <div class="panel" style="padding: var(--space-3) var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;">
+          <div class="panel interests-panel">
             <div style="display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;">
-              <span style="font-size: 0.82rem; font-weight: 700; color: var(--ink);">Your Interests:</span>
+              <span class="panel-label">Your interests</span>
               <div id="frontPageTagsList" style="display: inline-flex; gap: 6px; flex-wrap: wrap;"></div>
               <button type="button" class="btn btn-quiet btn-sm" onclick="openFiltersModal('tags')" style="padding: 0 10px; min-height: 26px; font-size: 0.78rem; font-family: var(--font-ui); font-weight: 600;">
                 + Edit
@@ -756,12 +670,16 @@
                 <span>Recommended for You</span>
               </button>
             </div>
+            <div class="concierge-strip">
+              <p id="conciergeSummary" class="hint">Tell the concierge what you're into — it alerts you when matching events are parsed and can put them on your calendar.</p>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="openAiConciergeModal()">Tell us what you're into</button>
+            </div>
           </div>
 
           <!-- View Arrangement Controls on Now & Soon -->
           <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-top: var(--space-3); margin-bottom: var(--space-2); flex-wrap: wrap;">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 0.74rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;">Arrangement:</span>
+              <span class="panel-label muted">Arrange</span>
               <div class="arrangement-nav" role="tablist" aria-label="Event arrangement">
                 <button type="button" id="arrangeChronoBtn" class="arrangement-tab active" aria-pressed="true" onclick="setNowSoonArrangement('chrono')">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
@@ -812,9 +730,9 @@
         <!-- VIEW 2: Directory Mode (Searchable full catalog) -->
         <div id="viewDirectory" class="stack view-container" style="display: none;">
           <!-- Interests / Recommended Filter for Directory -->
-          <div class="panel" style="padding: var(--space-3) var(--space-4); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;">
+          <div class="panel interests-panel">
             <div style="display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap;">
-              <span style="font-size: 0.82rem; font-weight: 700; color: var(--ink);">Your Interests:</span>
+              <span class="panel-label">Your interests</span>
               <div id="dirPageTagsList" style="display: inline-flex; gap: 6px; flex-wrap: wrap;"></div>
               <button type="button" class="btn btn-quiet btn-sm" onclick="openFiltersModal('tags')" style="padding: 0 10px; min-height: 26px; font-size: 0.78rem; font-family: var(--font-ui); font-weight: 600;">
                 + Edit
@@ -881,13 +799,13 @@
               <span id="plannerConflictBadge" class="status status-bad" style="display: none; font-size: 0.75rem;">0 Overlaps</span>
             </div>
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <button type="button" class="btn btn-quiet btn-sm" onclick="exportWeeklyPlannerCalendar()" title="Export weekly schedule as an RFC 5545 iCalendar (.ics) file">📅 Export Calendar (.ics)</button>
-              <button type="button" class="btn btn-quiet btn-sm" onclick="openFiltersModal('classes')">+ Manage Classes</button>
-              <button type="button" class="btn btn-primary btn-sm" onclick="switchMode('organizer')">+ Propose Event</button>
+              <button type="button" class="btn btn-quiet btn-sm" onclick="exportWeeklyPlannerCalendar()" title="Export weekly schedule as an RFC 5545 iCalendar (.ics) file"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg><span class="label-long">Export calendar (.ics)</span><span class="label-short">.ics</span></button>
+              <button type="button" class="btn btn-quiet btn-sm" onclick="openFiltersModal('classes')"><span class="label-long">+ Manage Classes</span><span class="label-short">Classes</span></button>
+              <button type="button" class="btn btn-primary btn-sm" onclick="switchMode('organizer')"><span class="label-long">+ Propose Event</span><span class="label-short">+ Event</span></button>
             </div>
             <!-- Department filter pill group (visible in 'All Campus Events' mode) -->
             <div id="plannerDeptFilterGroup" class="cal-dept-filters" style="display: none; width: 100%; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--rule); align-items: center; gap: 6px; flex-wrap: wrap;">
-              <span style="font-size: 0.72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; font-family: var(--font-mono); margin-right: 4px;">Department:</span>
+              <span class="panel-label muted">Department</span>
               <button type="button" class="cal-dept-pill active" data-dept="all" onclick="setPlannerDeptFilter('all')">All</button>
               <button type="button" class="cal-dept-pill" data-dept="dept-cs" onclick="setPlannerDeptFilter('dept-cs')">CS &amp; Tech</button>
               <button type="button" class="cal-dept-pill" data-dept="dept-arts" onclick="setPlannerDeptFilter('dept-arts')">Arts</button>
@@ -980,11 +898,11 @@
               <p class="hint" style="margin-bottom: var(--space-4);">Checks for class overlaps, other events, and room conflicts.</p>
 
               <div id="slotInspectorBox" class="notice notice-ok">
-                <div id="slotInspectorStatus" style="font-weight: 700; font-family: var(--font-mono); margin-bottom: 4px;">
+                <div id="slotInspectorStatus" style="font-weight: 600; margin-bottom: 4px;">
                   Checking schedule…
                 </div>
                 <div id="slotInspectorAdvice" style="margin-bottom: 6px;"></div>
-                <div id="slotInspectorDetails" style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted);"></div>
+                <div id="slotInspectorDetails" style="font-size: 0.82rem; color: var(--muted);"></div>
               </div>
 
               <div style="margin-top: var(--space-5);">
@@ -1042,6 +960,34 @@
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+    }
+
+    // Feed text sometimes arrives with literal HTML entities ("Laboratory&nbsp;"). Decode them to plain
+    // text (DOMParser never executes scripts) so escapeHtml() renders the intended characters.
+    const _entityParser = new DOMParser();
+    function cleanText(str) {
+      if (!str) return "";
+      const s = String(str);
+      if (!/&(#\d+|#x[0-9a-f]+|[a-z]+);/i.test(s)) return s.trim();
+      const decoded = _entityParser.parseFromString(s, "text/html").documentElement.textContent || "";
+      return decoded.replace(/ /g, " ").trim();
+    }
+
+    const ICON_CAL = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`;
+
+    function saveButtonLabel(saved) {
+      return saved ? "✓ On My Calendar" : "+ Add to My Calendar";
+    }
+
+    // The three calendar buttons every event surface must offer (CLAUDE.md "EVERY EVENT MUST HAVE BUTTONS").
+    function calendarActionsHtml(ev, size = "xs") {
+      const saved = isEventSaved(ev);
+      const evJson = escapeHtml(JSON.stringify(ev));
+      return `
+        <button type="button" class="btn btn-${size} cal-save-btn ${saved ? 'btn-gold' : 'btn-quiet'}" data-event="${evJson}" onclick="handleCardSaveToggle(this, event)" aria-pressed="${saved}">${saveButtonLabel(saved)}</button>
+        <button type="button" class="btn btn-${size} btn-quiet" data-ev="${evJson}" onclick="event.stopPropagation(); exportToSystemCalendar(JSON.parse(this.dataset.ev))" title="Download an .ics file for Apple Calendar, Outlook or any system calendar">${ICON_CAL}<span class="label-long">Add to System Calendar</span><span class="label-short">System Calendar</span></button>
+        <a class="btn btn-${size} btn-quiet" href="${getGoogleCalendarUrl(ev)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="Open in Google Calendar">Google Calendar ↗</a>
+      `;
     }
 
     // Modal controls for clean no-sidebar workspace
@@ -1259,7 +1205,7 @@
         activeRow.innerHTML = tags.map(t => {
           const theme = getTagThemeClass(t);
           return `
-            <span class="chip ${theme}" style="font-family: var(--font-mono); font-size: 0.78rem; font-weight: 600;">
+            <span class="chip ${theme}" style="font-size: 0.78rem; font-weight: 600;">
               ${escapeHtml(t)}
               <button type="button" data-tag="${escapeHtml(t)}" onclick="removeTag(this.dataset.tag)" style="background:none;border:none;cursor:pointer;font-weight:700;margin-left:4px;color:inherit;" title="Remove tag">×</button>
             </span>
@@ -1270,7 +1216,7 @@
       const renderTagChips = (tagList) => tagList.map(t => {
         const theme = getTagThemeClass(t);
         return `
-          <span class="chip ${theme}" style="font-family: var(--font-mono); font-size: 0.76rem; font-weight: 600;">
+          <span class="chip ${theme}" style="font-size: 0.76rem; font-weight: 600;">
             ${escapeHtml(t)}
           </span>
         `;
@@ -1626,9 +1572,9 @@
 
     function getGoogleCalendarUrl(ev) {
       if (!ev) return "#";
-      const title = encodeURIComponent(ev.title || ev.course_name || "Campus Event");
-      const desc = encodeURIComponent(ev.description || ev.summary || "");
-      const loc = encodeURIComponent(ev.location || "");
+      const title = encodeURIComponent(cleanText(ev.title || ev.course_name) || "Campus Event");
+      const desc = encodeURIComponent(cleanText(ev.description || ev.summary));
+      const loc = encodeURIComponent(cleanText(ev.location));
       let datesParam = "";
 
       if (ev.is_all_day) {
@@ -1681,51 +1627,29 @@
       const deptId = ev.department_id || "dept-acad";
       const deptName = ev.department_name || (DEPARTMENTS[deptId] ? DEPARTMENTS[deptId].name : "Campus");
 
-      if (titleEl) titleEl.textContent = ev.title || ev.course_name || "Event Details";
+      if (titleEl) titleEl.textContent = cleanText(ev.title || ev.course_name) || "Event Details";
       if (deptPill) {
         deptPill.className = `dept-pill dept-${deptId}`;
         deptPill.textContent = deptName;
       }
 
-      let timeDisplay = "";
-      if (ev.is_all_day) {
-        timeDisplay = "All Day";
-      } else if (ev.time_range_12h) {
-        timeDisplay = ev.time_range_12h;
-      } else if (ev.start_time && ev.end_time) {
-        timeDisplay = `${format12hJs(ev.start_time)} – ${format12hJs(ev.end_time)}`;
-      } else if (ev.start_at) {
-        timeDisplay = formatCampusEventTime(ev.start_at, ev.end_at, false);
-      }
-
-      let dateLabel = "";
-      if (ev.date_display) {
-        dateLabel = ev.date_display;
-      } else if (ev.day_of_week != null) {
-        dateLabel = DAYS[ev.day_of_week];
-      }
-
-      const desc = ev.description || ev.summary || "No detailed summary published for this session.";
-      const loc = ev.location || "Campus Venue TBA";
-      const host = ev.club_name || (ev.is_wm_event ? "William & Mary Campus" : "Student Organization");
+      const whenText = [eventDateLabel(ev), eventTimeDisplay(ev)].filter(Boolean).join(" · ");
+      const desc = cleanText(ev.description || ev.summary) || "No detailed summary published for this session.";
+      const loc = cleanText(ev.location) || "Venue TBA";
+      const host = cleanText(ev.club_name) || (ev.is_wm_event ? "William & Mary Campus" : "Student Organization");
       const safeLink = ev.source_url ? safeWmSourceUrl(ev.source_url) : null;
 
       if (bodyEl) {
         bodyEl.innerHTML = `
-          <div style="display: flex; flex-direction: column; gap: var(--space-3);">
-            <div style="font-size: 0.85rem; color: var(--muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <span class="chip" style="font-weight: 600;">${escapeHtml(host)}</span>
-              ${dateLabel ? `<span class="chip">${escapeHtml(dateLabel)}</span>` : ""}
-              ${timeDisplay ? `<span class="chip num">${escapeHtml(timeDisplay)}</span>` : ""}
-              <span>📍 ${escapeHtml(loc)}</span>
-              ${ev.category ? `<span class="chip">${escapeHtml(ev.category)}</span>` : ""}
-            </div>
-            ${ev.conflicting_course ? `<div class="notice notice-bad" style="padding: 6px 12px; font-size: 0.82rem;">⚠️ Overlaps with your enrolled class: <strong>${escapeHtml(ev.conflicting_course)}</strong></div>` : ""}
-            <div style="font-size: 0.92rem; line-height: 1.5; color: var(--ink);">
-              ${escapeHtml(desc)}
-            </div>
-            ${safeLink ? `<div style="margin-top: 4px;"><a href="${safeLink.href}" target="_blank" rel="noopener noreferrer" class="crumbs">Open official event page ↗</a></div>` : ""}
-          </div>
+          <dl class="event-facts">
+            ${whenText ? `<div><dt>When</dt><dd class="num">${escapeHtml(whenText)}</dd></div>` : ""}
+            <div><dt>Where</dt><dd>${escapeHtml(loc)}</dd></div>
+            <div><dt>Host</dt><dd>${escapeHtml(host)}</dd></div>
+            ${ev.category ? `<div><dt>Category</dt><dd>${escapeHtml(ev.category)}</dd></div>` : ""}
+          </dl>
+          ${ev.conflicting_course ? `<div class="notice notice-bad">Overlaps with your enrolled class: <strong>${escapeHtml(ev.conflicting_course)}</strong></div>` : ""}
+          <p class="event-desc">${escapeHtml(desc)}</p>
+          ${safeLink ? `<a class="lec-link" href="${safeLink.href}" target="_blank" rel="noopener noreferrer">Official event page ↗</a>` : ""}
         `;
       }
 
@@ -1734,6 +1658,20 @@
       }
       if (gcalLink) {
         gcalLink.href = getGoogleCalendarUrl(ev);
+      }
+
+      const saveModalBtn = document.getElementById("eventModalSaveBtn");
+      if (saveModalBtn) {
+        const saved = isEventSaved(ev);
+        saveModalBtn.className = `btn btn-sm ${saved ? 'btn-gold' : 'btn-quiet'}`;
+        saveModalBtn.textContent = saved ? '✓ On My Calendar' : '+ Add to My Calendar';
+        saveModalBtn.onclick = (e) => {
+          saveModalBtn.dataset.event = JSON.stringify(currentModalEvent);
+          handleCardSaveToggle(saveModalBtn, e);
+          const nowSaved = isEventSaved(currentModalEvent);
+          saveModalBtn.className = `btn btn-sm ${nowSaved ? 'btn-gold' : 'btn-quiet'}`;
+          saveModalBtn.textContent = nowSaved ? '✓ On My Calendar' : '+ Add to My Calendar';
+        };
       }
 
       if (modal && typeof modal.showModal === "function") {
@@ -1747,6 +1685,369 @@
         modal.close();
       }
     }
+
+    // ==========================================
+    // AI Campus Concierge: interests -> alerts -> auto-scheduled events
+    // ==========================================
+
+    const AI_SEEN_KEY = "ai_seen_alert_ids";       // alerts the student has looked at (clears the badge)
+    const AI_NOTIFIED_KEY = "ai_notified_alert_ids"; // alerts already announced by toast/notification
+
+    function readIdSet(key) {
+      try { return new Set(JSON.parse(localStorage.getItem(key) || "[]")); } catch (e) { return new Set(); }
+    }
+    function writeIdSet(key, set) {
+      try { localStorage.setItem(key, JSON.stringify([...set].slice(-500))); } catch (e) {}
+    }
+
+    function isAiScheduled(ev) {
+      return Boolean(ev && (ev.is_ai_scheduled || (typeof ev.source === "string" && ev.source.startsWith("ai_"))));
+    }
+
+    // Merge server-side saved events (auto-added by the concierge or accepted alerts) into
+    // localStorage user_saved_events so they appear in ★ My Calendar. Returns how many were new.
+    async function syncSavedEventsFromServer() {
+      try {
+        const res = await fetch("/api/user-saved-events");
+        if (!res.ok) return 0;
+        const data = await res.json();
+        const serverEvents = Array.isArray(data.saved_events) ? data.saved_events : [];
+        if (serverEvents.length === 0) return 0;
+
+        const localEvents = getUserSavedEvents();
+        const localKeys = new Set(localEvents.map(e => getEventKey(e)).filter(Boolean));
+        const added = [];
+
+        serverEvents.forEach(sv => {
+          if (!sv || !sv.uid) return;
+          const startAt = sv.start_at || sv.start_datetime || "";
+          const evObj = {
+            ...sv,
+            start_at: startAt,
+            end_at: sv.end_at || sv.end_datetime || "",
+            is_all_day: sv.is_all_day != null ? Boolean(sv.is_all_day) : String(startAt).length <= 10,
+            is_user_saved: true,
+            is_wm_event: true,
+            is_ai_scheduled: sv.is_ai_scheduled != null ? Boolean(sv.is_ai_scheduled) : true
+          };
+          delete evObj.id; // keep the wm-{uid} key; server row ids are not club event ids
+          const key = getEventKey(evObj);
+          if (!localKeys.has(key)) {
+            localEvents.push(evObj);
+            localKeys.add(key);
+            added.push(evObj);
+          }
+        });
+
+        if (added.length > 0) {
+          try {
+            localStorage.setItem("user_saved_events", JSON.stringify(localEvents));
+          } catch (e) {
+            console.warn("Could not store synced events:", e);
+            return 0;
+          }
+          if (currentMode === "planner") loadWeeklyPlanner();
+        }
+        return added.length;
+      } catch (e) {
+        console.warn("Sync saved events failed:", e);
+        return 0;
+      }
+    }
+
+    // Removing an AI-scheduled event must also delete it server-side, or the next sync re-adds it.
+    async function removeServerSavedEvent(ev) {
+      if (!ev || !ev.uid) return;
+      try {
+        const res = await fetch(`/api/user-saved-events/${encodeURIComponent(ev.uid)}`, { method: "DELETE" });
+        if (!res.ok && res.status !== 404) throw new Error(`HTTP ${res.status}`);
+      } catch (e) {
+        console.warn("Could not remove server-saved event:", e);
+        showToast("Removed locally, but the concierge copy could not be deleted. It may reappear.", "info");
+      }
+    }
+
+    async function openAiConciergeModal() {
+      const modal = document.getElementById("aiConciergeModal");
+      if (!modal) return;
+      if (typeof modal.showModal === "function" && !modal.open) {
+        modal.showModal();
+      }
+
+      try {
+        const res = await fetch("/api/ai/intent");
+        if (res.ok) {
+          const data = await res.json();
+          const promptInput = document.getElementById("aiIntentPromptInput");
+          const autoAddCb = document.getElementById("aiAutoAddCheckbox");
+          const notifyCb = document.getElementById("aiNotifyCheckbox");
+          if (promptInput && data.prompt !== undefined) promptInput.value = data.prompt || "";
+          if (autoAddCb && data.auto_add !== undefined) autoAddCb.checked = Boolean(data.auto_add);
+          if (notifyCb && data.notify !== undefined) notifyCb.checked = Boolean(data.notify);
+          updateConciergeSummary(data.prompt || "");
+        }
+      } catch (e) {
+        console.warn("Could not load AI intent:", e);
+      }
+
+      await loadAiAlerts({ markSeen: true });
+    }
+
+    function closeAiConciergeModal() {
+      const modal = document.getElementById("aiConciergeModal");
+      if (modal && typeof modal.close === "function") {
+        modal.close();
+      }
+    }
+
+    function insertAiSuggestion(text) {
+      const input = document.getElementById("aiIntentPromptInput");
+      if (!input) return;
+      const current = input.value.trim();
+      if (!current) {
+        input.value = text;
+      } else if (!current.toLowerCase().includes(text.toLowerCase())) {
+        input.value = `${current}, ${text}`;
+      }
+      input.focus();
+    }
+
+    // One-line status under "Your interests" on Who's up? so the concierge is discoverable.
+    function updateConciergeSummary(prompt, newCount) {
+      const el = document.getElementById("conciergeSummary");
+      if (!el) return;
+      if (prompt === undefined) prompt = el.dataset.prompt || "";
+      el.dataset.prompt = prompt;
+      const p = String(prompt || "").trim();
+      if (!p) {
+        el.textContent = "Tell the concierge what you're into — it alerts you when matching events are parsed and can put them on your calendar.";
+        return;
+      }
+      const short = p.length > 70 ? p.slice(0, 67) + "…" : p;
+      const n = newCount != null ? newCount : Number(document.getElementById("aiAlertBadge")?.dataset.count || 0);
+      el.textContent = `Watching for: “${short}”${n ? ` · ${n} new match${n === 1 ? "" : "es"}` : ""}`;
+    }
+
+    async function saveAiIntentAndMatch() {
+      const promptInput = document.getElementById("aiIntentPromptInput");
+      const autoAddCb = document.getElementById("aiAutoAddCheckbox");
+      const notifyCb = document.getElementById("aiNotifyCheckbox");
+      const statusText = document.getElementById("aiMatchStatusText");
+      const saveBtn = document.getElementById("saveAiIntentBtn");
+
+      const prompt = promptInput ? promptInput.value.trim() : "";
+      const autoAdd = autoAddCb ? autoAddCb.checked : false;
+      const notify = notifyCb ? notifyCb.checked : true;
+
+      if (saveBtn) saveBtn.disabled = true;
+      if (statusText) statusText.textContent = "Matching campus events…";
+
+      try {
+        const res = await fetch("/api/ai/intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt, auto_add: autoAdd, notify })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        const matchedCount = Number(data.matched_count ?? data.matched_events ?? 0) || 0;
+        const autoAddedCount = Number(data.auto_added_count ?? data.auto_added ?? 0) || 0;
+
+        if (statusText) {
+          statusText.textContent = prompt
+            ? `${matchedCount} matching event${matchedCount === 1 ? "" : "s"}${autoAddedCount ? ` · ${autoAddedCount} added to ★ My Calendar` : ""}`
+            : "Interests cleared.";
+        }
+        updateConciergeSummary(prompt);
+
+        const merged = await syncSavedEventsFromServer();
+        if (merged > 0 || autoAddedCount > 0) {
+          if (currentMode === "planner") loadWeeklyPlanner();
+          if (currentMode === "live") loadNowAndNext();
+        }
+        if (prompt) {
+          showToast(`Concierge saved · ${matchedCount} match${matchedCount === 1 ? "" : "es"}${autoAddedCount ? `, ${autoAddedCount} added to your calendar` : ""}.`, "success");
+        }
+        // Alerts created by this save are shown in the list right away; do not re-announce them.
+        await loadAiAlerts({ markSeen: true, silent: true });
+      } catch (err) {
+        console.error("Save AI intent failed:", err);
+        if (statusText) statusText.textContent = "Could not save your interests. Try again.";
+        showToast("Could not save concierge preferences.", "info");
+      } finally {
+        if (saveBtn) saveBtn.disabled = false;
+      }
+    }
+
+    function renderAiAlertCard(a) {
+      const deptId = a.department_id || "dept-acad";
+      const deptName = a.department_name || (DEPARTMENTS[deptId] ? DEPARTMENTS[deptId].name : "Campus");
+      const startAt = a.start_at || a.start_datetime || "";
+      const evForCal = {
+        ...a,
+        id: undefined,
+        start_at: startAt,
+        end_at: a.end_at || a.end_datetime || "",
+        is_all_day: a.is_all_day != null ? Boolean(a.is_all_day) : String(startAt).length <= 10,
+        is_wm_event: true
+      };
+      const when = [a.date_display, a.time_range_12h || a.start_time_12h].filter(Boolean).join(" · ");
+      const isAdded = isEventSaved(evForCal);
+      const alertId = Number(a.id);
+
+      return `
+        <div class="ai-alert-card ${a._isNew ? "is-new" : ""}" id="aiAlertCard_${alertId}">
+          <div class="ai-alert-head">
+            <div class="ai-alert-tags">
+              <span class="dept-pill dept-${deptId}">${escapeHtml(deptName)}</span>
+              ${a._isNew ? `<span class="status status-working">New</span>` : ""}
+            </div>
+            <button type="button" class="btn btn-quiet btn-xs modal-close" onclick="handleAiAlertAction(${alertId}, 'dismiss')" aria-label="Dismiss alert" title="Dismiss">✕</button>
+          </div>
+          <h4 class="cluster-item-title">${escapeHtml(cleanText(a.title))}</h4>
+          <div class="cluster-item-meta">
+            ${when ? `<span class="num">${escapeHtml(when)}</span>` : ""}
+            ${a.location ? `<span>${escapeHtml(cleanText(a.location))}</span>` : ""}
+          </div>
+          ${a.match_reason ? `<p class="ai-match-reason">Why: ${escapeHtml(a.match_reason)}</p>` : ""}
+          <div class="lec-actions">
+            ${isAdded
+              ? `<span class="btn btn-xs btn-gold" role="status">✓ On My Calendar</span>`
+              : `<button type="button" class="btn btn-xs btn-quiet" onclick="handleAiAlertAction(${alertId}, 'add')">+ Add to My Calendar</button>`}
+            <button type="button" class="btn btn-xs btn-quiet" data-ev="${escapeHtml(JSON.stringify(evForCal))}" onclick="exportToSystemCalendar(JSON.parse(this.dataset.ev))">${ICON_CAL}<span class="label-long">Add to System Calendar</span><span class="label-short">System Calendar</span></button>
+            <a class="btn btn-xs btn-quiet" href="${getGoogleCalendarUrl(evForCal)}" target="_blank" rel="noopener noreferrer">Google Calendar ↗</a>
+          </div>
+        </div>
+      `;
+    }
+
+    // Fetch alerts, update the unread badge, render the list, and announce alerts that are new
+    // since the last poll (toast + desktop notification). Accepts the legacy boolean argument.
+    async function loadAiAlerts(opts = {}) {
+      if (typeof opts === "boolean") opts = { showFeedback: opts };
+      const { showFeedback = false, markSeen = false, silent = false } = opts;
+      const container = document.getElementById("aiAlertsContainer");
+      const countEl = document.getElementById("aiAlertsCount");
+      const badgeEl = document.getElementById("aiAlertBadge");
+
+      try {
+        const res = await fetch("/api/ai/alerts");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const alerts = Array.isArray(data.alerts) ? data.alerts.filter(a => a && !a.is_dismissed) : [];
+
+        const seen = readIdSet(AI_SEEN_KEY);
+        const notified = readIdSet(AI_NOTIFIED_KEY);
+        let firstRun = false;
+        try { firstRun = localStorage.getItem(AI_NOTIFIED_KEY) === null; } catch (e) { firstRun = true; }
+
+        const unseen = alerts.filter(a => !seen.has(a.id));
+        const toAnnounce = alerts.filter(a => !notified.has(a.id));
+        alerts.forEach(a => { a._isNew = !seen.has(a.id); notified.add(a.id); });
+        writeIdSet(AI_NOTIFIED_KEY, notified);
+
+        // On the very first poll, everything is "new" — record it silently instead of spamming.
+        if (!silent && !firstRun && toAnnounce.length) {
+          announceAiAlerts(toAnnounce);
+        }
+
+        if (markSeen) {
+          alerts.forEach(a => seen.add(a.id));
+          writeIdSet(AI_SEEN_KEY, seen);
+        }
+        const badgeCount = markSeen ? 0 : unseen.length;
+
+        if (countEl) countEl.textContent = alerts.length;
+        if (badgeEl) {
+          badgeEl.dataset.count = String(badgeCount);
+          badgeEl.textContent = badgeCount > 99 ? "99+" : String(badgeCount);
+          badgeEl.hidden = badgeCount === 0;
+        }
+        updateConciergeSummary(undefined, badgeCount);
+
+        if (container) {
+          container.innerHTML = alerts.length
+            ? alerts.map(renderAiAlertCard).join("")
+            : `<p class="hint ai-empty">No matches yet. Describe what you'd like to do above and save — new matches appear here after every feed update.</p>`;
+        }
+
+        if (showFeedback) showToast("Concierge alerts refreshed.", "info");
+        return toAnnounce.length;
+      } catch (err) {
+        console.warn("Could not load AI alerts:", err);
+        return 0;
+      }
+    }
+
+    function announceAiAlerts(list) {
+      const autoAdded = list.filter(a => a.is_added);
+      const first = cleanText(list[0].title);
+      let body;
+      if (list.length === 1) {
+        body = autoAdded.length ? `Added to your calendar: ${first}` : `New match for your interests: ${first}`;
+      } else {
+        body = `${list.length} new events match your interests${autoAdded.length ? ` · ${autoAdded.length} added to your calendar` : ""}.`;
+      }
+      showToast(body, "success", { action: "View", onAction: openAiConciergeModal });
+      if ("Notification" in window && Notification.permission === "granted") {
+        try {
+          const n = new Notification("&.events · Concierge", { body, icon: "/favicon.svg", tag: "andevents-concierge" });
+          n.onclick = () => { window.focus(); openAiConciergeModal(); };
+        } catch (e) {
+          console.warn("Concierge notification notice:", e);
+        }
+      }
+    }
+
+    async function handleAiAlertAction(alertId, action) {
+      try {
+        const res = await fetch("/api/ai/alerts/action", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alert_id: alertId, action })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        if (action === "add") {
+          await syncSavedEventsFromServer();
+          showToast("Added to ★ My Calendar.", "success");
+          if (currentMode === "planner") loadWeeklyPlanner();
+          if (currentMode === "live") loadNowAndNext();
+        } else if (action === "dismiss") {
+          const card = document.getElementById(`aiAlertCard_${alertId}`);
+          if (card) card.remove();
+        }
+        await loadAiAlerts({ markSeen: true, silent: true });
+      } catch (err) {
+        console.error("Alert action error:", err);
+        showToast("Could not update that alert.", "info");
+      }
+    }
+
+    async function loadConciergeIntent() {
+      try {
+        const res = await fetch("/api/ai/intent");
+        if (res.ok) updateConciergeSummary((await res.json()).prompt || "");
+      } catch (e) {
+        console.warn("Could not load concierge intent:", e);
+      }
+    }
+
+    // Background watch: new parses (daily auto-sync or someone else's manual run) surface here.
+    const AI_POLL_MS = 3 * 60 * 1000;
+    async function pollConcierge() {
+      if (document.hidden) return;
+      const merged = await syncSavedEventsFromServer();
+      const modal = document.getElementById("aiConciergeModal");
+      await loadAiAlerts({ markSeen: Boolean(modal && modal.open) });
+      if (merged > 0 && currentMode === "live") loadNowAndNext();
+    }
+    setInterval(() => { pollConcierge().catch(console.warn); }, AI_POLL_MS);
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) pollConcierge().catch(console.warn);
+    });
+
 
     window._calClusters = window._calClusters || {};
     window._allDayRegistry = window._allDayRegistry || {};
@@ -1780,46 +2081,41 @@
           const isClass = item.type === "class";
           if (isClass) {
             return `
-              <div style="background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: var(--radius-sm); padding: var(--space-3);">
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-                  <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--ink);">${escapeHtml(item.course_name)}</h4>
-                  <span class="chip" style="color: var(--accent); font-weight: 600; font-size: 0.72rem;">Enrolled Course</span>
+              <div class="cluster-item is-class">
+                <div class="cluster-item-head">
+                  <h4 class="cluster-item-title">${escapeHtml(cleanText(item.course_name))}</h4>
+                  <span class="status status-ready">Enrolled course</span>
                 </div>
-                <div style="margin-top: 4px; font-size: 0.80rem; color: var(--muted); font-family: var(--font-mono);">
-                  🕒 ${escapeHtml(item.time_range_12h || item.start_time || '')}
-                  ${item.location ? ` · 📍 ${escapeHtml(item.location)}` : ''}
+                <div class="cluster-item-meta">
+                  <span class="num">${escapeHtml(item.time_range_12h || item.start_time || '')}</span>
+                  ${item.location ? `<span>${escapeHtml(cleanText(item.location))}</span>` : ''}
                 </div>
-              </div>
-            `;
-          } else {
-            const deptId = item.department_id || "dept-acad";
-            const deptName = item.department_name || (DEPARTMENTS[deptId] ? DEPARTMENTS[deptId].name : "Campus");
-            const deptColor = item.department_color || (DEPARTMENTS[deptId] ? DEPARTMENTS[deptId].color : '#4a5b66');
-            const savedInCal = isEventSaved(item);
-            const safeLink = item.source_url ? safeWmSourceUrl(item.source_url) : null;
-            const timeRangeStr = item.is_all_day ? "All Day" : (item.time_range_12h || `${item.start_time || ''} – ${item.end_time || ''}`);
-
-            return `
-              <div style="background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid ${deptColor}; border-radius: var(--radius-sm); padding: var(--space-3); display: flex; flex-direction: column; gap: 6px;">
-                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
-                  <div>
-                    <span class="dept-pill dept-${deptId}" style="margin-bottom: 4px;">${escapeHtml(deptName)}</span>
-                    <h4 style="margin: 2px 0 0 0; font-size: 0.95rem; font-weight: 600; color: var(--ink);">${escapeHtml(item.title)}</h4>
-                  </div>
-                  <button type="button" class="btn btn-xs ${savedInCal ? 'btn-gold' : 'btn-quiet'}" data-event="${escapeHtml(JSON.stringify(item))}" onclick="handleCardSaveToggle(this, event)" style="font-size: 0.72rem; padding: 3px 8px; white-space: nowrap;">
-                    ${savedInCal ? '✓ On My Calendar' : '+ Add to My Calendar'}
-                  </button>
-                </div>
-                <div style="font-size: 0.80rem; color: var(--muted); font-family: var(--font-mono); display: flex; gap: 8px; flex-wrap: wrap;">
-                  <span>🕒 ${escapeHtml(timeRangeStr)}</span>
-                  ${item.location ? `<span>📍 ${escapeHtml(item.location)}</span>` : ''}
-                </div>
-                ${item.has_conflict ? `<div class="notice notice-bad" style="padding: 4px 8px; font-size: 0.75rem;">⚠️ Overlaps with class: ${escapeHtml(item.conflicting_course || '')}</div>` : ''}
-                ${(item.description || item.summary) ? `<div style="font-size: 0.82rem; color: var(--ink-soft); line-height: 1.4; margin-top: 2px;">${escapeHtml(item.description || item.summary)}</div>` : ''}
-                ${safeLink ? `<div style="margin-top: 2px;"><a href="${safeLink.href}" target="_blank" rel="noopener noreferrer" style="font-size: 0.74rem; color: var(--accent); text-decoration: underline;">Open event page ↗</a></div>` : ''}
               </div>
             `;
           }
+          const deptId = item.department_id || "dept-acad";
+          const deptName = item.department_name || (DEPARTMENTS[deptId] ? DEPARTMENTS[deptId].name : "Campus");
+          const deptColor = item.department_color || (DEPARTMENTS[deptId] ? DEPARTMENTS[deptId].color : '#4a5b66');
+          const safeLink = item.source_url ? safeWmSourceUrl(item.source_url) : null;
+          const timeRangeStr = item.is_all_day ? "All Day" : (item.time_range_12h || `${item.start_time || ''} – ${item.end_time || ''}`);
+          const desc = cleanText(item.description || item.summary);
+
+          return `
+            <div class="cluster-item" style="border-left-color: ${escapeHtml(deptColor)};">
+              <div><span class="dept-pill dept-${deptId}">${escapeHtml(deptName)}</span></div>
+              <h4 class="cluster-item-title">${escapeHtml(cleanText(item.title))}</h4>
+              <div class="cluster-item-meta">
+                <span class="num">${escapeHtml(timeRangeStr)}</span>
+                ${item.location ? `<span>${escapeHtml(cleanText(item.location))}</span>` : ''}
+              </div>
+              ${item.has_conflict ? `<div class="notice notice-bad">Overlaps with class: ${escapeHtml(item.conflicting_course || '')}</div>` : ''}
+              ${desc ? `<p class="cluster-item-desc">${escapeHtml(desc)}</p>` : ''}
+              <div class="lec-actions">
+                ${calendarActionsHtml(item)}
+                ${safeLink ? `<a class="lec-link" href="${safeLink.href}" target="_blank" rel="noopener noreferrer">Event page ↗</a>` : ''}
+              </div>
+            </div>
+          `;
         }).join("");
       }
 
@@ -1878,19 +2174,24 @@
       return `title-${ev.title}-${ev.day_of_week ?? ev.start_at ?? ""}`;
     }
 
+    // A Directory card can stand for several feed copies of one event (alt_uids); a copy saved
+    // under any of those UIDs counts as this event being saved.
+    function findSavedIndex(saved, ev) {
+      const keys = new Set([getEventKey(ev), ...((ev && ev.alt_uids) || []).map(uid => `wm-${uid}`)]);
+      return saved.findIndex(item => keys.has(getEventKey(item)));
+    }
+
     function isEventSaved(ev) {
-      const saved = getUserSavedEvents();
-      const key = getEventKey(ev);
-      return saved.some(item => getEventKey(item) === key);
+      return findSavedIndex(getUserSavedEvents(), ev) >= 0;
     }
 
     function toggleSaveEvent(ev, mouseEv) {
       if (mouseEv && mouseEv.stopPropagation) mouseEv.stopPropagation();
       let saved = getUserSavedEvents();
-      const key = getEventKey(ev);
-      const idx = saved.findIndex(item => getEventKey(item) === key);
+      const idx = findSavedIndex(saved, ev);
       if (idx >= 0) {
-        saved.splice(idx, 1);
+        const removed = saved.splice(idx, 1)[0];
+        if (isAiScheduled(removed) || isAiScheduled(ev)) removeServerSavedEvent(removed);
       } else {
         saved.push({
           id: ev.id,
@@ -1914,7 +2215,12 @@
           is_user_saved: true
         });
       }
-      localStorage.setItem("user_saved_events", JSON.stringify(saved));
+      try {
+        localStorage.setItem("user_saved_events", JSON.stringify(saved));
+      } catch (e) {
+        console.warn("Could not save calendar selection:", e);
+        showToast("Could not save to My Calendar (browser storage unavailable).", "info");
+      }
 
       if (currentMode === "live") loadNowAndNext();
       if (currentMode === "directory") { loadEvents(); loadWmEvents(); }
@@ -1930,8 +2236,11 @@
         const ev = JSON.parse(raw);
         toggleSaveEvent(ev, mouseEv);
         const nowSaved = isEventSaved(ev);
-        btn.className = `btn btn-xs ${nowSaved ? 'btn-gold' : 'btn-quiet'}`;
-        btn.textContent = nowSaved ? '✓ On My Calendar' : '+ Add to My Calendar';
+        btn.classList.toggle("btn-gold", nowSaved);
+        btn.classList.toggle("btn-quiet", !nowSaved);
+        btn.setAttribute("aria-pressed", String(nowSaved));
+        btn.textContent = saveButtonLabel(nowSaved);
+        showToast(nowSaved ? `Added “${cleanText(ev.title || ev.course_name || "Event")}” to ★ My Calendar.` : "Removed from ★ My Calendar.", nowSaved ? "success" : "info");
       } catch (err) {
         console.error("Failed to parse event for toggle:", err);
       }
@@ -2022,44 +2331,57 @@
       }
     }
 
+    function eventTimeDisplay(ev) {
+      if (ev.is_all_day) return "All Day";
+      if (ev.time_range_12h) return ev.time_range_12h;
+      if (ev.start_time && ev.end_time) return `${format12hJs(ev.start_time)} – ${format12hJs(ev.end_time)}`;
+      if (ev.start_at) return formatCampusEventTime(ev.start_at, ev.end_at, false);
+      return "";
+    }
+
+    const _shortDateFmt = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "America/New_York" });
+    // Weekly club meetings carry only day_of_week; show the concrete date of the next occurrence
+    // (today's if it meets today) so they read like dated W&M events: "Sun, Nov 15".
+    function eventDateLabel(ev) {
+      if (ev.is_ongoing && ev.end_at) return `Through ${ongoingEndLabel(ev)}`;
+      if (ev.date_display) return ev.date_display;
+      if (ev.day_of_week != null && DAYS[ev.day_of_week]) {
+        const todayIdx = (new Date().getDay() + 6) % 7;
+        const diff = (Number(ev.day_of_week) - todayIdx + 7) % 7;
+        return _shortDateFmt.format(new Date(Date.now() + diff * 86400000));
+      }
+      return "";
+    }
+
+    // Last day an ongoing program runs. All-day DTEND is exclusive, so step back one day.
+    function ongoingEndLabel(ev) {
+      const endIso = campusDateOf(ev.end_at);
+      const end = new Date(endIso + "T12:00:00Z");
+      if (ev.is_all_day || /^\d{4}-\d{2}-\d{2}$/.test(String(ev.end_at))) end.setUTCDate(end.getUTCDate() - 1);
+      return new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" }).format(end);
+    }
+
     function renderLiveEventCardHtml(ev, options = {}) {
       const deptId = ev.department_id || "dept-acad";
       const deptInfo = DEPARTMENTS[deptId] || { name: "Academic & Professional", color: "#64748b" };
       const deptName = ev.department_name || deptInfo.name;
-
-      const saved = isEventSaved(ev);
-      const eventJsonEscaped = escapeHtml(JSON.stringify(ev));
-      const saveBtn = `
-        <button type="button" class="btn btn-xs ${saved ? 'btn-gold' : 'btn-quiet'}" data-event="${eventJsonEscaped}" onclick="handleCardSaveToggle(this, event)" title="${saved ? 'Remove from my calendar' : 'Add to my calendar'}" style="white-space: nowrap;">
-          ${saved ? '✓ On My Calendar' : '+ Add to My Calendar'}
-        </button>
-      `;
+      const title = cleanText(ev.title || ev.course_name || "Campus event");
+      const location = cleanText(ev.location);
+      const host = cleanText(ev.club_name) || (ev.is_wm_event ? "W&M Campus" : "Campus");
+      const description = cleanText(ev.description || ev.summary);
 
       const conflictNote = ev.has_conflict
         ? `<span class="status-note conflict">${options.conflictPrefix || 'Class conflict: '}${escapeHtml(ev.conflicting_course || 'Class')}</span>`
         : `<span class="status-note free">No class conflict</span>`;
 
       const tagPill = (ev.matched_tags && ev.matched_tags.length)
-        ? `<span class="tag-match-pill ${getTagThemeClass(ev.matched_tags[0])}">★ Recommended · ${escapeHtml(ev.matched_tags.join(" "))}</span>`
+        ? `<span class="tag-match-pill ${getTagThemeClass(ev.matched_tags[0])}">★ ${escapeHtml(ev.matched_tags.join(" "))}</span>`
         : "";
 
-      let timeDisplay = "";
-      if (ev.is_all_day) {
-        timeDisplay = "All Day";
-      } else if (ev.time_range_12h) {
-        timeDisplay = ev.time_range_12h;
-      } else if (ev.start_time && ev.end_time) {
-        timeDisplay = `${format12hJs(ev.start_time)} – ${format12hJs(ev.end_time)}`;
-      } else if (ev.start_at) {
-        timeDisplay = formatCampusEventTime(ev.start_at, ev.end_at, false);
-      }
-
-      let dateLabel = "";
-      if (ev.date_display) {
-        dateLabel = ev.date_display;
-      } else if (ev.day_of_week != null) {
-        dateLabel = DAYS[ev.day_of_week];
-      }
+      // When/where line: date + time are timestamps (mono), host and venue are prose (sans).
+      const timeDisplay = eventTimeDisplay(ev);
+      const dateLabel = eventDateLabel(ev);
+      const whenText = [dateLabel, timeDisplay].filter(Boolean).join(" · ");
 
       let statusBadge = "";
       if (options.statusLabel) {
@@ -2071,18 +2393,14 @@
       let notifyBtn = "";
       if (options.showNotify) {
         const eventTimeStr = ev.start_time || (ev.start_at ? formatCampusEventTime(ev.start_at, ev.end_at, Boolean(ev.is_all_day)) : "");
-        notifyBtn = `
-          <button type="button" class="btn btn-quiet btn-xs" data-title="${escapeHtml(ev.title)}" data-location="${escapeHtml(ev.location || 'Campus')}" data-time="${escapeHtml(eventTimeStr)}" onclick="onNotifyClick(this)" style="white-space: nowrap;">
-            Notify me
-          </button>
-        `;
+        notifyBtn = `<button type="button" class="btn btn-quiet btn-xs" data-title="${escapeHtml(title)}" data-location="${escapeHtml(location || 'Campus')}" data-time="${escapeHtml(eventTimeStr)}" onclick="event.stopPropagation(); onNotifyClick(this)">Notify me</button>`;
       }
 
       let sourceLink = "";
       if (ev.source_url) {
         const sUrl = safeWmSourceUrl(ev.source_url);
         if (sUrl) {
-          sourceLink = `<p class="crumbs" style="margin-top: 4px;"><a href="${sUrl.href}" target="_blank" rel="noopener noreferrer">Open official campus link ↗</a></p>`;
+          sourceLink = `<a class="lec-link" href="${sUrl.href}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Official event page ↗</a>`;
         }
       }
 
@@ -2094,51 +2412,72 @@
       ].filter(Boolean).join(" ");
 
       return `
-        <div class="${cardClasses}" onclick="toggleCardExpansion(this, event)" onkeydown="onCardKeyDown(this, event)" role="button" tabindex="0" aria-expanded="false">
-          <div class="live-event-head">
-            <div style="flex: 1; min-width: 0;">
-              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <span class="dept-pill dept-${deptId}">${escapeHtml(deptName)}</span>
-                <h3 class="live-event-title" style="display: inline;">${escapeHtml(ev.title)}</h3>
-                ${tagPill}
-              </div>
-              <div class="live-event-meta" style="margin-top: 6px;">
-                <span class="chip" style="font-weight: 600;">${escapeHtml(ev.club_name || (ev.is_wm_event ? "W&M Campus" : "Campus"))}</span>
-                ${dateLabel ? `<span class="chip">${escapeHtml(dateLabel)}</span>` : ""}
-                ${timeDisplay ? `<span class="chip num">${escapeHtml(timeDisplay)}</span>` : ""}
-                ${ev.location ? `<span>📍 ${escapeHtml(ev.location)}</span>` : ""}
-                ${ev.category ? `<span class="chip">${escapeHtml(ev.category)}</span>` : ""}
-              </div>
-            </div>
-            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
-              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
-                ${statusBadge}
-                ${saveBtn}
-                ${notifyBtn}
-              </div>
-              <div style="display: flex; align-items: center; gap: 8px;">
-                ${conflictNote}
-                <span class="card-expand-label" style="font-size: 0.74rem; font-family: var(--font-mono); color: var(--muted); cursor: pointer; user-select: none;">▾ Details</span>
-              </div>
+        <article class="${cardClasses}" onclick="toggleCardExpansion(this, event)" onkeydown="onCardKeyDown(this, event)" role="button" tabindex="0" aria-expanded="false">
+          <div class="lec-top">
+            <span class="dept-pill dept-${deptId}">${escapeHtml(deptName)}</span>
+            ${tagPill}
+            <span class="lec-status">${statusBadge}</span>
+          </div>
+          <h3 class="live-event-title">${escapeHtml(title)}</h3>
+          <div class="live-event-meta">
+            ${whenText ? `<span class="lec-when num">${escapeHtml(whenText)}</span>` : ""}
+            ${location ? `<span class="lec-where">${escapeHtml(location)}</span>` : ""}
+            <span class="lec-host">${escapeHtml(host)}</span>
+          </div>
+          <div class="lec-actions">
+            ${calendarActionsHtml(ev)}
+            ${notifyBtn}
+            <span class="lec-actions-end">
+              ${conflictNote}
+              <span class="card-expand-label" aria-hidden="true">▾ Details</span>
+            </span>
+          </div>
+          <div class="live-event-details">
+            ${description ? `<p class="lec-desc">${escapeHtml(description)}</p>` : `<p class="lec-desc is-empty">No detailed summary published for this session.</p>`}
+            <div class="lec-detail-row">
+              ${ev.category ? `<span><strong>Category:</strong> ${escapeHtml(ev.category)}</span>` : ""}
+              ${location ? `<span><strong>Venue:</strong> ${escapeHtml(location)}</span>` : ""}
+              <button type="button" class="btn btn-quiet btn-xs" data-ev="${escapeHtml(JSON.stringify(ev))}" onclick="event.stopPropagation(); openEventModal(JSON.parse(this.dataset.ev))">Open full details</button>
+              ${sourceLink}
             </div>
           </div>
-          <div class="live-event-details" style="display: none; margin-top: var(--space-2); padding-top: var(--space-2); border-top: 1px dashed var(--rule);">
-            ${(ev.description || ev.summary) ? `<p style="font-size: 0.90rem; color: var(--ink-soft); margin-bottom: 8px; line-height: 1.45;">${escapeHtml(ev.description || ev.summary)}</p>` : `<p style="font-size: 0.84rem; color: var(--muted); margin-bottom: 6px; font-style: italic;">No detailed summary published for this session.</p>`}
-            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-              <div style="font-size: 0.80rem; color: var(--muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                ${ev.category ? `<span><strong>Category:</strong> ${escapeHtml(ev.category)}</span>` : ""}
-                ${ev.location ? `<span><strong>Venue:</strong> ${escapeHtml(ev.location)}</span>` : ""}
-              </div>
-              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                <button type="button" class="btn btn-quiet btn-xs" onclick="event.stopPropagation(); exportToSystemCalendar(JSON.parse(this.dataset.ev))" data-ev="${escapeHtml(JSON.stringify(ev))}" title="Add to Apple Calendar or macOS Calendar">📅 Add to System Calendar</button>
-                <a href="${getGoogleCalendarUrl(ev)}" target="_blank" rel="noopener noreferrer" class="btn btn-quiet btn-xs" onclick="event.stopPropagation()" title="Open Google Calendar">Google Cal ↗</a>
-                <button type="button" class="btn btn-quiet btn-xs" onclick="event.stopPropagation(); openEventModal(JSON.parse(this.dataset.ev))" data-ev="${escapeHtml(JSON.stringify(ev))}">Modal View</button>
-                ${sourceLink}
-              </div>
-            </div>
-          </div>
-        </div>
+        </article>
       `;
+    }
+
+    // Campus calendar date (America/New_York) as YYYY-MM-DD, independent of the viewer's timezone.
+    const _campusDateFmt = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" });
+    function campusIsoDate(d) {
+      return _campusDateFmt.format(d instanceof Date ? d : new Date(d));
+    }
+    // ISO date of an event start/end in campus time; date-only strings are already calendar dates.
+    function campusDateOf(value) {
+      const str = String(value || "");
+      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+      const dt = new Date(str);
+      return Number.isNaN(dt.getTime()) ? str.slice(0, 10) : campusIsoDate(dt);
+    }
+
+    // Client-side guard for "Who's up?": only today's single-day sessions qualify.
+    function isStrictlyLiveToday(ev, data) {
+      if (!ev) return false;
+      if (data && data.is_simulated) return true;
+      if (ev.status_label === "Ongoing" || ev.is_ongoing || ev.is_multi_day) return false;
+      if (!ev.start_at) return true; // recurring club meetings are scoped by the server per weekday
+      const todayIso = campusIsoDate(new Date());
+      const startIso = campusDateOf(ev.start_at);
+      if (startIso !== todayIso) return false;
+      if (ev.end_at) {
+        if (ev.is_all_day) {
+          // All-day DTEND is exclusive: a one-day event ends the next day at the latest.
+          const spanDays = (new Date(campusDateOf(ev.end_at) + "T12:00:00Z") - new Date(startIso + "T12:00:00Z")) / 86400000;
+          if (spanDays > 1) return false;
+        } else {
+          const durHours = (new Date(ev.end_at) - new Date(ev.start_at)) / 3600000;
+          if (!(durHours > 0 && durHours < 24)) return false;
+        }
+      }
+      return true;
     }
 
     // LOAD NOW & NEXT (Front page view)
@@ -2158,37 +2497,39 @@
         const res = await fetch(`/api/now-and-next?${params.toString()}`);
         const data = await res.json();
 
-        // Proactive non-lesson event alerts (starting in <= 30 mins)
+        // Proactive non-lesson event alerts (starting in <= 30 mins), batched into one toast so a
+        // busy hour never stacks four overlapping notices over the cards.
         try {
-          const nonLessonCandidates = [...(data.starting_soon || []), ...(data.happening_now || [])].filter(
-            ev => ev && ev.type !== 'class' && !ev.course_name
-          );
-          nonLessonCandidates.forEach(ev => {
-            const startsIn = ev.starts_in_minutes != null ? ev.starts_in_minutes : (ev.minutes_remaining != null ? 0 : null);
-            if (startsIn != null && startsIn <= 30) {
+          const fresh = [];
+          [...(data.starting_soon || []), ...(data.happening_now || [])]
+            .filter(ev => ev && ev.type !== 'class' && !ev.course_name && isStrictlyLiveToday(ev, data))
+            .forEach(ev => {
+              let startsIn = ev.starts_in_minutes != null ? ev.starts_in_minutes : null;
+              // In-session events only count as "starting now" during their first 5 minutes,
+              // not hours into an all-afternoon workshop.
+              if (startsIn == null && ev.start_at) {
+                const sinceStart = (Date.now() - new Date(ev.start_at).getTime()) / 60000;
+                if (sinceStart >= 0 && sinceStart <= 5) startsIn = 0;
+              }
+              if (startsIn == null || startsIn > 30) return;
               const dedupKey = ev.uid ? `notif_uid_${ev.uid}` : (ev.id ? `notif_id_${ev.id}` : `notif_t_${ev.title}_${ev.start_time || ev.start_at}`);
-              if (!sessionStorage.getItem(dedupKey)) {
-                sessionStorage.setItem(dedupKey, "1");
-                const title = ev.title || "Campus Event";
-                const loc = ev.location ? ` at ${ev.location}` : "";
-                const timeMsg = startsIn > 0 ? `starts in ${startsIn}m` : "is starting now";
-                const notifBody = `${title} ${timeMsg}${loc}.`;
-
-                showToast(`🔔 ${notifBody}`, "info");
-
-                if ("Notification" in window && Notification.permission === "granted") {
-                  try {
-                    new Notification("&.events · Campus Reminder", {
-                      body: notifBody,
-                      icon: "/favicon.svg"
-                    });
-                  } catch (e) {
-                    console.warn("Notification trigger notice:", e);
-                  }
-                }
+              if (sessionStorage.getItem(dedupKey)) return;
+              sessionStorage.setItem(dedupKey, "1");
+              const title = cleanText(ev.title) || "Campus Event";
+              const loc = ev.location ? ` at ${cleanText(ev.location)}` : "";
+              fresh.push(`${title} ${startsIn > 0 ? `starts in ${startsIn}m` : "is starting now"}${loc}.`);
+            });
+          if (fresh.length) {
+            const body = fresh.length === 1 ? fresh[0] : `${fresh.length} campus events are starting now or within 30 minutes.`;
+            showToast(body, "info");
+            if ("Notification" in window && Notification.permission === "granted") {
+              try {
+                new Notification("&.events · Campus Reminder", { body, icon: "/favicon.svg" });
+              } catch (e) {
+                console.warn("Notification trigger notice:", e);
               }
             }
-          });
+          }
         } catch (notifErr) {
           console.warn("Event alert notification error:", notifErr);
         }
@@ -2225,16 +2566,14 @@
               <div class="academic-hero in-class">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
                   <span class="academic-hero-badge badge-in-class">
-                    <span class="academic-pulse-dot" aria-hidden="true"></span>
-                    IN SESSION · ${escapeHtml(remMins)}
+                    In class · <span class="num">${escapeHtml(remMins)}</span>
                   </span>
-                  <span class="academic-hero-meta">Active Now</span>
                 </div>
                 <h2 class="academic-hero-title">${escapeHtml(cl.course_name)}</h2>
                 <div class="academic-hero-meta">
-                  <span>📍 ${escapeHtml(cl.location || "TBA")}</span>
-                  <span>·</span>
-                  <span>${escapeHtml(timeRange)}</span>
+                  <span>${escapeHtml(cl.location || "Room TBA")}</span>
+                  <span aria-hidden="true">·</span>
+                  <span class="num">${escapeHtml(timeRange)}</span>
                 </div>
                 ${stripHtml}
               </div>
@@ -2242,19 +2581,19 @@
           } else if (data.next_class) {
             const cl = data.next_class;
             const durStr = cl.minutes_until_start != null ? formatDurationJs(cl.minutes_until_start) : "";
-            const tagText = durStr ? `NEXT CLASS · in ${durStr}` : "NEXT CLASS";
+            const tagText = durStr ? `Next class · in ${durStr}` : "Next class";
             const startDisplay = cl.start_time_12h || cl.start_time;
             heroContainer.innerHTML = `
               <div class="academic-hero upcoming">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
                   <span class="academic-hero-badge badge-upcoming">${escapeHtml(tagText)}</span>
-                  <span class="academic-hero-meta">${escapeHtml(cl.time_range_12h || startDisplay)}</span>
+                  <span class="academic-hero-meta num">${escapeHtml(cl.time_range_12h || startDisplay)}</span>
                 </div>
                 <h2 class="academic-hero-title">${escapeHtml(cl.course_name)}</h2>
                 <div class="academic-hero-meta">
-                  <span>📍 ${escapeHtml(cl.location || "TBA")}</span>
-                  <span>·</span>
-                  <span>Starts at ${escapeHtml(startDisplay)}</span>
+                  <span>${escapeHtml(cl.location || "Room TBA")}</span>
+                  <span aria-hidden="true">·</span>
+                  <span>Starts at <span class="num">${escapeHtml(startDisplay)}</span></span>
                 </div>
                 ${stripHtml}
               </div>
@@ -2264,29 +2603,27 @@
             heroContainer.innerHTML = `
               <div class="academic-hero all-clear">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-                  <span class="academic-hero-badge clear">ACADEMIC SCHEDULE · TODAY</span>
+                  <span class="academic-hero-badge clear">Today's classes</span>
                   <span class="academic-hero-meta">${total} ${total === 1 ? 'class' : 'classes'} completed</span>
                 </div>
-                <div class="academic-hero-title">Classes Clear for Today</div>
+                <div class="academic-hero-title">Classes done for today</div>
                 <div class="academic-hero-meta">
                   <span>All ${total} scheduled ${total === 1 ? 'class has' : 'classes have'} finished for today.</span>
-                  <span style="margin: 0 6px;">·</span>
-                  <button type="button" class="btn btn-quiet btn-xs" onclick="openFiltersModal('classes')" style="padding: 2px 8px; font-weight: 600; min-height: 24px;">+ Manage Classes</button>
+                  <button type="button" class="btn btn-quiet btn-xs" onclick="openFiltersModal('classes')">Manage classes</button>
                 </div>
                 ${stripHtml}
               </div>
             `;
           } else {
             heroContainer.innerHTML = `
-              <div class="academic-hero all-clear">
+              <div class="academic-hero all-clear is-empty">
                 <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
-                  <span class="academic-hero-badge clear">ACADEMIC SCHEDULE · TODAY</span>
+                  <span class="academic-hero-badge clear">Today's classes</span>
                 </div>
-                <div class="academic-hero-title">No Classes Scheduled</div>
+                <div class="academic-hero-title">No classes today</div>
                 <div class="academic-hero-meta">
-                  <span>Your academic schedule is completely clear today.</span>
-                  <span style="margin: 0 6px;">·</span>
-                  <button type="button" class="btn btn-quiet btn-xs" onclick="openFiltersModal('classes')" style="padding: 2px 8px; font-weight: 600; min-height: 24px;">+ Add Classes</button>
+                  <span>Nothing on your class schedule today.</span>
+                  <button type="button" class="btn btn-quiet btn-xs" onclick="openFiltersModal('classes')">+ Add classes</button>
                 </div>
               </div>
             `;
@@ -2302,34 +2639,10 @@
           matched_tags: matchClientTags(ev, studentTags)
         }));
 
-        // Strict temporal safeguard: Never show events from 10 days ago, past months, or ongoing multi-day programs
-        // Use local calendar date (YYYY-MM-DD) avoiding UTC midnight rollover in Eastern Time (UTC-5)
-        const localNow = new Date();
-        const localTodayIso = [
-          localNow.getFullYear(),
-          String(localNow.getMonth() + 1).padStart(2, '0'),
-          String(localNow.getDate()).padStart(2, '0')
-        ].join('-');
-        const localTodayDisplay = localNow.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }); // e.g. "Sat, Nov 14"
-
-        happening = happening.filter(ev => {
-          if (ev.status_label === "Ongoing") return false;
-          if (ev.is_wm_event) {
-            const evStartIso = (ev.start_at || "").substring(0, 10);
-            if (evStartIso && evStartIso < localTodayIso) return false;
-            if (ev.date_display && ev.date_display !== localTodayDisplay && !ev.day_name && !ev.day_of_week) return false;
-          }
-          return true;
-        });
-        soon = soon.filter(ev => {
-          if (ev.status_label === "Ongoing") return false;
-          if (ev.is_wm_event) {
-            const evStartIso = (ev.start_at || "").substring(0, 10);
-            if (evStartIso && evStartIso < localTodayIso) return false;
-            if (ev.date_display && ev.date_display !== localTodayDisplay && !ev.day_name && !ev.day_of_week) return false;
-          }
-          return true;
-        });
+        // Strict temporal safeguard (Task F): never show past-day events, "Ongoing" exhibitions or
+        // multi-day programs, even if the server returns stale or cached data.
+        happening = happening.filter(ev => isStrictlyLiveToday(ev, data));
+        soon = soon.filter(ev => isStrictlyLiveToday(ev, data));
 
         if (recommendedOnly) {
           happening = happening.filter(ev => ev.matched_tags && ev.matched_tags.length > 0);
@@ -2437,17 +2750,15 @@
               if (!list || !list.length) return "";
               const dept = DEPARTMENTS[dId] || { name: dId, color: "#64748b" };
               return `
-                <div class="dept-shelf" style="background: var(--surface); border: 1px solid var(--rule); border-radius: var(--radius); padding: var(--space-3) var(--space-4); margin-bottom: var(--space-3);">
-                  <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid ${dept.color}; padding-bottom: 6px; margin-bottom: var(--space-3);">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                      <span class="dept-pill dept-${dId}">${escapeHtml(dept.name)}</span>
-                    </div>
-                    <span class="num chip" style="font-size: 0.76rem;">${list.length} event${list.length === 1 ? '' : 's'}</span>
+                <section class="dept-shelf">
+                  <div class="section-title" style="border-bottom: 2px solid ${dept.color}; padding-bottom: 6px;">
+                    <span>${escapeHtml(dept.name)}</span>
+                    <span class="status status-ready num">${list.length} event${list.length === 1 ? '' : 's'}</span>
                   </div>
-                  <div class="stack" style="gap: var(--space-2);">
+                  <div class="stack-sm">
                     ${list.map(ev => renderLiveEventCardHtml(ev)).join("")}
                   </div>
-                </div>
+                </section>
               `;
             }).filter(Boolean).join("");
 
@@ -2495,10 +2806,8 @@
               `;
             } else {
               arrangedEl.innerHTML = `
-                <div style="padding: 6px 12px; background: var(--sunk); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 0.76rem; color: var(--muted); margin-bottom: var(--space-2);">
-                  🔀 Shuffled Stream · ${interleaved.length} events round-robin interleaved across departments
-                </div>
-                <div class="stack" style="gap: var(--space-2);">
+                <p class="hint">Mixed across departments · <span class="num">${interleaved.length}</span> events</p>
+                <div class="stack-sm">
                   ${interleaved.map(ev => renderLiveEventCardHtml(ev)).join("")}
                 </div>
               `;
@@ -2529,7 +2838,7 @@
           if (!dayClasses.length) return "";
           return `
             <div style="margin-bottom: 8px;">
-              <div style="font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700; color: var(--gold); margin-bottom: 4px;">${dayName}</div>
+              <div style="font-family: var(--font-body); font-size: 0.75rem; font-weight: 700; color: var(--gold); margin-bottom: 4px;">${dayName}</div>
               ${dayClasses.map(c => `
                 <div class="side-class-card">
                   <div class="side-class-info">
@@ -2652,11 +2961,18 @@
         } else {
           const data = await res.json();
           showToast(data.message || "Calendar feeds successfully updated.", "success");
+          const aiNew = Number(data.ai_new_alerts || 0);
+          const aiAdded = Number(data.ai_auto_added || 0);
+          if (aiNew || aiAdded) {
+            showToast(`Concierge: ${aiNew} new match${aiNew === 1 ? "" : "es"}${aiAdded ? ` · ${aiAdded} added to ★ My Calendar` : ""}.`, "success", { action: "View", onAction: openAiConciergeModal });
+          }
 
           // Refresh currently active view
           if (currentMode === "live") loadNowAndNext();
           if (currentMode === "directory") { loadWmEvents(); loadEvents(); }
           if (currentMode === "planner") loadWeeklyPlanner();
+          syncSavedEventsFromServer().catch(console.warn);
+          loadAiAlerts({ silent: Boolean(aiNew || aiAdded) }).catch(console.warn);
 
           const badge = document.getElementById("directoryEventCountBadge");
           if (badge && data.total_events != null) {
@@ -2670,6 +2986,8 @@
         if (currentMode === "live") loadNowAndNext();
         if (currentMode === "directory") { loadWmEvents(); loadEvents(); }
         if (currentMode === "planner") loadWeeklyPlanner();
+        syncSavedEventsFromServer().catch(console.warn);
+        loadAiAlerts().catch(console.warn);
       } finally {
         clearTimeout(timeoutId);
         setTimeout(() => {
@@ -2690,25 +3008,54 @@
       }
     }
 
-    function showToast(message, type = "info") {
+    // Toasts: opaque, de-duplicated, at most three on screen; optional action button.
+    function showToast(message, type = "info", opts = {}) {
       let container = document.getElementById("toastContainer");
       if (!container) {
         container = document.createElement("div");
         container.id = "toastContainer";
+        container.setAttribute("role", "status");
+        container.setAttribute("aria-live", "polite");
         document.body.appendChild(container);
       }
+      const text = String(message || "");
+      for (const existing of container.children) {
+        if (existing.dataset.msg === text) return;
+      }
+      while (container.children.length >= 3) container.firstElementChild.remove();
+
       const toast = document.createElement("div");
       toast.className = `app-toast toast-${type}`;
-      toast.innerHTML = `
-        <span style="font-weight: 700; color: ${type === 'success' ? 'var(--ok)' : 'var(--info)'}; font-family: var(--font-mono);">${type === 'success' ? '✓' : 'ℹ'}</span>
-        <span style="flex: 1;">${escapeHtml(message)}</span>
-      `;
+      toast.dataset.msg = text;
+      const icon = document.createElement("span");
+      icon.className = "app-toast-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = type === "success" ? "✓" : "i";
+      const body = document.createElement("span");
+      body.className = "app-toast-body";
+      body.textContent = text;
+      toast.append(icon, body);
+      if (opts.action && typeof opts.onAction === "function") {
+        const actionBtn = document.createElement("button");
+        actionBtn.type = "button";
+        actionBtn.className = "btn btn-quiet btn-xs";
+        actionBtn.textContent = opts.action;
+        actionBtn.onclick = () => { toast.remove(); opts.onAction(); };
+        toast.append(actionBtn);
+      }
+      const closeBtn = document.createElement("button");
+      closeBtn.type = "button";
+      closeBtn.className = "app-toast-close";
+      closeBtn.setAttribute("aria-label", "Dismiss");
+      closeBtn.textContent = "✕";
+      closeBtn.onclick = () => toast.remove();
+      toast.append(closeBtn);
       container.appendChild(toast);
       setTimeout(() => {
         toast.style.opacity = "0";
         toast.style.transform = "translateY(8px)";
         setTimeout(() => toast.remove(), 220);
-      }, 4200);
+      }, opts.action ? 8000 : 4200);
     }
 
     async function loadWmEvents() {
@@ -2758,7 +3105,18 @@
         if (countBadge) {
           countBadge.textContent = `${events.length} event${events.length === 1 ? '' : 's'}`;
         }
-        container.innerHTML = events.map(ev => renderLiveEventCardHtml(ev, { isWm: true })).join("");
+        // Upcoming dated events first; multi-day programs already running go in their own section,
+        // labelled "Through <last day>" instead of a months-old start date.
+        const upcoming = events.filter(ev => !ev.is_ongoing);
+        const ongoing = events.filter(ev => ev.is_ongoing);
+        container.innerHTML = upcoming.map(ev => renderLiveEventCardHtml(ev, { isWm: true })).join("")
+          + (ongoing.length ? `
+            <div class="section-title dir-subsection">
+              <span>Ongoing exhibitions &amp; programs</span>
+              <span class="status status-working num">${ongoing.length}</span>
+            </div>
+            ${ongoing.map(ev => renderLiveEventCardHtml(ev, { isWm: true })).join("")}
+          ` : "");
       } catch (err) {
         console.error("Failed to load W&M events:", err);
         container.innerHTML = `<p class="hint">Dated W&M calendar events could not be loaded right now.</p>`;
@@ -2957,7 +3315,7 @@
         const conflictEl = document.getElementById("plannerConflictBadge");
         if (conflictEl) {
           if (totalOverlapsCount > 0) {
-            conflictEl.textContent = `⚠️ ${totalOverlapsCount} Overlap${totalOverlapsCount > 1 ? 's' : ''}`;
+            conflictEl.textContent = `${totalOverlapsCount} Overlap${totalOverlapsCount > 1 ? 's' : ''}`;
             conflictEl.style.display = "inline-flex";
           } else {
             conflictEl.style.display = "none";
@@ -2967,25 +3325,7 @@
         const container = document.getElementById("timetableContainer");
         if (!container) return;
 
-        // Expanded timeline from 7:00 AM (420 min) through 10:00 PM (16 hours)
-        const HOURS = [
-          { hour: 7, label: "7am" },
-          { hour: 8, label: "8am" },
-          { hour: 9, label: "9am" },
-          { hour: 10, label: "10am" },
-          { hour: 11, label: "11am" },
-          { hour: 12, label: "noon" },
-          { hour: 13, label: "1pm" },
-          { hour: 14, label: "2pm" },
-          { hour: 15, label: "3pm" },
-          { hour: 16, label: "4pm" },
-          { hour: 17, label: "5pm" },
-          { hour: 18, label: "6pm" },
-          { hour: 19, label: "7pm" },
-          { hour: 20, label: "8pm" },
-          { hour: 21, label: "9pm" },
-          { hour: 22, label: "10pm" }
-        ];
+        const PIXELS_PER_HOUR = 50;
 
         function layoutTimedItems(items) {
           const allDay = [];
@@ -2999,7 +3339,7 @@
           });
 
           timed.forEach(it => {
-            let sm = 7 * 60; // 420
+            let sm = 7 * 60;
             if (it.start_time && it.start_time.includes(":")) {
               const parts = it.start_time.split(":");
               sm = (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
@@ -3008,7 +3348,8 @@
             if (it.end_time && it.end_time.includes(":")) {
               const parts = it.end_time.split(":");
               em = (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
-              if (em <= sm) em = sm + 50;
+              if (em < sm) em += 24 * 60;
+              else if (em === sm) em = sm + 50;
             }
             it._sm = sm;
             it._em = em;
@@ -3039,17 +3380,31 @@
           ? Math.max(0, ...processedDays.map(d => d._allDay.length))
           : 0;
 
+        // W&M Path-style window: 8am–10pm by default, widened only when an item falls outside it,
+        // so the grid opens on the school day instead of eight empty overnight rows.
+        const allTimed = processedDays.flatMap(d => d._timed || []);
+        const firstHour = allTimed.length ? Math.floor(Math.min(...allTimed.map(it => it._sm)) / 60) : 8;
+        const lastHour = allTimed.length ? Math.ceil(Math.max(...allTimed.map(it => it._em)) / 60) : 22;
+        const START_HOUR = Math.max(0, Math.min(8, firstHour));
+        const END_HOUR = Math.min(24, Math.max(22, lastHour));
+        const TIMELINE_START = START_HOUR * 60;
+        const TIMELINE_HEIGHT = (END_HOUR - START_HOUR) * PIXELS_PER_HOUR;
+        const HOURS = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => {
+          const hour = START_HOUR + i;
+          return { hour, label: hour === 0 ? "12am" : hour < 12 ? `${hour}am` : hour === 12 ? "noon" : `${hour - 12}pm` };
+        });
+
         container.innerHTML = `
           <div class="cal-grid">
             <!-- Left Time Gutter matching W&M Path -->
             <div class="cal-time-gutter" aria-hidden="true">
               <div class="cal-gutter-header">Time</div>
               ${maxAllDayCount > 0 ? `
-                <div class="cal-gutter-all-day" style="height: 36px; min-height: 36px; max-height: 36px; line-height: 36px;">All Day</div>
+                <div class="cal-gutter-all-day">All day</div>
               ` : ''}
-              <div class="cal-gutter-canvas">
+              <div class="cal-gutter-canvas" style="height: ${TIMELINE_HEIGHT}px;">
                 ${HOURS.map((h, i) => `
-                  <div class="cal-gutter-hour" style="top: ${i * 50}px;">
+                  <div class="cal-gutter-hour" style="top: ${i * PIXELS_PER_HOUR}px;">
                     ${h.label}
                   </div>
                 `).join("")}
@@ -3066,29 +3421,20 @@
               const allDay = d._allDay || [];
               const timed = d._timed || [];
 
-              // Group timed items into collision clusters
-              const clusters = [];
-              let currentCluster = [];
-              let clusterEnd = -1;
-
+              // Build connected collision groups; cards within each lane never overlap.
+              const collisionGroups = [];
+              let currentGroup = [];
+              let groupEnd = -1;
               timed.forEach(it => {
-                if (currentCluster.length === 0) {
-                  currentCluster.push(it);
-                  clusterEnd = it._em;
-                } else {
-                  if (it._sm < clusterEnd) {
-                    currentCluster.push(it);
-                    clusterEnd = Math.max(clusterEnd, it._em);
-                  } else {
-                    clusters.push(currentCluster);
-                    currentCluster = [it];
-                    clusterEnd = it._em;
-                  }
+                if (currentGroup.length && it._sm >= groupEnd) {
+                  collisionGroups.push(currentGroup);
+                  currentGroup = [];
+                  groupEnd = -1;
                 }
+                currentGroup.push(it);
+                groupEnd = Math.max(groupEnd, it._em);
               });
-              if (currentCluster.length > 0) {
-                clusters.push(currentCluster);
-              }
+              if (currentGroup.length) collisionGroups.push(currentGroup);
 
               return `
                 <div class="cal-day-col ${isToday ? 'is-today' : ''}">
@@ -3097,60 +3443,59 @@
                       <span>${escapeHtml(d.day_name)}</span>
                       ${todayBadge}
                     </div>
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 2px;">
-                      <div class="cal-day-meta">${countLabel}</div>
-                      <div style="display: flex; gap: 4px;">
-                        <button type="button" class="btn btn-quiet btn-xs" onclick="openFiltersModal('classes', ${d.day_index})" title="Add class to ${escapeHtml(d.day_name)}" style="padding: 1px 4px; font-size: 0.68rem; min-height: 20px;">+ Class</button>
-                        <button type="button" class="btn btn-quiet btn-xs" onclick="openCreateEventDay(${d.day_index})" title="Propose event on ${escapeHtml(d.day_name)}" style="padding: 1px 4px; font-size: 0.68rem; min-height: 20px;">+ Event</button>
+                    <div class="cal-day-sub">
+                      <div class="cal-day-meta num">${countLabel}</div>
+                      <div class="cal-day-actions">
+                        <button type="button" class="cal-day-add" onclick="openFiltersModal('classes', ${d.day_index})" title="Add a class on ${escapeHtml(d.day_name)}">+ Class</button>
+                        <button type="button" class="cal-day-add" onclick="openCreateEventDay(${d.day_index})" title="Propose an event on ${escapeHtml(d.day_name)}">+ Event</button>
                       </div>
                     </div>
                   </div>
 
                   ${maxAllDayCount > 0 ? `
-                    <div class="cal-all-day-lane" style="height: 36px; min-height: 36px; max-height: 36px; padding: 3px 4px; box-sizing: border-box; overflow: hidden;">
+                    <div class="cal-all-day-lane">
                       ${allDay.length === 0 ? '' : (allDay.length === 1 ? `
-                        <div class="cal-grid-item is-event" style="position: static; height: 28px; min-height: 28px; display: flex; align-items: center; justify-content: space-between; padding: 2px 6px;" onclick="openClusterModal(window._allDayRegistry['${d.day_index}'], '${escapeHtml(d.day_name)}', 'All Day')" title="${escapeHtml(allDay[0].title || allDay[0].course_name)}">
-                          <div class="cal-item-title" style="font-size: 0.74rem;">${escapeHtml(allDay[0].title || allDay[0].course_name)}</div>
-                          <span class="chip chip-gold" style="font-size: 0.62rem; padding: 0 4px;">All Day</span>
-                        </div>
+                        <button type="button" class="cal-allday-btn" onclick="openClusterModal(window._allDayRegistry['${d.day_index}'], '${escapeHtml(d.day_name)}', 'All Day')" title="${escapeHtml(cleanText(allDay[0].title || allDay[0].course_name))}">
+                          <span class="cal-allday-label">${escapeHtml(cleanText(allDay[0].title || allDay[0].course_name))}</span>
+                        </button>
                       ` : `
-                        <div class="cal-grid-item is-event cal-allday-group" style="position: static; height: 28px; min-height: 28px; display: flex; align-items: center; justify-content: space-between; padding: 2px 6px; cursor: pointer;" onclick="openClusterModal(window._allDayRegistry['${d.day_index}'], '${escapeHtml(d.day_name)}', 'All Day')" title="Click to view all ${allDay.length} all-day events">
-                          <div class="cal-item-title" style="font-size: 0.74rem; font-weight: 600;">📅 ${allDay.length} All-Day Events</div>
-                          <span class="chip chip-gold" style="font-size: 0.62rem; padding: 1px 5px; font-weight: 600;">Expand ▾</span>
-                        </div>
+                        <button type="button" class="cal-allday-btn is-group" onclick="openClusterModal(window._allDayRegistry['${d.day_index}'], '${escapeHtml(d.day_name)}', 'All Day')" title="View all ${allDay.length} all-day events">
+                          <span class="cal-allday-label"><span class="num">${allDay.length}</span> all-day events</span>
+                          <span aria-hidden="true">▾</span>
+                        </button>
                       `)}
                     </div>
                   ` : ''}
 
-                  <div class="cal-time-canvas">
-                    ${clusters.map((cluster, cIdx) => {
-                      const clusterId = "clust_" + d.day_index + "_" + cIdx;
-                      window._calClusters[clusterId] = cluster;
-
-                      const startMin = Math.min(...cluster.map(it => it._sm));
-                      const endMin = Math.max(...cluster.map(it => it._em));
-                      const groupOffset = Math.max(0, startMin - 420);
-                      const groupDuration = Math.max(30, endMin - startMin);
-                      const topPx = Math.max(0, Math.min(760, (groupOffset / 60) * 50));
-                      const heightPx = Math.max(28, Math.min(800 - topPx, (groupDuration / 60) * 50 - 3));
-                      const timeRange = format12hJs(minutesToTime(startMin)) + " – " + format12hJs(minutesToTime(endMin));
+                  <div class="cal-time-canvas" style="height: ${TIMELINE_HEIGHT}px;">
+                    ${collisionGroups.map((cluster, cIdx) => {
+                      const lanes = [];
+                      cluster.forEach(it => {
+                        let lane = lanes.find(candidate => candidate[candidate.length - 1]._em <= it._sm);
+                        if (!lane) {
+                          lane = [];
+                          lanes.push(lane);
+                        }
+                        lane.push(it);
+                      });
 
                       const renderCard = (item, wCss, lCss, customTop = null, customHeight = null) => {
-                        const itOffset = Math.max(0, item._sm - 420);
+                        const itOffset = Math.max(0, item._sm - TIMELINE_START);
                         const itDur = Math.max(30, item._em - item._sm);
-                        const itTop = customTop !== null ? customTop : Math.max(0, Math.min(760, (itOffset / 60) * 50));
-                        const itHeight = customHeight !== null ? customHeight : Math.max(28, Math.min(800 - itTop, (itDur / 60) * 50 - 3));
+                        const itTop = customTop !== null ? customTop : Math.max(0, Math.min(TIMELINE_HEIGHT - 28, (itOffset / 60) * PIXELS_PER_HOUR));
+                        const itHeight = customHeight !== null ? customHeight : Math.max(28, Math.min(TIMELINE_HEIGHT - itTop, (itDur / 60) * PIXELS_PER_HOUR - 3));
                         const itRange = item.time_range_12h || `${item.start_time_12h || item.start_time || ''} – ${item.end_time_12h || item.end_time || ''}`;
+                        const sizeCls = itHeight < 40 ? "is-short is-tiny" : (itHeight < 56 ? "is-short" : (itHeight < 78 ? "is-compact" : ""));
 
                         if (item.type === "class") {
                           return `
-                            <div class="cal-grid-item is-class" style="top: ${itTop}px; height: ${itHeight}px; width: ${wCss}; left: ${lCss};" onclick="toggleCalItemExpansion(this, event)">
-                              <div class="cal-item-title">${escapeHtml(item.course_name)}</div>
+                            <div class="cal-grid-item is-class ${sizeCls}" style="top: ${itTop}px; height: ${itHeight}px; width: ${wCss}; left: ${lCss};" onclick="toggleCalItemExpansion(this, event)">
+                              <div class="cal-item-title">${escapeHtml(cleanText(item.course_name))}</div>
                               <div class="cal-item-time">${escapeHtml(itRange)}</div>
                               ${item.location ? `<div class="cal-item-loc">${escapeHtml(item.location)}</div>` : ""}
                               <div class="cal-item-expanded-details" style="display: none; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--rule); font-size: 0.76rem;">
                                 <div style="font-weight: 600; color: var(--accent); margin-bottom: 2px;">Enrolled Course</div>
-                                ${item.location ? `<div>📍 Location: ${escapeHtml(item.location)}</div>` : ''}
+                                ${item.location ? `<div>Location: ${escapeHtml(item.location)}</div>` : ''}
                                 <div style="margin-top: 4px;">
                                   <button type="button" class="btn btn-xs btn-quiet" onclick="openFiltersModal('classes', ${d.day_index})" style="font-size: 0.70rem;">Manage Course</button>
                                 </div>
@@ -3159,22 +3504,22 @@
                           `;
                         } else {
                           const deptColor = item.department_color || (DEPARTMENTS[item.department_id] ? DEPARTMENTS[item.department_id].color : '#4a5b66');
-                          const savedInCal = isEventSaved(item);
                           const safeLink = item.source_url ? safeWmSourceUrl(item.source_url) : null;
-                          const conflictBadge = item.has_conflict ? `<span style="color: var(--bad); font-weight: 700; font-size: 0.66rem;">⚠️ Overlap</span>` : "";
+                          const conflictBadge = item.has_conflict ? `<span class="cal-item-overlap">Overlap</span>` : "";
+                          const itemTitle = cleanText(item.title);
+                          const itemDesc = cleanText(item.description || item.summary);
 
                           return `
-                            <div class="cal-grid-item is-event ${item.has_conflict ? 'has-conflict' : ''}" style="top: ${itTop}px; height: ${itHeight}px; width: ${wCss}; left: ${lCss}; ${item.has_conflict ? '' : `border-left-color: ${deptColor};`}" onclick="toggleCalItemExpansion(this, event)">
-                              <div class="cal-item-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div>
+                            <div class="cal-grid-item is-event ${sizeCls} ${item.has_conflict ? 'has-conflict' : ''}" style="top: ${itTop}px; height: ${itHeight}px; width: ${wCss}; left: ${lCss}; ${item.has_conflict ? '' : `border-left-color: ${escapeHtml(deptColor)};`}" onclick="toggleCalItemExpansion(this, event)">
+                              <div class="cal-item-title" title="${escapeHtml(itemTitle)}">${escapeHtml(itemTitle)}</div>
                               <div class="cal-item-time">${escapeHtml(itRange)} ${conflictBadge}</div>
-                              ${item.location ? `<div class="cal-item-loc">${escapeHtml(item.location)}</div>` : ""}
-                              <div class="cal-item-expanded-details" style="display: none; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--rule); font-size: 0.76rem;">
-                                ${(item.description || item.summary) ? `<div style="color: var(--ink-soft); margin-bottom: 6px; line-height: 1.35;">${escapeHtml(item.description || item.summary)}</div>` : ''}
-                                <div style="display: flex; gap: 6px; align-items: center; justify-content: space-between; margin-top: 4px; flex-wrap: wrap;">
-                                  <button type="button" class="btn btn-xs ${savedInCal ? 'btn-gold' : 'btn-quiet'}" data-event="${escapeHtml(JSON.stringify(item))}" onclick="handleCardSaveToggle(this, event)" style="font-size: 0.70rem; padding: 2px 6px;">
-                                    ${savedInCal ? '✓ On My Calendar' : '+ Add to My Calendar'}
-                                  </button>
-                                  ${safeLink ? `<a href="${safeLink.href}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="font-size: 0.70rem; color: var(--accent); text-decoration: underline;">Open Link ↗</a>` : ''}
+                              ${item.location ? `<div class="cal-item-loc">${escapeHtml(cleanText(item.location))}</div>` : ""}
+                              <div class="cal-item-expanded-details" style="display: none;">
+                                ${itemDesc ? `<div class="cal-item-desc">${escapeHtml(itemDesc)}</div>` : ''}
+                                <div class="cal-item-actions">
+                                  ${calendarActionsHtml(item)}
+                                  <button type="button" class="btn btn-xs btn-quiet" data-ev="${escapeHtml(JSON.stringify(item))}" onclick="event.stopPropagation(); openEventModal(JSON.parse(this.dataset.ev))">Full details</button>
+                                  ${safeLink ? `<a class="lec-link" href="${safeLink.href}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()">Event page ↗</a>` : ''}
                                 </div>
                               </div>
                             </div>
@@ -3182,29 +3527,60 @@
                         }
                       };
 
-                      if (cluster.length === 1) {
-                        return renderCard(cluster[0], "calc(100% - 6px)", "3px");
-                      }
-
-                      if (cluster.length === 2) {
+                      const laneStyle = (index, count) => {
+                        const laneWidth = 100 / count;
                         return [
-                          renderCard(cluster[0], "calc(48% - 4px)", "2px"),
-                          renderCard(cluster[1], "calc(48% - 4px)", "calc(52% + 2px)")
-                        ].join("");
+                          `calc(${laneWidth}% - 4px)`,
+                          `calc(${laneWidth * index}% + 2px)`
+                        ];
+                      };
+
+                      // At most two things side by side (CLAUDE.md MAX_COLS rule, tightened for narrow
+                      // day columns): two lanes split the column; three or more keep lane one as a card and
+                      // fold everything else into a "+N more" chip that opens #clusterModal.
+                      if (lanes.length <= 2) {
+                        return lanes.map((lane, laneIndex) => {
+                          const [width, left] = laneStyle(laneIndex, lanes.length);
+                          return lane.map(item => renderCard(item, width, left)).join("");
+                        }).join("");
                       }
 
-                      // cluster.length >= 3:
-                      // First item in Column 0 (width: calc(48% - 4px), left: 2px)
-                      // Clean overflow card in Column 2 (width: calc(48% - 4px), left: calc(52% + 2px))
-                      const overflowCount = cluster.length - 1;
-                      const primaryCard = renderCard(cluster[0], "calc(48% - 4px)", "2px");
-                      const overflowCard = `
-                        <div class="cal-grid-item cal-overflow-card" style="top: ${topPx}px; height: ${heightPx}px; width: calc(48% - 4px); left: calc(52% + 2px);" onclick="openClusterModal(window._calClusters['${clusterId}'], '${escapeHtml(d.day_name)}', '${escapeHtml(timeRange)}')">
-                          <div class="cal-item-title">+${overflowCount} more events</div>
-                          <div class="cal-item-time">Click to expand (${overflowCount})</div>
-                        </div>
-                      `;
-                      return primaryCard + overflowCard;
+                      const cardMarkup = lanes[0].map(item => renderCard(item, "calc(64% - 3px)", "2px")).join("");
+                      const hiddenItems = lanes.slice(1).flat().sort((a, b) => a._sm - b._sm);
+                      const hiddenGroups = [];
+                      let hiddenGroup = [];
+                      let hiddenEnd = -1;
+                      hiddenItems.forEach(item => {
+                        if (hiddenGroup.length && item._sm >= hiddenEnd) {
+                          hiddenGroups.push(hiddenGroup);
+                          hiddenGroup = [];
+                          hiddenEnd = -1;
+                        }
+                        hiddenGroup.push(item);
+                        hiddenEnd = Math.max(hiddenEnd, item._em);
+                      });
+                      if (hiddenGroup.length) hiddenGroups.push(hiddenGroup);
+
+                      const overflowMarkup = hiddenGroups.map((items, overflowIndex) => {
+                        const clusterId = `clust_${d.day_index}_${cIdx}_${overflowIndex}`;
+                        // The modal lists the whole collision cluster so nothing is hidden twice.
+                        window._calClusters[clusterId] = cluster;
+                        const startMin = items[0]._sm;
+                        const endMin = Math.max(...items.map(item => item._em));
+                        const offset = Math.max(0, startMin - TIMELINE_START);
+                        const topPx = Math.max(0, Math.min(TIMELINE_HEIGHT - 28, (offset / 60) * PIXELS_PER_HOUR));
+                        const duration = Math.max(30, endMin - startMin);
+                        const heightPx = Math.max(32, Math.min(TIMELINE_HEIGHT - topPx, (duration / 60) * PIXELS_PER_HOUR - 3));
+                        const cStart = Math.min(...cluster.map(item => item._sm));
+                        const cEnd = Math.max(...cluster.map(item => item._em));
+                        const timeRange = format12hJs(minutesToTime(cStart)) + " – " + format12hJs(minutesToTime(cEnd % (24 * 60)));
+                        return `
+                          <button type="button" class="cal-more-chip cal-overflow-card" style="top: ${topPx}px; height: ${heightPx}px; width: calc(36% - 3px); left: calc(64% + 1px);" onclick="openClusterModal(window._calClusters['${clusterId}'], '${escapeHtml(d.day_name)}', '${escapeHtml(timeRange)}')" title="Show all ${cluster.length} overlapping items" aria-label="${items.length} more overlapping events">
+                            <span class="num">+${items.length}</span><span>more</span>
+                          </button>
+                        `;
+                      }).join("");
+                      return cardMarkup + overflowMarkup;
                     }).join("")}
                   </div>
                 </div>
@@ -3291,9 +3667,9 @@
         container.innerHTML = events.map(ev => `
           <div class="panel" style="padding: var(--space-3); display: flex; justify-content: space-between; align-items: center; gap: 10px;">
             <div>
-              <div style="font-weight: 700; font-size: 0.92rem; color: var(--ink);">${escapeHtml(ev.title)}</div>
-              <div class="meta num" style="font-size: 0.78rem; margin-top: 2px;">
-                ${DAYS[ev.day_of_week]} · ${escapeHtml(ev.start_time)}–${escapeHtml(ev.end_time)} · ${escapeHtml(ev.club_name)} · ${escapeHtml(ev.location)}
+              <div style="font-weight: 600; font-size: 0.95rem; color: var(--ink);">${escapeHtml(cleanText(ev.title))}</div>
+              <div class="meta" style="font-size: 0.82rem; margin-top: 2px; color: var(--muted);">
+                ${DAYS[ev.day_of_week]} · <span class="num">${escapeHtml(ev.start_time)}–${escapeHtml(ev.end_time)}</span> · ${escapeHtml(ev.club_name)} · ${escapeHtml(ev.location)}
               </div>
             </div>
             <button type="button" class="btn btn-danger btn-sm" onclick="deleteClubEvent(${ev.id})" title="Delete event">
@@ -3707,6 +4083,8 @@
         loadEvents().catch(console.error);
         loadWmEvents().catch(console.error);
         loadWeeklyPlanner().catch(console.error);
+        syncSavedEventsFromServer().catch(console.warn);
+        loadConciergeIntent().then(() => loadAiAlerts()).catch(console.warn);
       }, 50);
     }
 

@@ -12,6 +12,7 @@ graph TD
         UI_Planner["View 2: Student Weekly Planner (Mon-Sun Timetable)"]
         UI_Organizer["View 3: Event Organizer Lab (Conflict Inspector & Management)"]
         UI_Sidebar["Class Schedule Manager (Lecture Batch Form)"]
+        UI_AIModal["AI Concierge Modal (Intent & Matched Alerts)"]
     end
 
     subgraph Backend ["FastAPI Backend (app.py)"]
@@ -23,7 +24,10 @@ graph TD
         API_Planning_Conflicts["/api/planning/creator-conflicts (GET)"]
         API_Planning_Weekly["/api/planning/weekly-schedule (GET)"]
         API_AICat["/api/ai/department-categorize (GET, POST)"]
+        API_AIIntent["/api/ai/intent (GET, POST)"]
+        API_AIAlerts["/api/ai/alerts (GET, POST action)"]
         Engine["Conflict, Live Calculation & Department Classifier"]
+        AIEngine["AI Intent & Schedule Assistant Matcher (Gemini + Deterministic)"]
     end
 
     subgraph Ingestion ["Calendar Ingestion (wm_data.py, import_wm_events.py)"]
@@ -38,6 +42,8 @@ graph TD
         T_WMEvents[("wm_events")]
         T_WMCals[("wm_event_calendars")]
         T_Meta[("app_meta")]
+        T_AIIntent[("user_ai_intent")]
+        T_AIAlerts[("user_ai_alerts")]
     end
 
     UI_Radar -->|GET /api/now-and-next| API_NowNext
@@ -48,9 +54,12 @@ graph TD
     UI_Organizer -->|POST, DELETE /api/events| API_Events
     UI_Nav -->|GET /api/wm-events| API_WMEvents
     UI_Radar -.->|POST /api/ai/department-categorize| API_AICat
+    UI_AIModal -->|GET, POST /api/ai/intent| API_AIIntent
+    UI_AIModal -->|GET, POST /api/ai/alerts| API_AIAlerts
 
     Ingestion -->|Strict HTTPS / Parse / Expand| T_WMEvents
     Ingestion -->|Calendar Mapping| T_WMCals
+    Ingestion -.->|Trigger Intent Evaluation| AIEngine
 
     API_NowNext --> Engine
     API_Events --> Engine
@@ -58,6 +67,13 @@ graph TD
     API_Planning_Weekly --> Engine
     API_WMEvents --> T_WMEvents
     API_AICat --> Engine
+    API_AIIntent --> AIEngine
+    API_AIAlerts --> T_AIAlerts
+
+    AIEngine --> T_AIIntent
+    AIEngine --> T_AIAlerts
+    AIEngine --> T_WMEvents
+    AIEngine -.->|GEMINI_API_KEY / urllib.request| GeminiAPI["Google Gemini API (Fallback: Deterministic Heuristic)"]
 
     Engine --> T_Events
     Engine --> T_Classes
@@ -78,7 +94,9 @@ graph TD
 | **`wm_events` Table** | Dated instances from official campus feeds and TribeLink student organizations | Dated event instances (uid, start_at, end_at, timezone, is_all_day, location, source_url, categories) |
 | **`wm_event_calendars` Table** | Many-to-many calendar feed membership tracking | Feed slugs and calendar display names |
 | **`app_meta` Table** | Database migrations and seed execution tracking | Migration version & seed flags |
-| **`static/index.html`** | Zero-build single-page application with distraction-free 100% width Now & Soon view and collapsible Filters & Schedule modal | Local UI state: active view mode, filter modal open state, theme, preview time |
+| **`user_ai_intent` Table** | Student natural language event interest prompt, auto-add preference, and alert settings | Active intent record (prompt, auto_add, notify, updated_at) |
+| **`user_ai_alerts` Table** | Discovered and matched events from calendar ingestion | Matched event instances (uid, title, start_datetime, match_reason, score, is_added, is_dismissed) |
+| **`static/index.html`** | Zero-build single-page application with distraction-free 100% width Now & Soon view, Weekly Planner, and AI Concierge Modal | Local UI state: active view mode, filter modal open state, concierge modal state, theme, preview time |
 
 ---
 
@@ -485,6 +503,108 @@ Returns metadata regarding crawler health, event counts, synchronization timesta
 
 ---
 
+### 2.6 AI Event Intent & Schedule Assistant Contracts
+
+The AI Concierge allows students to specify in natural language the kinds of campus events, talks, workshops, and extracurricular activities they wish to attend. When feeds are parsed (or upon updating intent), the engine evaluates upcoming events using Google Gemini (with deterministic heuristic fallback) and automatically flags or enrolls matches into the student's schedule.
+
+#### `GET /api/ai/intent`
+Retrieves the student's currently configured AI event preference profile.
+- **Response**:
+```json
+{
+  "prompt": "Computer science colloquia, robotics workshops, and hackathons",
+  "auto_add": true,
+  "notify": true,
+  "updated_at": "2026-11-15T12:00:00-05:00",
+  "last_evaluated_at": "2026-11-15T12:05:00-05:00"
+}
+```
+
+#### `POST /api/ai/intent`
+Updates the student's AI event preferences and immediately triggers schedule evaluation against upcoming campus events.
+- **Request Body**:
+```json
+{
+  "prompt": "Computer science colloquia, robotics workshops, and hackathons",
+  "auto_add": true,
+  "notify": true
+}
+```
+- **Validation**:
+  - `prompt`: string (1–500 characters, whitespace trimmed).
+  - `auto_add`: boolean (default `true`).
+  - `notify`: boolean (default `true`).
+- **Response**:
+```json
+{
+  "status": "ok",
+  "message": "AI intent saved and schedule evaluated.",
+  "intent": {
+    "prompt": "Computer science colloquia, robotics workshops, and hackathons",
+    "auto_add": true,
+    "notify": true,
+    "updated_at": "2026-11-15T12:00:00-05:00"
+  },
+  "matched_count": 3
+}
+```
+
+#### `GET /api/ai/alerts`
+Returns AI-matched event recommendations and notifications.
+- **Query Parameters**:
+  - `include_dismissed`: boolean (default `false`)
+  - `limit`: integer (default `50`, max `200`)
+- **Response**:
+```json
+{
+  "alerts": [
+    {
+      "id": 1,
+      "uid": "wm-cs-colloquium-20261117",
+      "title": "Colloquium: Scalable Transformers & Distributed Reasoning",
+      "start_datetime": "2026-11-17T15:00:00-05:00",
+      "start_time_12h": "3:00 PM",
+      "date_display": "Tue, Nov 17",
+      "location": "McGlothlin-Street 020",
+      "department_id": "dept-cs",
+      "department_name": "Computer Science & Technology",
+      "department_color": "#2c6eb5",
+      "match_reason": "Matches your interest in Computer science colloquia and transformers",
+      "score": 0.95,
+      "is_added": 1,
+      "is_dismissed": 0,
+      "created_at": "2026-11-15T12:00:00-05:00"
+    }
+  ],
+  "total_active": 1,
+  "total_auto_added": 1
+}
+```
+
+#### `POST /api/ai/alerts/action`
+Allows students to accept, add to schedule, or dismiss individual event alerts.
+- **Request Body**:
+```json
+{
+  "alert_id": 1,
+  "action": "dismiss"
+}
+```
+- **Actions**:
+  - `"dismiss"`: Marks alert as dismissed (`is_dismissed = 1`).
+  - `"add"`: Marks alert as added to schedule (`is_added = 1, is_dismissed = 0`).
+  - `"remove"`: Un-marks alert as added (`is_added = 0`).
+- **Response**:
+```json
+{
+  "status": "ok",
+  "alert_id": 1,
+  "action": "dismiss"
+}
+```
+
+---
+
 ## 3. Database Schema & Indexing
 
 ```sql
@@ -535,11 +655,37 @@ CREATE TABLE IF NOT EXISTS app_meta (
     value TEXT
 );
 
+CREATE TABLE IF NOT EXISTS user_ai_intent (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    prompt TEXT NOT NULL,
+    auto_add INTEGER NOT NULL DEFAULT 1 CHECK (auto_add IN (0, 1)),
+    notify INTEGER NOT NULL DEFAULT 1 CHECK (notify IN (0, 1)),
+    updated_at TEXT NOT NULL,
+    last_evaluated_at TEXT
+);
+
+CREATE TABLE IF NOT EXISTS user_ai_alerts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uid TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    start_datetime TEXT NOT NULL,
+    location TEXT NOT NULL DEFAULT '',
+    department_id TEXT NOT NULL DEFAULT 'dept-acad',
+    match_reason TEXT NOT NULL,
+    score REAL NOT NULL DEFAULT 1.0,
+    is_added INTEGER NOT NULL DEFAULT 0 CHECK (is_added IN (0, 1)),
+    is_dismissed INTEGER NOT NULL DEFAULT 0 CHECK (is_dismissed IN (0, 1)),
+    created_at TEXT NOT NULL
+);
+
 -- Compound indexes for zero-latency temporal lookups
 CREATE INDEX IF NOT EXISTS idx_club_events_day_time ON club_events (day_of_week, start_time);
 CREATE INDEX IF NOT EXISTS idx_user_classes_day_time ON user_classes (day_of_week, start_time);
 CREATE INDEX IF NOT EXISTS idx_wm_events_start_at ON wm_events(start_at);
 CREATE INDEX IF NOT EXISTS idx_wm_event_calendars_slug ON wm_event_calendars(calendar_slug, uid);
+CREATE INDEX IF NOT EXISTS idx_ai_alerts_uid ON user_ai_alerts(uid);
+CREATE INDEX IF NOT EXISTS idx_ai_alerts_status ON user_ai_alerts(is_dismissed, is_added);
+CREATE INDEX IF NOT EXISTS idx_ai_alerts_start ON user_ai_alerts(start_datetime);
 ```
 
 ### Overlap Rule
@@ -566,7 +712,7 @@ stateDiagram-v2
 
 1. **Now & Soon (`live`)**:
    - 100% width, uncluttered campus pulse.
-   - Shows "Happening Right Now" (including active all-day and ongoing multi-day campus & TribeLink events) and "Starting in the next 3 hours".
+   - Shows "Happening Right Now" (strictly single-day events actively in session today) and "Starting in the next 3 hours" (strictly starting today). Multi-day and ongoing exhibitions are excluded from the live feed and remain in Directory mode.
    - The permanent left-hand planning sidebar is completely collapsed into a neat "Filters" modal/drawer button.
 2. **Filters & Schedule Modal (`#filtersModal`)**:
    - Accessible via the "Filters" button in the masthead/header.
@@ -623,6 +769,28 @@ To eliminate clumsy AI dashboard aesthetics and clunky background grayness:
 - **Zero Background Grayness**: Navigation tabs (`.arrangement-tab`, `.modes .mode`) enforce `background: transparent !important`, eliminating heavy pill backgrounds and sunk containers.
 - **Caslon Gold Indicators**: Active states utilize pure Caslon/Cypher gold indicators (`::after` bottom rule with `background: var(--gold)`).
 - **Subtle Elevation**: Active tabs receive a crisp micro-elevation (`transform: translateY(-1px)`) with smooth CSS cubic-bezier transitions (`transition: color 120ms var(--ease), transform 120ms var(--ease)`).
+
+### 4.7 Mobile & Phone View Responsiveness (Screens <= 640px)
+- **Weekly Planner Timetable Horizontal Scroll & Sticky Gutter**:
+  - The timetable container (`.cal-grid-wrapper`) scrolls horizontally while maintaining minimum column legibility (`min-width: 1050px`).
+  - The time hour gutter (`.cal-time-gutter`) uses `position: sticky; left: 0; z-index: 6;` with a subtle elevation drop-shadow (`box-shadow: 2px 0 6px rgba(0,0,0,0.08)`) so hours (8 AM - 10 PM) remain visible during horizontal pan.
+- **Edge-to-Edge Bottom-Sheet Modals**:
+  - All `<dialog class="filters-modal">` elements (`#filtersModal`, `#eventModal`, `#clusterModal`, `#aiConciergeModal`) transition on `<= 640px` screens to bottom-sheet drawers:
+    `top: auto; bottom: 0; left: 0; right: 0; width: 100vw; max-width: 100vw; border-radius: 12px 12px 0 0; transform: none;`.
+  - Tap targets meet the 44px touch ergonomics standard (`min-height: 44px;`).
+  - Form inputs (`input`, `select`, `textarea`) enforce `font-size: 16px;` to prevent iOS Safari auto-zoom behavior.
+
+### 4.8 Strict Temporal Scoping Invariant
+To prevent live dashboard confusion:
+- `happening_now`:
+  - Strictly single-day events actively in session today (`st <= now_dt < en` AND `st.date() == today_d` AND `st.date() == en.date()`).
+  - Single-day all-day events occurring today (`is_all_day == 1` AND `ev_start_d == today_d` AND `(ev_end_d - ev_start_d).days <= 1`).
+- `starting_soon`:
+  - Strictly events starting within 3 hours today (`st > now_dt` AND `(st - now_dt).total_seconds() <= 3 * 3600` AND `st.date() == today_d` AND `st.date() == en.date()`).
+- Banned from live feed:
+  - Any event where `st.date() < today_d` or `ev_start_d < today_d`.
+  - Multi-day exhibitions or programs spanning more than 1 day (`st.date() != en.date()` or `(ev_end_d - ev_start_d).days > 1`).
+  - Client double-validation: `loadNowAndNext()` cross-checks `date_display` and `start_at` against server-returned `today_date` / `today_display` (or simulated date in simulation mode).
 
 ---
 

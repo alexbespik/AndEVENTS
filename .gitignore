@@ -65,3 +65,6 @@ CLAUDE.local.md
 AGENTS.md
 AgentPrompt.md
 GEMINI_WRITEUP.md
+.env.example
+.env.example
+ARCHITECTURE.md

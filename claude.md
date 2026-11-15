@@ -505,3 +505,31 @@ Exports calendar data as standard RFC 5545 iCalendar (`.ics`) files for native i
   - `[📅 Add to System Calendar]` button directly on live event cards and within the detailed event modal (`openEventModal(ev)`).
   - Google Calendar web link option (`getGoogleCalendarUrl(ev)`) generating instant event creation links with recurrence.
   - `[📅 Export Calendar (.ics)]` button on the Weekly Planner summary bar to export the student's schedule.
+
+Make the AI that will get the request of what type of stuff you want to participate and then alerts you when that gets parsed and puts it in your schedule 
+
+And fix the whole visual appearence use the visual capabilities to acces the problem 
+
+---
+
+## 8. Status Review (2026-11-15)
+
+Audit of this plan against the code and the running app (desktop 1280px and phone 375px, dark and light).
+
+| Item | Status | Notes |
+|---|---|---|
+| Typography spec | Done | Every heading and card title computes to `IBM Plex Sans`; no serif anywhere. The page breadcrumb was the last mono offender and is now sans. |
+| Task A: feeds | Done | `DEFAULT_DISCOVERY_FEEDS` in `import_wm_events.py`. |
+| Task D: update buttons | Done | `.btn-update` + dual-arrow SVG. |
+| Task E: phone view | Done | Nav scroll, planner horizontal scroll with sticky gutter, bottom-sheet modals, 16px inputs. This pass added 44px planner tap targets, a compact "No classes today" row, and a 1 + 2 button grid on cards at <= 480px (all three calendar buttons stay visible). |
+| Task F: live feed scoping | Done | `/api/now-and-next` plus the client guard in `loadNowAndNext()`. |
+| Calendar buttons on every event | Done | Checked on live cards, Directory cards and `#clusterModal` (all three buttons per event). |
+| Interest concierge (last request above) | Done | `user_ai_intent` / `user_ai_alerts` / `user_saved_events`, `/api/ai/*`, `#aiConciergeModal`, hook in `_run_parser_worker`. Works without an API key (keyword fallback); Gemini only expands the interest text once, never per event. Covered by tests 17 and 19-24. |
+| Directory duplicates | Fixed | `/api/wm-events` collapses copies sharing a normalized title and start instant and merges their `source_calendars` (read path only; the database is untouched). Test 26. |
+| Fitness classes tagged "Academic" | Fixed | FitWell / yoga / pilates / cycling / Bee McLeod keywords route to Athletics & Recreation. |
+| Planner class titles cut to one line | Fixed | 75-minute cards show a two-line title and time. |
+
+### Still open
+- The 5-day class preset was restored in the local `schedule.db` on 2026-11-15 (12 rows, Mon-Fri); the previous two rows are in `schedule.backup-2026-11-15.db`.
+- `ARCHITECTURE.md` does not yet describe the Directory dedupe.
+- Nothing is committed; `main` is protected, so publish through a feature branch and a pull request.

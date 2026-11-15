@@ -1,9 +1,11 @@
 import os
+import html
 import json
 import re
 import sqlite3
 import urllib.request
 import asyncio
+import time
 from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -131,7 +133,9 @@ def classify_department(event_dict: dict[str, Any]) -> dict[str, str]:
             "athletics", "recreation", "rec", "rec center", "pool", "swim", "polo",
             "soccer", "basketball", "volleyball", "running", "fitness", "climbing",
             "tennis", "gym", "sport", "sports", "scrimmage", "intramural", "conditioning",
-            "kaplan", "zable", "busch field", "mccormack", "plumeri"
+            "kaplan", "zable", "busch field", "mccormack", "plumeri", "fitwell", "yoga",
+            "pilates", "zumba", "barre", "barrecycle", "cycling", "workout",
+            "bee mcleod", "tribe athletics"
         ],
         "dept-biol": [
             "biology", "biol", "marine", "vims", "wildlife", "botany", "genetics",
@@ -247,7 +251,7 @@ CAMPUS_TZ = ZoneInfo("America/New_York")
 
 
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30.0)
     conn.row_factory = sqlite3.Row
     # High-concurrency WAL mode and foreign key integrity from &EDU db.py
     conn.execute("PRAGMA journal_mode = WAL;")
@@ -255,13 +259,231 @@ def get_db():
     return conn
 
 
-def _run_parser_worker(delay: float = 0.0, timeout: float = 4.0) -> tuple[int, int]:
+_STOP_WORDS = {
+    "i", "me", "my", "we", "want", "to", "would", "like", "participate", "attend",
+    "go", "join", "the", "a", "an", "and", "or", "in", "on", "at", "for", "with",
+    "about", "events", "stuff", "activities", "things", "sessions", "programs",
+    "please", "some", "any", "all", "is", "of", "looking", "interested"
+}
+
+
+# How far ahead the interest matcher looks for upcoming campus events.
+INTENT_MATCH_WINDOW_DAYS = 30
+
+_INTENT_SYNONYMS: dict[str, list[str]] = {
+    "food": ["pizza", "dinner", "lunch", "refreshments", "snacks", "boba"],
+    "tech": ["computer", "coding", "software", "hackathon", "robotics"],
+    "soccer": ["football", "sports", "athletic"],
+    "seminar": ["colloquium", "lecture", "symposium", "research"],
+    "seminars": ["colloquium", "lecture", "symposium", "research"],
+}
+
+# Gemini keyword expansions keyed by normalized interest text -> (cached_at monotonic, keywords).
+# Successful expansions are kept; failures (empty list) are retried only after the TTL.
+_INTENT_KEYWORD_CACHE: dict[str, tuple[float, list[str]]] = {}
+_INTENT_FAILURE_TTL_SECONDS = 300.0
+
+
+def _keyword_fallback(intent_text: str) -> list[str]:
+    """Deterministic keyword extraction: stop-word filtered tokens plus domain synonyms."""
+    tokens = [
+        re.sub(r"[^a-z0-9]", "", w.lower())
+        for w in re.split(r"[\s,;.]+", intent_text)
+    ]
+    keywords: list[str] = []
+    for w in tokens:
+        if len(w) >= 3 and w not in _STOP_WORDS and w not in keywords:
+            keywords.append(w)
+    for w in list(keywords):
+        for syn in _INTENT_SYNONYMS.get(w, []):
+            if syn not in keywords:
+                keywords.append(syn)
+    return keywords
+
+
+def _intent_keywords(intent_text: str) -> tuple[list[str], str]:
+    """
+    Returns (keywords, source). Source is "gemini" when Gemini expanded the interest text,
+    otherwise "keyword". Gemini is never contacted when TESTING=1 or no key is configured.
+    """
+    keywords = _keyword_fallback(intent_text)
+    api_key = _gemini_api_key()
+    if not api_key:
+        return keywords, "keyword"
+
+    cache_key = intent_text.strip().lower()
+    cached = _INTENT_KEYWORD_CACHE.get(cache_key)
+    if cached is not None and not cached[1] and time.monotonic() - cached[0] >= _INTENT_FAILURE_TTL_SECONDS:
+        cached = None
+    if cached is None:
+        expanded = _query_gemini_intent_keywords(api_key, intent_text) or []
+        if len(_INTENT_KEYWORD_CACHE) >= 200:
+            _INTENT_KEYWORD_CACHE.clear()
+        _INTENT_KEYWORD_CACHE[cache_key] = (time.monotonic(), expanded)
+    else:
+        expanded = cached[1]
+    if not expanded:
+        return keywords, "keyword"
+    for kw in expanded:
+        if kw not in keywords:
+            keywords.append(kw)
+    return keywords, "gemini"
+
+
+def _parse_event_start(start_at: str, is_all_day: bool) -> Optional[datetime]:
+    """Parses a stored wm_events start_at into an aware campus datetime (all-day -> midnight)."""
+    try:
+        if is_all_day:
+            d = date.fromisoformat(str(start_at)[:10])
+            return datetime(d.year, d.month, d.day, tzinfo=CAMPUS_TZ)
+        st = datetime.fromisoformat(str(start_at).replace("Z", "+00:00"))
+        if st.tzinfo is None:
+            st = st.replace(tzinfo=CAMPUS_TZ)
+        return st.astimezone(CAMPUS_TZ)
+    except (TypeError, ValueError):
+        return None
+
+
+def _save_event_for_user(cur: sqlite3.Cursor, ev: dict[str, Any], source: str, alert_id: Optional[int], now_iso: str) -> None:
+    cur.execute("""
+        INSERT OR IGNORE INTO user_saved_events (
+            uid, title, start_datetime, end_datetime, location, is_all_day, source, alert_id, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        ev["uid"], ev["title"], ev["start_datetime"], ev.get("end_datetime") or "",
+        ev.get("location") or "", 1 if ev.get("is_all_day") else 0, source, alert_id, now_iso,
+    ))
+
+
+def _evaluate_events_against_intent(
+    conn: sqlite3.Connection,
+    intent_text: str,
+    auto_add: bool = False,
+    now: Optional[datetime] = None,
+) -> dict[str, Any]:
+    """
+    Matches upcoming campus events (starting at/after `now`, within INTENT_MATCH_WINDOW_DAYS)
+    against the student's participation prompt. Each event is alerted at most once: events that
+    already have a user_ai_alerts row (pending, added or dismissed) are never re-alerted, so
+    repeated parser runs do not duplicate alerts. With auto_add, new matches are also saved
+    into user_saved_events.
+    """
+    result: dict[str, Any] = {
+        "matched_count": 0,
+        "new_alerts": 0,
+        "auto_added_count": 0,
+        "keywords": [],
+        "keyword_source": "keyword",
+    }
+    if not intent_text or not intent_text.strip():
+        return result
+
+    keywords, source = _intent_keywords(intent_text.strip())
+    result["keywords"] = keywords
+    result["keyword_source"] = source
+    if not keywords:
+        return result
+    patterns = [(kw, re.compile(r"\b" + re.escape(kw))) for kw in keywords]
+
+    now_dt = (now or datetime.now(CAMPUS_TZ)).astimezone(CAMPUS_TZ)
+    today_d = now_dt.date()
+    max_d = today_d + timedelta(days=INTENT_MATCH_WINDOW_DAYS)
+
+    cur = conn.cursor()
+    # Coarse SQL prefilter on the stored date prefix; exact start-time check happens below.
+    cur.execute("""
+        SELECT uid, title, summary, description, start_at, end_at, location, categories, is_all_day
+        FROM wm_events
+        WHERE substr(start_at, 1, 10) >= ? AND substr(start_at, 1, 10) <= ?
+        ORDER BY start_at ASC
+    """, (today_d.isoformat(), (max_d + timedelta(days=1)).isoformat()))
+    rows = [dict(r) for r in cur.fetchall()]
+
+    cur.execute("SELECT uid, id, is_added, is_dismissed FROM user_ai_alerts")
+    existing_alerts = {r[0]: (r[1], bool(r[2]), bool(r[3])) for r in cur.fetchall()}
+    now_iso = datetime.now(CAMPUS_TZ).isoformat()
+
+    for r in rows:
+        is_all_day = bool(r["is_all_day"])
+        st = _parse_event_start(r["start_at"], is_all_day)
+        if st is None:
+            continue
+        if is_all_day:
+            if not (today_d <= st.date() <= max_d):
+                continue
+        elif not (now_dt <= st and st.date() <= max_d):
+            continue
+
+        search_blob = " ".join(
+            str(r[k] or "") for k in ("title", "description", "summary", "location", "categories")
+        ).lower()
+        matched_kws = [kw for kw, pat in patterns if pat.search(search_blob)]
+        if not matched_kws:
+            continue
+
+        result["matched_count"] += 1
+        uid = r["uid"]
+        ev = {
+            "uid": uid,
+            "title": r["title"] or "",
+            "start_datetime": r["start_at"],
+            "end_datetime": r["end_at"],
+            "location": r["location"] or "",
+            "is_all_day": is_all_day,
+        }
+        if uid in existing_alerts:
+            alert_id, was_added, was_dismissed = existing_alerts[uid]
+            # Never re-alert; but a still-pending suggestion is scheduled once auto_add is on.
+            if auto_add and not was_added and not was_dismissed:
+                cur.execute("UPDATE user_ai_alerts SET is_added = 1 WHERE id = ?", (alert_id,))
+                _save_event_for_user(cur, ev, "ai_auto", alert_id, now_iso)
+                existing_alerts[uid] = (alert_id, True, False)
+                result["auto_added_count"] += 1
+            continue
+
+        score = round(min(1.0, 0.4 + 0.15 * len(matched_kws)), 2)
+        reason = f"Matched: {', '.join(sorted(set(matched_kws))[:4])}"
+        cur.execute("""
+            INSERT INTO user_ai_alerts (
+                uid, title, start_datetime, end_datetime, location, match_reason, score, is_added, is_dismissed, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+        """, (uid, ev["title"], ev["start_datetime"], ev["end_datetime"], ev["location"], reason, score, 1 if auto_add else 0, now_iso))
+        alert_id = cur.lastrowid
+        existing_alerts[uid] = (alert_id, auto_add, False)
+        result["new_alerts"] += 1
+        if auto_add:
+            _save_event_for_user(cur, ev, "ai_auto", alert_id, now_iso)
+            result["auto_added_count"] += 1
+
+    return result
+
+
+def _evaluate_stored_intent(conn: sqlite3.Connection) -> Optional[dict[str, Any]]:
+    """Runs the saved interest prompt (if any) against the current events table."""
+    cur = conn.cursor()
+    cur.execute("SELECT prompt, auto_add FROM user_ai_intent WHERE id = 1")
+    row = cur.fetchone()
+    if not row or not (row[0] or "").strip():
+        return None
+    res = _evaluate_events_against_intent(conn, row[0].strip(), bool(row[1]))
+    conn.commit()
+    return res
+
+
+def _run_parser_worker(delay: float = 0.0, timeout: float = 4.0) -> tuple[int, int, Optional[dict[str, Any]]]:
+    """Syncs feeds, then evaluates the stored interest prompt against the freshly parsed events."""
     from import_wm_events import discover_and_import
+    import sys
     worker_conn = get_db()
     try:
-        res = discover_and_import(worker_conn, delay=delay, timeout=timeout, discover_directory=False)
+        successes, failures = discover_and_import(worker_conn, delay=delay, timeout=timeout, discover_directory=False)
         worker_conn.commit()
-        return res
+        ai_result = None
+        try:
+            ai_result = _evaluate_stored_intent(worker_conn)
+        except Exception as ai_err:
+            print(f"AI Intent evaluation error in parser worker: {ai_err}", file=sys.stderr)
+        return successes, failures, ai_result
     finally:
         worker_conn.close()
 
@@ -431,16 +653,60 @@ def init_db():
             value TEXT
         )
     """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_ai_intent (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            prompt TEXT NOT NULL,
+            auto_add INTEGER NOT NULL DEFAULT 0,
+            notify INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_ai_alerts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uid TEXT NOT NULL UNIQUE,
+            title TEXT NOT NULL,
+            start_datetime TEXT NOT NULL,
+            end_datetime TEXT,
+            location TEXT,
+            match_reason TEXT NOT NULL,
+            score REAL NOT NULL DEFAULT 1.0,
+            is_added INTEGER NOT NULL DEFAULT 0,
+            is_dismissed INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS user_saved_events (
+            uid TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            start_datetime TEXT NOT NULL,
+            end_datetime TEXT,
+            location TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+    # Columns added after the first release of user_saved_events.
+    saved_cols = {r[1] for r in cur.execute("PRAGMA table_info(user_saved_events)").fetchall()}
+    if "is_all_day" not in saved_cols:
+        cur.execute("ALTER TABLE user_saved_events ADD COLUMN is_all_day INTEGER NOT NULL DEFAULT 0")
+    if "source" not in saved_cols:
+        cur.execute("ALTER TABLE user_saved_events ADD COLUMN source TEXT NOT NULL DEFAULT 'ai_auto'")
+    if "alert_id" not in saved_cols:
+        cur.execute("ALTER TABLE user_saved_events ADD COLUMN alert_id INTEGER")
 
     ensure_schema(conn)
 
     # High performance compound indexes for range & conflict scanning
     cur.execute("CREATE INDEX IF NOT EXISTS idx_club_events_day_time ON club_events (day_of_week, start_time);")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_user_classes_day_time ON user_classes (day_of_week, start_time);")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_user_ai_alerts_created ON user_ai_alerts (created_at DESC);")
+    cur.execute("CREATE INDEX IF NOT EXISTS idx_user_ai_alerts_active ON user_ai_alerts (is_dismissed, is_added);")
 
     # Ensure canonical student organization club meetings are present
     events = [
-        ("W&M Linux Users Group", "Kernel & Dotfiles Workshop", "Hands-on compilation, config tweaking, and terminal setups.", 0, "17:00", "18:30", "ISC 1127", "Technology"),
         ("Machine Learning Club", "AI Paper Reading Group", "Discussion on recent transformer architectures and reasoning papers.", 2, "18:00", "19:30", "McGlothlin 020", "Academic"),
         ("W&M Club Swim & Water Polo", "Open Lap Swim & Water Polo", "Casual scrimmages and endurance lap lanes.", 1, "19:00", "20:30", "Student Rec Center", "Sports"),
         ("W&M Chess Club", "Rapid Chess Blitz Night", "Casual and rated 5+3 blitz games. All rating tiers welcome.", 3, "18:30", "20:00", "Sadler Center 202", "Social"),
@@ -689,8 +955,11 @@ def get_now_and_next(
     )
     events = [dict(r) for r in cur.fetchall()]
 
-    # Query dated wm_events
-    cur.execute("SELECT * FROM wm_events ORDER BY start_at ASC")
+    # Query dated wm_events bounded by current campus week
+    cur.execute(
+        "SELECT * FROM wm_events WHERE start_at >= date(?, '-1 day') AND start_at <= date(?, '+7 days') ORDER BY start_at ASC",
+        (today_iso, today_iso)
+    )
     all_wm_rows = [dict(r) for r in cur.fetchall()]
     conn.close()
 
@@ -769,13 +1038,22 @@ def get_now_and_next(
         else:
             try:
                 st = datetime.fromisoformat(r["start_at"].replace("Z", "+00:00")).astimezone(CAMPUS_TZ)
-                en = datetime.fromisoformat(r["end_at"].replace("Z", "+00:00")).astimezone(CAMPUS_TZ) if r.get("end_at") else st
+                en = (
+                    datetime.fromisoformat(r["end_at"].replace("Z", "+00:00")).astimezone(CAMPUS_TZ)
+                    if r.get("end_at")
+                    else (st + timedelta(hours=1))
+                )
             except Exception:
                 continue
 
-            is_active = (st <= now_dt < en)
-            is_soon = (st > now_dt and (st - now_dt).total_seconds() <= 3 * 3600 and st.date() == today_d)
+            # Task F: an event belongs to the live feed only if it ends on its start date
+            # (an end of exactly midnight still counts as the same day).
+            last_instant = en - timedelta(microseconds=1) if en > st else st
+            is_single_day = last_instant.date() == st.date()
+            is_active = (st.date() == today_d and st <= now_dt < en and is_single_day)
+            is_soon = (st.date() == today_d and 0 <= (st - now_dt).total_seconds() <= 3 * 3600 and is_single_day)
             if not (is_active or is_soon):
+                wm_processed.append(r)
                 continue
 
             dedup_key = (
@@ -844,6 +1122,8 @@ def get_now_and_next(
         "current_day": current_day,
         "current_day_name": days_of_week[current_day],
         "current_time": current_time,
+        "today_date": today_iso,
+        "today_display": today_d.strftime("%a, %b %-d"),
         "is_simulated": sim_day is not None or sim_time is not None,
         "current_class": current_class,
         "next_class": next_class,
@@ -863,7 +1143,13 @@ def get_wm_events(
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
     search: Optional[str] = None,
+    include_past: bool = False,
 ):
+    """
+    Directory listing of dated campus events. Unless include_past is set, events that have
+    fully ended are excluded. Results are sorted soonest start first, with multi-day items that
+    are already running (is_ongoing) grouped after today's and upcoming events.
+    """
     conn = get_db()
     cur = conn.cursor()
 
@@ -959,7 +1245,53 @@ def get_wm_events(
                 "name": row["calendar_name"],
             })
 
-    return list(events.values())
+    now_dt = datetime.now(CAMPUS_TZ)
+    far_future = datetime.max.replace(tzinfo=CAMPUS_TZ)
+    listed = []
+    for event in events.values():
+        st = _parse_event_start(event["start_at"], event["is_all_day"])
+        en = _parse_event_start(event["end_at"], event["is_all_day"]) if event.get("end_at") else None
+        if st is not None and en is None:
+            en = st + (timedelta(days=1) if event["is_all_day"] else timedelta(hours=1))
+        if st is not None and en is not None and en > st:
+            # All-day ends are exclusive dates; timed events ending at midnight stay single-day.
+            is_multi_day = ((en - timedelta(microseconds=1)).date() - st.date()).days >= 1
+        else:
+            is_multi_day = False
+        event["is_multi_day"] = is_multi_day
+        event["is_ongoing"] = bool(is_multi_day and st is not None and st.date() <= now_dt.date() and en > now_dt)
+        event["_sort"] = (1 if event["is_ongoing"] else 0, st or far_future)
+        if not include_past and en is not None and en <= now_dt:
+            continue
+        listed.append(event)
+
+    listed.sort(key=lambda ev: ev["_sort"])
+
+    # The same event is often published by several feeds under different UIDs (and sometimes with
+    # the start written in a different UTC offset). Collapse copies that share a normalized title
+    # and start instant, keeping the first and merging their source calendars.
+    unique: list[dict[str, Any]] = []
+    by_key: dict[tuple[str, str], dict[str, Any]] = {}
+    for event in listed:
+        st = event["_sort"][1]
+        del event["_sort"]
+        title_key = re.sub(r"[^a-z0-9]+", "", html.unescape(str(event.get("title") or "")).lower())
+        if not title_key or st is far_future:
+            unique.append(event)
+            continue
+        when_key = st.strftime("%Y-%m-%d") if event["is_all_day"] else st.astimezone(CAMPUS_TZ).strftime("%Y-%m-%d %H:%M")
+        kept = by_key.get((title_key, when_key))
+        if kept is None:
+            by_key[(title_key, when_key)] = event
+            unique.append(event)
+            continue
+        # Lets the client recognise a copy the student saved under the other feed's UID.
+        kept.setdefault("alt_uids", []).append(event["uid"])
+        known = {c["slug"] for c in kept["source_calendars"]}
+        kept["source_calendars"].extend(c for c in event["source_calendars"] if c["slug"] not in known)
+        if event["has_conflict"] and not kept["has_conflict"]:
+            kept["has_conflict"], kept["conflicting_course"] = True, event["conflicting_course"]
+    return unique
 
 
 @app.post("/api/parser/run")
@@ -973,8 +1305,9 @@ async def run_calendar_parser():
         raise HTTPException(status_code=429, detail="A calendar parser synchronization is already running. Please wait a moment.")
 
     async with _PARSER_LOCK:
+        ai_result: Optional[dict[str, Any]] = None
         try:
-            successes, failures = await asyncio.wait_for(
+            successes, failures, ai_result = await asyncio.wait_for(
                 asyncio.to_thread(_run_parser_worker, 0.0, 6.0),
                 timeout=45.0,
             )
@@ -1008,6 +1341,9 @@ async def run_calendar_parser():
             "feeds_failed": failures,
             "total_events": total_events,
             "synced_at": now_iso,
+            # Interest matching runs after every sync; both are 0 when no interest prompt is saved.
+            "ai_new_alerts": ai_result["new_alerts"] if ai_result else 0,
+            "ai_auto_added": ai_result["auto_added_count"] if ai_result else 0,
         }
 
 
@@ -1521,7 +1857,6 @@ CANONICAL_CAMPUS_LOCATIONS = [
 ]
 
 CANONICAL_CAMPUS_RSOS = [
-    "W&M Linux Users Group (LUG)",
     "Association for Computing Machinery (ACM)",
     "Machine Learning & AI Club",
     "Tribe Cyber",
@@ -1969,6 +2304,69 @@ AI_CLASSIFICATION_CACHE: dict[str, dict[str, str]] = {}
 _WORKING_GEMINI_MODEL: Optional[str] = None
 
 
+def _gemini_api_key() -> str:
+    """Configured Gemini key, or "" when AI calls are disabled (no key, or TESTING=1)."""
+    if os.environ.get("TESTING") == "1":
+        return ""
+    return os.environ.get("GEMINI_API_KEY", "").strip()
+
+
+def _query_gemini_intent_keywords(api_key: str, intent_text: str) -> Optional[list[str]]:
+    """
+    Asks Gemini to expand the student's interest text into search keywords. Only the interest
+    text is sent (no event data). Returns None on any failure so callers use the keyword fallback.
+    """
+    global _WORKING_GEMINI_MODEL
+    prompt = (
+        "A university student describes what campus events they want to attend:\n"
+        f"\"{intent_text.strip()[:500]}\"\n\n"
+        "List up to 15 short lowercase search keywords (single words or two-word phrases) that "
+        "would appear in titles or descriptions of matching campus events, including close synonyms. "
+        "Reply with ONLY a comma-separated list."
+    )
+    models_to_try: list[str] = []
+    for m in [_WORKING_GEMINI_MODEL, os.environ.get("GEMINI_MODEL", "").strip(),
+              "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-2.5-flash",
+              "gemini-2.0-flash-lite", "gemini-1.5-flash"]:
+        if m and m not in models_to_try:
+            models_to_try.append(m)
+
+    req_body = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode("utf-8")
+    for model_name in models_to_try:
+        req = urllib.request.Request(
+            f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent",
+            data=req_body,
+            headers={"Content-Type": "application/json", "x-goog-api-key": api_key},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=5.0) as resp:
+                if resp.status != 200:
+                    continue
+                raw = resp.read()
+        except urllib.error.HTTPError as err:
+            if err.code in (404, 400):
+                continue
+            return None
+        except (urllib.error.URLError, OSError):
+            # Network failure (DNS, refused, timeout): other models would fail the same way.
+            return None
+        try:
+            resp_data = json.loads(raw.decode("utf-8"))
+            text = resp_data["candidates"][0]["content"]["parts"][0]["text"].lower()
+        except (ValueError, KeyError, IndexError, TypeError):
+            continue
+        keywords: list[str] = []
+        for part in re.split(r"[,\n]+", text):
+            kw = re.sub(r"[^a-z0-9 &-]", "", part).strip()
+            if 3 <= len(kw) <= 40 and kw not in _STOP_WORDS and kw not in keywords:
+                keywords.append(kw)
+        if keywords:
+            _WORKING_GEMINI_MODEL = model_name
+            return keywords[:20]
+    return None
+
+
 def _query_gemini_categorization(api_key: str, data: dict[str, Any]) -> Optional[str]:
     """Helper running in threadpool making outbound Gemini API request with multi-model fallback chain."""
     global _WORKING_GEMINI_MODEL
@@ -2069,7 +2467,7 @@ async def ai_department_categorize(request: Request):
     if "events" in body_data and isinstance(body_data["events"], list):
         if len(body_data["events"]) > 50:
             raise HTTPException(status_code=400, detail="Batch size exceeds maximum limit of 50 events.")
-        api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+        api_key = _gemini_api_key()
         classified = []
         for raw_ev in body_data["events"]:
             if not isinstance(raw_ev, dict):
@@ -2084,7 +2482,8 @@ async def ai_department_categorize(request: Request):
             if not matched_id and api_key and (ev_title or ev_cat or ev_club):
                 matched_id = await asyncio.to_thread(_query_gemini_categorization, api_key, ev_copy)
                 if matched_id and matched_id in DEPARTMENTS:
-                    AI_CLASSIFICATION_CACHE[cache_k] = matched_id
+                    if len(AI_CLASSIFICATION_CACHE) < 500:
+                        AI_CLASSIFICATION_CACHE[cache_k] = matched_id
 
             if matched_id and matched_id in DEPARTMENTS:
                 dept_info = format_dept(DEPARTMENTS[matched_id])
@@ -2111,7 +2510,7 @@ async def ai_department_categorize(request: Request):
     if cache_key and cache_key in AI_CLASSIFICATION_CACHE:
         return dict(AI_CLASSIFICATION_CACHE[cache_key])
 
-    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    api_key = _gemini_api_key()
     if api_key:
         matched_id = await asyncio.to_thread(_query_gemini_categorization, api_key, data)
         if matched_id and matched_id in DEPARTMENTS:
@@ -2126,6 +2525,329 @@ async def ai_department_categorize(request: Request):
     if cache_key and len(AI_CLASSIFICATION_CACHE) < 500:
         AI_CLASSIFICATION_CACHE[cache_key] = res
     return res
+
+
+class AIIntentPayload(BaseModel):
+    prompt: str = ""
+    auto_add: Optional[bool] = False
+    notify: Optional[bool] = True
+
+
+class AIAlertActionPayload(BaseModel):
+    alert_id: int
+    action: str  # "add" | "dismiss"
+
+
+@app.get("/api/ai/intent")
+def get_ai_intent():
+    conn = get_db()
+    try:
+        row = conn.execute("SELECT prompt, auto_add, notify, updated_at FROM user_ai_intent WHERE id = 1").fetchone()
+    finally:
+        conn.close()
+    if not row:
+        return {"prompt": "", "auto_add": False, "notify": True, "updated_at": None}
+    return {
+        "prompt": row[0],
+        "auto_add": bool(row[1]),
+        "notify": bool(row[2]),
+        "updated_at": row[3],
+    }
+
+
+@app.post("/api/ai/intent")
+def set_ai_intent(payload: AIIntentPayload):
+    prompt = payload.prompt.strip()
+    auto_add = 1 if payload.auto_add else 0
+    notify = 1 if payload.notify else 0
+    now_iso = datetime.now(CAMPUS_TZ).isoformat()
+
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT prompt FROM user_ai_intent WHERE id = 1")
+        prev = cur.fetchone()
+        if prev is not None and (prev[0] or "").strip().lower() != prompt.lower():
+            # A new interest makes untouched suggestions from the old one stale. Added and
+            # dismissed alerts are kept so those events are never re-alerted.
+            cur.execute("DELETE FROM user_ai_alerts WHERE is_added = 0 AND is_dismissed = 0")
+        cur.execute("""
+            INSERT INTO user_ai_intent (id, prompt, auto_add, notify, created_at, updated_at)
+            VALUES (1, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                prompt = excluded.prompt,
+                auto_add = excluded.auto_add,
+                notify = excluded.notify,
+                updated_at = excluded.updated_at
+        """, (prompt, auto_add, notify, now_iso, now_iso))
+        conn.commit()
+
+        res = _evaluate_events_against_intent(conn, prompt, bool(auto_add))
+        conn.commit()
+    finally:
+        conn.close()
+
+    return {
+        "status": "ok",
+        "prompt": prompt,
+        "auto_add": bool(auto_add),
+        "notify": bool(notify),
+        "matched_count": res["matched_count"],
+        "matched_events": res["matched_count"],
+        "new_alerts": res["new_alerts"],
+        "auto_added_count": res["auto_added_count"],
+        "auto_added": res["auto_added_count"],
+        "keywords": res["keywords"],
+        "keyword_source": res["keyword_source"],
+        "updated_at": now_iso
+    }
+
+
+def _with_display_times(r: dict[str, Any], start_raw: Optional[str], end_raw: Optional[str], is_all_day: bool) -> dict[str, Any]:
+    """Adds date_display / start_time_12h / end_time_12h / time_range_12h like /api/wm-events."""
+    st = _parse_event_start(start_raw or "", is_all_day)
+    r["date_display"] = st.strftime("%a, %b %-d") if st else str(start_raw or "")[:10]
+    if is_all_day:
+        r["start_time_12h"] = "All Day"
+        r["end_time_12h"] = ""
+        r["time_range_12h"] = "All Day"
+        return r
+    en = _parse_event_start(end_raw, False) if end_raw else None
+    r["start_time_12h"] = format_12h(st.strftime("%H:%M")) if st else ""
+    r["end_time_12h"] = format_12h(en.strftime("%H:%M")) if en else ""
+    r["time_range_12h"] = f"{r['start_time_12h']} – {r['end_time_12h']}" if en else r["start_time_12h"]
+    return r
+
+
+def _decode_categories(raw: Any) -> list:
+    try:
+        cats = json.loads(raw) if isinstance(raw, str) else (raw or [])
+    except (TypeError, json.JSONDecodeError):
+        return []
+    return cats if isinstance(cats, list) else []
+
+
+def _parse_aware_iso(value: str) -> datetime:
+    """Parses an ISO-8601 timestamp (Z suffix accepted); naive values are campus time."""
+    dt = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=CAMPUS_TZ)
+
+
+def _alert_is_past(r: dict[str, Any], now_dt: datetime) -> bool:
+    """True if the alerted event started before today (Eastern) or has already ended."""
+    st = _parse_event_start(r["start_datetime"], r["is_all_day"])
+    if st is None or st.date() < now_dt.date():
+        return True
+    if r["end_datetime"]:
+        en = _parse_event_start(r["end_datetime"], r["is_all_day"])
+        if en is not None and en <= now_dt:
+            return True
+    return False
+
+
+@app.get("/api/ai/alerts")
+def get_ai_alerts(unread_only: bool = False, since: Optional[str] = None):
+    """
+    Lists non-dismissed interest alerts for events that are still upcoming (started today or
+    later and not yet ended). `unread_only` limits to alerts not yet added to the schedule;
+    `since` (ISO timestamp) limits to alerts created after it, so the client can notify only
+    about matches found by the latest parser run.
+    """
+    since_dt = None
+    if since:
+        try:
+            since_dt = _parse_aware_iso(since)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid 'since' timestamp; expected ISO-8601.")
+
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT a.id, a.uid, a.title, a.start_datetime, a.end_datetime, a.location,
+                   a.match_reason, a.score, a.is_added, a.is_dismissed, a.created_at,
+                   w.categories, w.is_all_day, w.source_url, w.description
+            FROM user_ai_alerts a
+            LEFT JOIN wm_events w ON a.uid = w.uid
+            WHERE a.is_dismissed = 0
+            ORDER BY a.start_datetime ASC
+        """)
+        rows = [dict(r) for r in cur.fetchall()]
+        cur.execute("SELECT COUNT(*) FROM user_ai_alerts WHERE is_added = 1")
+        auto_added_count = cur.fetchone()[0]
+    finally:
+        conn.close()
+
+    now_dt = datetime.now(CAMPUS_TZ)
+    upcoming = []
+    for r in rows:
+        if r["is_all_day"] is None:
+            # Event no longer in wm_events: date-only starts are all-day.
+            r["is_all_day"] = len(str(r["start_datetime"] or "")) == 10
+        r["is_all_day"] = bool(r["is_all_day"])
+        if not _alert_is_past(r, now_dt):
+            upcoming.append(r)
+    unread_count = sum(1 for r in upcoming if not r["is_added"])
+
+    alerts = []
+    for r in upcoming:
+        if unread_only and r["is_added"]:
+            continue
+        if since_dt is not None:
+            try:
+                if _parse_aware_iso(r["created_at"]) <= since_dt:
+                    continue
+            except ValueError:
+                continue
+        r["categories"] = _decode_categories(r["categories"])
+        r["is_added"] = bool(r["is_added"])
+        r["is_dismissed"] = bool(r["is_dismissed"])
+        enrich_department(r)
+        _with_display_times(r, r["start_datetime"], r["end_datetime"], r["is_all_day"])
+        alerts.append(r)
+        if len(alerts) >= 100:
+            break
+
+    return {
+        "alerts": alerts,
+        "unread_count": unread_count,
+        "auto_added_count": auto_added_count
+    }
+
+
+@app.post("/api/ai/alerts/action")
+def set_ai_alert_action(payload: AIAlertActionPayload):
+    if payload.action not in ("add", "dismiss"):
+        raise HTTPException(status_code=400, detail="Invalid action")
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT a.id, a.uid, a.title, a.start_datetime, a.end_datetime, a.location, w.is_all_day
+            FROM user_ai_alerts a LEFT JOIN wm_events w ON a.uid = w.uid
+            WHERE a.id = ?
+        """, (payload.alert_id,))
+        row = cur.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Alert not found")
+
+        now_iso = datetime.now(CAMPUS_TZ).isoformat()
+        if payload.action == "add":
+            cur.execute("UPDATE user_ai_alerts SET is_added = 1, is_dismissed = 0 WHERE id = ?", (payload.alert_id,))
+            _save_event_for_user(cur, {
+                "uid": row["uid"],
+                "title": row["title"],
+                "start_datetime": row["start_datetime"],
+                "end_datetime": row["end_datetime"],
+                "location": row["location"],
+                "is_all_day": bool(row["is_all_day"]),
+            }, "ai_alert", row["id"], now_iso)
+        else:
+            cur.execute("UPDATE user_ai_alerts SET is_dismissed = 1 WHERE id = ?", (payload.alert_id,))
+        conn.commit()
+    finally:
+        conn.close()
+    return {"status": "ok", "alert_id": payload.alert_id, "action": payload.action}
+
+
+@app.get("/api/user-saved-events")
+def get_user_saved_events():
+    """
+    Events the AI concierge put on the student's schedule (auto-added or accepted alerts).
+    Field names mirror the localStorage `user_saved_events` entries used by the planner.
+    """
+    conn = get_db()
+    try:
+        rows = [dict(r) for r in conn.execute("""
+        SELECT s.uid, s.title, s.start_datetime, s.end_datetime, s.location, s.is_all_day AS saved_all_day,
+               s.source, s.alert_id, s.created_at,
+               w.uid AS wm_uid, w.summary, w.description, w.timezone, w.source_url, w.categories,
+               w.is_all_day AS wm_all_day, a.match_reason
+        FROM user_saved_events s
+        LEFT JOIN wm_events w ON w.uid = s.uid
+        LEFT JOIN user_ai_alerts a ON a.uid = s.uid
+        ORDER BY s.start_datetime ASC
+        """).fetchall()]
+    finally:
+        conn.close()
+
+    saved = []
+    for r in rows:
+        is_all_day = bool(r["wm_all_day"]) if r["wm_uid"] is not None else bool(r["saved_all_day"])
+        ev: dict[str, Any] = {
+            "uid": r["uid"],
+            "title": r["title"],
+            "start_at": r["start_datetime"],
+            "end_at": r["end_datetime"] or None,
+            "start_datetime": r["start_datetime"],
+            "end_datetime": r["end_datetime"] or None,
+            "timezone": r["timezone"] or "America/New_York",
+            "location": r["location"] or "",
+            "is_all_day": is_all_day,
+            "summary": r["summary"] or "",
+            "description": r["description"] or "",
+            "source_url": r["source_url"] or "",
+            "categories": _decode_categories(r["categories"]),
+            "club_name": "W&M Campus",
+            "match_reason": r["match_reason"] or "",
+            "source": r["source"],
+            "alert_id": r["alert_id"],
+            "created_at": r["created_at"],
+            "is_wm_event": True,
+            "is_user_saved": True,
+            "is_ai_scheduled": True,
+        }
+        enrich_department(ev)
+        _with_display_times(ev, ev["start_at"], ev["end_at"], is_all_day)
+        saved.append(ev)
+    return {"saved_events": saved}
+
+
+@app.delete("/api/user-saved-events/{uid:path}")
+def delete_user_saved_event(uid: str):
+    """Removes an AI-scheduled event and dismisses its alert so later syncs don't re-add it."""
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        cur.execute("DELETE FROM user_saved_events WHERE uid = ?", (uid,))
+        deleted = cur.rowcount
+        cur.execute("UPDATE user_ai_alerts SET is_added = 0, is_dismissed = 1 WHERE uid = ?", (uid,))
+        conn.commit()
+    finally:
+        conn.close()
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Saved event not found")
+    return {"status": "ok", "uid": uid}
+
+
+@app.post("/api/ai/match-intent")
+def match_ai_intent(payload: Optional[AIIntentPayload] = None):
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        prompt = payload.prompt.strip() if payload and payload.prompt else ""
+        auto_add = bool(payload.auto_add) if payload else False
+        if not prompt:
+            cur.execute("SELECT prompt, auto_add FROM user_ai_intent WHERE id = 1")
+            row = cur.fetchone()
+            if row:
+                prompt = row[0]
+                if not payload or payload.auto_add is None:
+                    auto_add = bool(row[1])
+
+        res = _evaluate_events_against_intent(conn, prompt, auto_add)
+        conn.commit()
+    finally:
+        conn.close()
+    return {
+        "status": "ok",
+        "prompt": prompt,
+        "matched_count": res["matched_count"],
+        "new_alerts": res["new_alerts"],
+        "auto_added_count": res["auto_added_count"],
+        "keywords": res["keywords"],
+        "keyword_source": res["keyword_source"],
+    }
 
 
 if __name__ == "__main__":
