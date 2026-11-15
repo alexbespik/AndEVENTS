@@ -616,6 +616,123 @@ class TestCampusScheduleAPI(unittest.TestCase):
         after_data = after_res.json()
         self.assertIsNotNone(after_data["last_sync"])
 
+    def test_14_daily_sync_status_fields(self):
+        """
+        Verify the enhanced /api/parser/status payload containing
+        auto_sync_enabled, sync_interval_hours, and next_auto_sync.
+        """
+        res = client.get("/api/parser/status")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertIn("total_events", data)
+        self.assertIn("last_sync", data)
+        self.assertIn("auto_sync_enabled", data)
+        self.assertTrue(data["auto_sync_enabled"])
+        self.assertEqual(data["sync_interval_hours"], 24)
+        self.assertIn("next_auto_sync", data)
+        if data["last_sync"]:
+            self.assertIsNotNone(data["next_auto_sync"])
+
+    def test_15_calendar_export_ics(self):
+        """
+        Verify /api/calendar/export.ics endpoint:
+        - 400 error when no target parameter is specified
+        - 404 error when invalid/unknown target ID is supplied
+        - Valid RFC 5545 iCalendar payload for single club event (event_id)
+        - Valid RFC 5545 iCalendar payload for class session (class_id)
+        - Valid RFC 5545 iCalendar payload for scope (scope=my)
+        """
+        # 1. Missing all params -> 400 Bad Request
+        res_empty = client.get("/api/calendar/export.ics")
+        self.assertEqual(res_empty.status_code, 400)
+        self.assertIn("At least one export parameter", res_empty.json()["detail"])
+
+        # 2. Non-existent item -> 404 Not Found
+        res_not_found = client.get("/api/calendar/export.ics?event_id=999999")
+        self.assertEqual(res_not_found.status_code, 404)
+
+        # 3. Export single club event
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT id, title, location FROM club_events LIMIT 1")
+        club_row = cur.fetchone()
+        conn.close()
+
+        self.assertIsNotNone(club_row)
+        club_id = club_row["id"]
+        res_club = client.get(f"/api/calendar/export.ics?event_id={club_id}")
+        self.assertEqual(res_club.status_code, 200)
+        self.assertIn("text/calendar", res_club.headers["content-type"])
+        self.assertIn(".ics", res_club.headers.get("content-disposition", ""))
+        club_ics = res_club.text
+        self.assertTrue(club_ics.startswith("BEGIN:VCALENDAR\r\n"))
+        self.assertTrue(club_ics.endswith("END:VCALENDAR\r\n"))
+        self.assertIn("VERSION:2.0\r\n", club_ics)
+        self.assertIn("PRODID:-//AndEDU//AndEVENTS//EN\r\n", club_ics)
+        self.assertIn("BEGIN:VEVENT\r\n", club_ics)
+        self.assertIn("RRULE:FREQ=WEEKLY;BYDAY=", club_ics)
+        self.assertIn(f"UID:club-{club_id}@andedu.events\r\n", club_ics)
+
+        # 4. Export single user class
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT id, course_name FROM user_classes LIMIT 1")
+        class_row = cur.fetchone()
+        conn.close()
+
+        self.assertIsNotNone(class_row)
+        class_id = class_row["id"]
+        res_class = client.get(f"/api/calendar/export.ics?class_id={class_id}")
+        self.assertEqual(res_class.status_code, 200)
+        self.assertIn("text/calendar", res_class.headers["content-type"])
+        class_ics = res_class.text
+        self.assertIn("BEGIN:VCALENDAR\r\n", class_ics)
+        self.assertIn(f"UID:class-{class_id}@andedu.events\r\n", class_ics)
+        self.assertIn("RRULE:FREQ=WEEKLY;BYDAY=", class_ics)
+
+        # 5. Export scope=my schedule
+        res_scope = client.get("/api/calendar/export.ics?scope=my")
+        self.assertEqual(res_scope.status_code, 200)
+        self.assertIn("wm_my_schedule.ics", res_scope.headers.get("content-disposition", ""))
+        self.assertIn("BEGIN:VCALENDAR\r\n", res_scope.text)
+
+    def test_16_planner_refinements_and_uid_hardening(self):
+        """
+        Verify Weekly Planner DOM elements & defensive UID CRLF hardening.
+        """
+        from app import _format_wm_vevent
+        dtstamp = "20261115T000000Z"
+
+        # 1. Defense-in-depth: UID with newline is sanitized to single line
+        tainted_ev = {
+            "uid": "event-1234\r\nATTACK:INJECTION",
+            "title": "Clean Title",
+            "start_at": "2026-11-15T14:00:00",
+            "end_at": "2026-11-15T15:00:00",
+        }
+        lines = _format_wm_vevent(tainted_ev, dtstamp)
+        self.assertIn("UID:event-1234", lines)
+        for line in lines:
+            self.assertNotIn("ATTACK:INJECTION", line)
+            self.assertNotIn("\r", line)
+            self.assertNotIn("\n", line)
+
+        # 2. Frontend index.html verification
+        res = client.get("/")
+        self.assertEqual(res.status_code, 200)
+        self.assertIn("plannerDeptFilterGroup", res.text)
+        self.assertIn("clusterModal", res.text)
+        self.assertIn("openClusterModal", res.text)
+        self.assertIn("cal-overflow-card", res.text)
+        self.assertIn("cal-gutter-all-day", res.text)
+
+        # 3. CSS styles verification
+        css_res = client.get("/static/lab.css")
+        self.assertEqual(css_res.status_code, 200)
+        self.assertIn(".cal-gutter-all-day", css_res.text)
+        self.assertIn(".cal-overflow-card", css_res.text)
+        self.assertIn(".cal-dept-pill", css_res.text)
+
 
 if __name__ == "__main__":
     unittest.main()

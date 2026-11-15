@@ -653,6 +653,48 @@
     </div>
   </dialog>
 
+  <!-- Event Details & System Calendar Export Modal Dialog -->
+  <dialog id="eventModal" class="filters-modal" aria-labelledby="eventModalTitle">
+    <div class="filters-modal-inner">
+      <div class="filters-modal-head">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <span id="eventModalDeptPill" class="dept-pill dept-dept-acad">Campus</span>
+          <h3 id="eventModalTitle" style="margin: 0; font-size: 1.15rem;">Event Details</h3>
+        </div>
+        <button type="button" class="btn btn-quiet btn-sm" onclick="closeEventModal()" aria-label="Close dialog" style="font-size: 1.1rem; min-height: 28px; width: 28px; padding: 0;">✕</button>
+      </div>
+      <div id="eventModalBody" class="filters-modal-body">
+        <!-- Dynamically populated -->
+      </div>
+      <div class="filters-modal-foot">
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <button type="button" id="eventModalSysCalBtn" class="btn btn-gold btn-sm">📅 Add to System Calendar</button>
+          <a id="eventModalGoogleCalLink" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-quiet btn-sm">Google Calendar ↗</a>
+        </div>
+        <button type="button" class="btn btn-quiet btn-sm" onclick="closeEventModal()">Close</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Overlapping Events Cluster Modal Dialog -->
+  <dialog id="clusterModal" class="filters-modal" aria-labelledby="clusterModalTitle">
+    <div class="filters-modal-inner" style="max-width: 640px;">
+      <div class="filters-modal-head">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <span class="chip" style="font-weight: 600; color: var(--gold-rule);">📅 Weekly Schedule</span>
+          <h3 id="clusterModalTitle" style="margin: 0; font-size: 1.15rem;">Overlapping Events</h3>
+        </div>
+        <button type="button" class="btn btn-quiet btn-sm" onclick="closeClusterModal()" aria-label="Close dialog" style="font-size: 1.1rem; min-height: 28px; width: 28px; padding: 0;">✕</button>
+      </div>
+      <div id="clusterModalBody" class="filters-modal-body" style="max-height: 65vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: var(--space-4);">
+        <!-- Dynamically populated -->
+      </div>
+      <div class="filters-modal-foot">
+        <button type="button" class="btn btn-quiet btn-sm" onclick="closeClusterModal()">Close</button>
+      </div>
+    </div>
+  </dialog>
+
   <!-- Workspace: 100% full width with zero sidebar clutter -->
   <div class="workspace no-sidebar">
     <!-- Main Workspace Area with Stone Paper and Faint 32px Grid Background -->
@@ -810,20 +852,34 @@
         <div id="viewPlanner" class="stack view-container" style="display: none;">
           <div class="cal-summary-bar">
             <div class="cal-summary-stats" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <div class="btn-group" role="tablist" aria-label="Planner scope filter" style="display: inline-flex; border: 1px solid var(--rule); border-radius: var(--radius-sm); overflow: hidden;">
-                <button type="button" id="plannerTabMy" class="btn btn-xs btn-gold" onclick="setPlannerScope('my')" style="border-radius: 0; border: none; font-size: 0.78rem;">
-                  ★ My Calendar
+              <div class="arrangement-nav" role="tablist" aria-label="Planner scope filter">
+                <button type="button" id="plannerTabMy" class="arrangement-tab active" aria-pressed="true" onclick="setPlannerScope('my')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                  <span>My Calendar</span>
                 </button>
-                <button type="button" id="plannerTabAll" class="btn btn-xs btn-quiet" onclick="setPlannerScope('all')" style="border-radius: 0; border: none; font-size: 0.78rem;">
-                  🏫 All Campus Events
+                <button type="button" id="plannerTabAll" class="arrangement-tab" aria-pressed="false" onclick="setPlannerScope('all')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                  <span>All Campus Events</span>
                 </button>
               </div>
               <span id="plannerSummaryStats" class="chip num" style="font-weight: 600;">0 Classes · 0 Events</span>
               <span id="plannerConflictBadge" class="status status-bad" style="display: none; font-size: 0.75rem;">0 Overlaps</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-quiet btn-sm" onclick="exportWeeklyPlannerCalendar()" title="Export weekly schedule as an RFC 5545 iCalendar (.ics) file">📅 Export Calendar (.ics)</button>
               <button type="button" class="btn btn-quiet btn-sm" onclick="openFiltersModal('classes')">+ Manage Classes</button>
               <button type="button" class="btn btn-primary btn-sm" onclick="switchMode('organizer')">+ Propose Event</button>
+            </div>
+            <!-- Department filter pill group (visible in 'All Campus Events' mode) -->
+            <div id="plannerDeptFilterGroup" class="cal-dept-filters" style="display: none; width: 100%; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--rule); align-items: center; gap: 6px; flex-wrap: wrap;">
+              <span style="font-size: 0.72rem; color: var(--muted); font-weight: 600; text-transform: uppercase; font-family: var(--font-mono); margin-right: 4px;">Department:</span>
+              <button type="button" class="cal-dept-pill active" data-dept="all" onclick="setPlannerDeptFilter('all')">All</button>
+              <button type="button" class="cal-dept-pill" data-dept="dept-cs" onclick="setPlannerDeptFilter('dept-cs')">CS &amp; Tech</button>
+              <button type="button" class="cal-dept-pill" data-dept="dept-arts" onclick="setPlannerDeptFilter('dept-arts')">Arts</button>
+              <button type="button" class="cal-dept-pill" data-dept="dept-sports" onclick="setPlannerDeptFilter('dept-sports')">Athletics</button>
+              <button type="button" class="cal-dept-pill" data-dept="dept-biol" onclick="setPlannerDeptFilter('dept-biol')">Biology</button>
+              <button type="button" class="cal-dept-pill" data-dept="dept-civics" onclick="setPlannerDeptFilter('dept-civics')">Civics</button>
+              <button type="button" class="cal-dept-pill" data-dept="dept-life" onclick="setPlannerDeptFilter('dept-life')">Student Life</button>
             </div>
           </div>
           <div id="timetableContainer" class="cal-grid-wrapper">
@@ -1517,6 +1573,259 @@
       alert(`Notification set for ${title} at ${timeStr} in ${location}.`);
     }
 
+    function exportToSystemCalendar(ev) {
+      if (!ev) return;
+      let url = "/api/calendar/export.ics?";
+      if (ev.uid) {
+        url += `uid=${encodeURIComponent(ev.uid)}`;
+      } else if (ev.id && ev.type !== "class") {
+        url += `event_id=${encodeURIComponent(ev.id)}`;
+      } else if (ev.class_id || (ev.type === "class" && ev.id)) {
+        url += `class_id=${encodeURIComponent(ev.class_id || ev.id)}`;
+      } else {
+        showToast("Unable to export this calendar item.", "info");
+        return;
+      }
+      const a = document.createElement("a");
+      a.href = url;
+      a.setAttribute("download", "");
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showToast("Downloading calendar file (.ics)...", "info");
+    }
+    const downloadEventIcs = exportToSystemCalendar;
+
+    function exportWeeklyPlannerCalendar() {
+      const scope = plannerScope === "all" ? "all" : "my";
+      const url = `/api/calendar/export.ics?scope=${encodeURIComponent(scope)}`;
+      const a = document.createElement("a");
+      a.href = url;
+      a.setAttribute("download", "");
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showToast(`Exporting ${scope === "all" ? "all campus events" : "your weekly schedule"} (.ics)...`, "info");
+    }
+
+    function getGoogleCalendarUrl(ev) {
+      if (!ev) return "#";
+      const title = encodeURIComponent(ev.title || ev.course_name || "Campus Event");
+      const desc = encodeURIComponent(ev.description || ev.summary || "");
+      const loc = encodeURIComponent(ev.location || "");
+      let datesParam = "";
+
+      if (ev.is_all_day) {
+        const dStr = (ev.start_at || "").slice(0, 10).replace(/-/g, "");
+        if (dStr) {
+          datesParam = `${dStr}/${dStr}`;
+        }
+      } else if (ev.start_at) {
+        try {
+          const st = new Date(ev.start_at);
+          const en = ev.end_at ? new Date(ev.end_at) : new Date(st.getTime() + 3600000);
+          const fmt = d => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+          datesParam = `${fmt(st)}/${fmt(en)}`;
+        } catch (e) {}
+      }
+
+      let recurParam = "";
+      if (ev.day_of_week != null && ev.start_time && ev.end_time) {
+        recurParam = "&recur=RRULE:FREQ=WEEKLY";
+        try {
+          const now = new Date();
+          const currentDayIdx = (now.getDay() + 6) % 7; // 0=Mon, 6=Sun
+          const diff = (ev.day_of_week - currentDayIdx + 7) % 7;
+          const target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diff);
+          const [sh, sm] = String(ev.start_time).split(":").map(Number);
+          const [eh, em] = String(ev.end_time).split(":").map(Number);
+          target.setHours(sh || 10, sm || 0, 0, 0);
+          const endTarget = new Date(target);
+          endTarget.setHours(eh || 11, em || 0, 0, 0);
+          if (endTarget <= target) endTarget.setHours(target.getHours() + 1);
+          const fmt = d => d.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+          datesParam = `${fmt(target)}/${fmt(endTarget)}`;
+        } catch (e) {}
+      }
+
+      return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${desc}&location=${loc}${datesParam ? `&dates=${datesParam}` : ""}${recurParam}`;
+    }
+
+    let currentModalEvent = null;
+    function openEventModal(ev) {
+      if (!ev) return;
+      currentModalEvent = ev;
+      const modal = document.getElementById("eventModal");
+      const titleEl = document.getElementById("eventModalTitle");
+      const deptPill = document.getElementById("eventModalDeptPill");
+      const bodyEl = document.getElementById("eventModalBody");
+      const sysBtn = document.getElementById("eventModalSysCalBtn");
+      const gcalLink = document.getElementById("eventModalGoogleCalLink");
+
+      const deptId = ev.department_id || "dept-acad";
+      const deptName = ev.department_name || (DEPARTMENTS[deptId] ? DEPARTMENTS[deptId].name : "Campus");
+
+      if (titleEl) titleEl.textContent = ev.title || ev.course_name || "Event Details";
+      if (deptPill) {
+        deptPill.className = `dept-pill dept-${deptId}`;
+        deptPill.textContent = deptName;
+      }
+
+      let timeDisplay = "";
+      if (ev.is_all_day) {
+        timeDisplay = "All Day";
+      } else if (ev.time_range_12h) {
+        timeDisplay = ev.time_range_12h;
+      } else if (ev.start_time && ev.end_time) {
+        timeDisplay = `${format12hJs(ev.start_time)} – ${format12hJs(ev.end_time)}`;
+      } else if (ev.start_at) {
+        timeDisplay = formatCampusEventTime(ev.start_at, ev.end_at, false);
+      }
+
+      let dateLabel = "";
+      if (ev.date_display) {
+        dateLabel = ev.date_display;
+      } else if (ev.day_of_week != null) {
+        dateLabel = DAYS[ev.day_of_week];
+      }
+
+      const desc = ev.description || ev.summary || "No detailed summary published for this session.";
+      const loc = ev.location || "Campus Venue TBA";
+      const host = ev.club_name || (ev.is_wm_event ? "William & Mary Campus" : "Student Organization");
+      const safeLink = ev.source_url ? safeWmSourceUrl(ev.source_url) : null;
+
+      if (bodyEl) {
+        bodyEl.innerHTML = `
+          <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+            <div style="font-size: 0.85rem; color: var(--muted); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span class="chip" style="font-weight: 600;">${escapeHtml(host)}</span>
+              ${dateLabel ? `<span class="chip">${escapeHtml(dateLabel)}</span>` : ""}
+              ${timeDisplay ? `<span class="chip num">${escapeHtml(timeDisplay)}</span>` : ""}
+              <span>📍 ${escapeHtml(loc)}</span>
+              ${ev.category ? `<span class="chip">${escapeHtml(ev.category)}</span>` : ""}
+            </div>
+            ${ev.conflicting_course ? `<div class="notice notice-bad" style="padding: 6px 12px; font-size: 0.82rem;">⚠️ Overlaps with your enrolled class: <strong>${escapeHtml(ev.conflicting_course)}</strong></div>` : ""}
+            <div style="font-size: 0.92rem; line-height: 1.5; color: var(--ink);">
+              ${escapeHtml(desc)}
+            </div>
+            ${safeLink ? `<div style="margin-top: 4px;"><a href="${safeLink.href}" target="_blank" rel="noopener noreferrer" class="crumbs">Open official event page ↗</a></div>` : ""}
+          </div>
+        `;
+      }
+
+      if (sysBtn) {
+        sysBtn.onclick = () => exportToSystemCalendar(currentModalEvent);
+      }
+      if (gcalLink) {
+        gcalLink.href = getGoogleCalendarUrl(ev);
+      }
+
+      if (modal && typeof modal.showModal === "function") {
+        modal.showModal();
+      }
+    }
+
+    function closeEventModal() {
+      const modal = document.getElementById("eventModal");
+      if (modal && typeof modal.close === "function") {
+        modal.close();
+      }
+    }
+
+    window._calClusters = window._calClusters || {};
+    window._allDayRegistry = window._allDayRegistry || {};
+
+    function minutesToTime(m) {
+      const h = Math.floor(m / 60);
+      const min = m % 60;
+      return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+    }
+
+    function openClusterModal(clusterItems, dayName, timeRange) {
+      if (typeof clusterItems === "string") {
+        if (window._calClusters && window._calClusters[clusterItems]) {
+          clusterItems = window._calClusters[clusterItems];
+        } else if (window._allDayRegistry && window._allDayRegistry[clusterItems]) {
+          clusterItems = window._allDayRegistry[clusterItems];
+        }
+      }
+      if (!clusterItems || !Array.isArray(clusterItems) || clusterItems.length === 0) return;
+
+      const modal = document.getElementById("clusterModal");
+      const titleEl = document.getElementById("clusterModalTitle");
+      const bodyEl = document.getElementById("clusterModalBody");
+
+      if (titleEl) {
+        titleEl.textContent = `${dayName || 'Day'} · ${timeRange || 'All Day'} (${clusterItems.length} Events)`;
+      }
+
+      if (bodyEl) {
+        bodyEl.innerHTML = clusterItems.map(item => {
+          const isClass = item.type === "class";
+          if (isClass) {
+            return `
+              <div style="background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: var(--radius-sm); padding: var(--space-3);">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                  <h4 style="margin: 0; font-size: 0.95rem; font-weight: 700; color: var(--ink);">${escapeHtml(item.course_name)}</h4>
+                  <span class="chip" style="color: var(--accent); font-weight: 600; font-size: 0.72rem;">Enrolled Course</span>
+                </div>
+                <div style="margin-top: 4px; font-size: 0.80rem; color: var(--muted); font-family: var(--font-mono);">
+                  🕒 ${escapeHtml(item.time_range_12h || item.start_time || '')}
+                  ${item.location ? ` · 📍 ${escapeHtml(item.location)}` : ''}
+                </div>
+              </div>
+            `;
+          } else {
+            const deptId = item.department_id || "dept-acad";
+            const deptName = item.department_name || (DEPARTMENTS[deptId] ? DEPARTMENTS[deptId].name : "Campus");
+            const deptColor = item.department_color || (DEPARTMENTS[deptId] ? DEPARTMENTS[deptId].color : '#4a5b66');
+            const savedInCal = isEventSaved(item);
+            const safeLink = item.source_url ? safeWmSourceUrl(item.source_url) : null;
+            const timeRangeStr = item.is_all_day ? "All Day" : (item.time_range_12h || `${item.start_time || ''} – ${item.end_time || ''}`);
+
+            return `
+              <div style="background: var(--surface); border: 1px solid var(--rule); border-left: 4px solid ${deptColor}; border-radius: var(--radius-sm); padding: var(--space-3); display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;">
+                  <div>
+                    <span class="dept-pill dept-${deptId}" style="margin-bottom: 4px;">${escapeHtml(deptName)}</span>
+                    <h4 style="margin: 2px 0 0 0; font-size: 0.95rem; font-weight: 600; color: var(--ink);">${escapeHtml(item.title)}</h4>
+                  </div>
+                  <button type="button" class="btn btn-xs ${savedInCal ? 'btn-gold' : 'btn-quiet'}" data-event="${escapeHtml(JSON.stringify(item))}" onclick="handleCardSaveToggle(this, event)" style="font-size: 0.72rem; padding: 3px 8px; white-space: nowrap;">
+                    ${savedInCal ? '✓ On My Calendar' : '+ Add to My Calendar'}
+                  </button>
+                </div>
+                <div style="font-size: 0.80rem; color: var(--muted); font-family: var(--font-mono); display: flex; gap: 8px; flex-wrap: wrap;">
+                  <span>🕒 ${escapeHtml(timeRangeStr)}</span>
+                  ${item.location ? `<span>📍 ${escapeHtml(item.location)}</span>` : ''}
+                </div>
+                ${item.has_conflict ? `<div class="notice notice-bad" style="padding: 4px 8px; font-size: 0.75rem;">⚠️ Overlaps with class: ${escapeHtml(item.conflicting_course || '')}</div>` : ''}
+                ${(item.description || item.summary) ? `<div style="font-size: 0.82rem; color: var(--ink-soft); line-height: 1.4; margin-top: 2px;">${escapeHtml(item.description || item.summary)}</div>` : ''}
+                ${safeLink ? `<div style="margin-top: 2px;"><a href="${safeLink.href}" target="_blank" rel="noopener noreferrer" style="font-size: 0.74rem; color: var(--accent); text-decoration: underline;">Open event page ↗</a></div>` : ''}
+              </div>
+            `;
+          }
+        }).join("");
+      }
+
+      if (modal && typeof modal.showModal === "function") {
+        modal.showModal();
+      }
+    }
+
+    function closeClusterModal() {
+      const modal = document.getElementById("clusterModal");
+      if (modal && typeof modal.close === "function") {
+        modal.close();
+      }
+    }
+
+    const clusterModalEl = document.getElementById("clusterModal");
+    if (clusterModalEl) {
+      clusterModalEl.addEventListener("click", (e) => {
+        if (e.target === clusterModalEl) closeClusterModal();
+      });
+    }
+
     function formatDurationJs(minutes) {
       if (minutes == null) return "";
       const mins = Math.max(0, Math.floor(minutes));
@@ -1604,6 +1913,9 @@
         if (!raw) return;
         const ev = JSON.parse(raw);
         toggleSaveEvent(ev, mouseEv);
+        const nowSaved = isEventSaved(ev);
+        btn.className = `btn btn-xs ${nowSaved ? 'btn-gold' : 'btn-quiet'}`;
+        btn.textContent = nowSaved ? '✓ On My Calendar' : '+ Add to My Calendar';
       } catch (err) {
         console.error("Failed to parse event for toggle:", err);
       }
@@ -1667,6 +1979,16 @@
     function setPlannerScope(scope) {
       plannerScope = scope;
       localStorage.setItem("planner_scope", scope);
+      loadWeeklyPlanner();
+    }
+
+    let plannerDeptFilter = "all";
+    function setPlannerDeptFilter(deptId) {
+      plannerDeptFilter = deptId;
+      const pills = document.querySelectorAll("#plannerDeptFilterGroup .cal-dept-pill");
+      pills.forEach(p => {
+        p.classList.toggle("active", p.dataset.dept === deptId);
+      });
       loadWeeklyPlanner();
     }
 
@@ -1791,7 +2113,12 @@
                 ${ev.category ? `<span><strong>Category:</strong> ${escapeHtml(ev.category)}</span>` : ""}
                 ${ev.location ? `<span><strong>Venue:</strong> ${escapeHtml(ev.location)}</span>` : ""}
               </div>
-              ${sourceLink}
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <button type="button" class="btn btn-quiet btn-xs" onclick="event.stopPropagation(); exportToSystemCalendar(JSON.parse(this.dataset.ev))" data-ev="${escapeHtml(JSON.stringify(ev))}" title="Add to Apple Calendar or macOS Calendar">📅 Add to System Calendar</button>
+                <a href="${getGoogleCalendarUrl(ev)}" target="_blank" rel="noopener noreferrer" class="btn btn-quiet btn-xs" onclick="event.stopPropagation()" title="Open Google Calendar">Google Cal ↗</a>
+                <button type="button" class="btn btn-quiet btn-xs" onclick="event.stopPropagation(); openEventModal(JSON.parse(this.dataset.ev))" data-ev="${escapeHtml(JSON.stringify(ev))}">Modal View</button>
+                ${sourceLink}
+              </div>
             </div>
           </div>
         </div>
@@ -1814,6 +2141,41 @@
 
         const res = await fetch(`/api/now-and-next?${params.toString()}`);
         const data = await res.json();
+
+        // Proactive non-lesson event alerts (starting in <= 30 mins)
+        try {
+          const nonLessonCandidates = [...(data.starting_soon || []), ...(data.happening_now || [])].filter(
+            ev => ev && ev.type !== 'class' && !ev.course_name
+          );
+          nonLessonCandidates.forEach(ev => {
+            const startsIn = ev.starts_in_minutes != null ? ev.starts_in_minutes : (ev.minutes_remaining != null ? 0 : null);
+            if (startsIn != null && startsIn <= 30) {
+              const dedupKey = ev.uid ? `notif_uid_${ev.uid}` : (ev.id ? `notif_id_${ev.id}` : `notif_t_${ev.title}_${ev.start_time || ev.start_at}`);
+              if (!sessionStorage.getItem(dedupKey)) {
+                sessionStorage.setItem(dedupKey, "1");
+                const title = ev.title || "Campus Event";
+                const loc = ev.location ? ` at ${ev.location}` : "";
+                const timeMsg = startsIn > 0 ? `starts in ${startsIn}m` : "is starting now";
+                const notifBody = `${title} ${timeMsg}${loc}.`;
+
+                showToast(`🔔 ${notifBody}`, "info");
+
+                if ("Notification" in window && Notification.permission === "granted") {
+                  try {
+                    new Notification("&.events · Campus Reminder", {
+                      body: notifBody,
+                      icon: "/favicon.svg"
+                    });
+                  } catch (e) {
+                    console.warn("Notification trigger notice:", e);
+                  }
+                }
+              }
+            }
+          });
+        } catch (notifErr) {
+          console.warn("Event alert notification error:", notifErr);
+        }
 
         // 1. Update Academic Priority Hero
         const heroContainer = document.getElementById("academicPriorityHero");
@@ -2418,8 +2780,18 @@
 
         const tMy = document.getElementById("plannerTabMy");
         const tAll = document.getElementById("plannerTabAll");
-        if (tMy) tMy.className = plannerScope === "my" ? "btn btn-xs btn-gold" : "btn btn-xs btn-quiet";
-        if (tAll) tAll.className = plannerScope === "all" ? "btn btn-xs btn-gold" : "btn btn-xs btn-quiet";
+        if (tMy) {
+          tMy.classList.toggle("active", plannerScope === "my");
+          tMy.setAttribute("aria-pressed", plannerScope === "my" ? "true" : "false");
+        }
+        if (tAll) {
+          tAll.classList.toggle("active", plannerScope === "all");
+          tAll.setAttribute("aria-pressed", plannerScope === "all" ? "true" : "false");
+        }
+        const deptGroupEl = document.getElementById("plannerDeptFilterGroup");
+        if (deptGroupEl) {
+          deptGroupEl.style.display = plannerScope === "all" ? "flex" : "none";
+        }
 
         let totalClassesCount = 0;
         let totalEventsCount = 0;
@@ -2494,8 +2866,12 @@
               }
             }
           } else {
-            // All campus events
-            dayEvents = d.events || [];
+            // All campus events with optional department filtering
+            let rawEvents = d.events || [];
+            if (plannerDeptFilter && plannerDeptFilter !== "all") {
+              rawEvents = rawEvents.filter(ev => ev.department_id === plannerDeptFilter);
+            }
+            dayEvents = rawEvents;
           }
 
           totalEventsCount += dayEvents.length;
@@ -2535,7 +2911,9 @@
         const container = document.getElementById("timetableContainer");
         if (!container) return;
 
+        // Expanded timeline from 7:00 AM (420 min) through 10:00 PM (16 hours)
         const HOURS = [
+          { hour: 7, label: "7am" },
           { hour: 8, label: "8am" },
           { hour: 9, label: "9am" },
           { hour: 10, label: "10am" },
@@ -2565,7 +2943,7 @@
           });
 
           timed.forEach(it => {
-            let sm = 8 * 60;
+            let sm = 7 * 60; // 420
             if (it.start_time && it.start_time.includes(":")) {
               const parts = it.start_time.split(":");
               sm = (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
@@ -2580,40 +2958,39 @@
             it._em = em;
           });
 
-          timed.sort((a, b) => a._sm - b._sm || (b._em - b._sm) - (a._em - a._sm));
-
-          const columns = [];
-          timed.forEach(it => {
-            let placed = false;
-            for (let c = 0; c < columns.length; c++) {
-              const last = columns[c][columns[c].length - 1];
-              if (last._em <= it._sm) {
-                columns[c].push(it);
-                it._col = c;
-                placed = true;
-                break;
-              }
+          timed.sort((a, b) => {
+            if (a._sm !== b._sm) return a._sm - b._sm;
+            if ((a.type === "class") !== (b.type === "class")) {
+              return a.type === "class" ? -1 : 1;
             }
-            if (!placed) {
-              it._col = columns.length;
-              columns.push([it]);
-            }
-          });
-
-          timed.forEach(it => {
-            const overlaps = timed.filter(other => !(other._em <= it._sm || other._sm >= it._em));
-            const maxCol = overlaps.reduce((max, cur) => Math.max(max, (cur._col ?? 0) + 1), 1);
-            it._totalCols = maxCol;
+            return (b._em - b._sm) - (a._em - a._sm);
           });
 
           return { allDay, timed };
         }
+
+        window._calClusters = {};
+        window._allDayRegistry = {};
+
+        processedDays.forEach(d => {
+          const res = layoutTimedItems(d.timeline || []);
+          d._allDay = res.allDay;
+          d._timed = res.timed;
+          window._allDayRegistry[d.day_index] = res.allDay;
+        });
+
+        const maxAllDayCount = processedDays.length
+          ? Math.max(0, ...processedDays.map(d => d._allDay.length))
+          : 0;
 
         container.innerHTML = `
           <div class="cal-grid">
             <!-- Left Time Gutter matching W&M Path -->
             <div class="cal-time-gutter" aria-hidden="true">
               <div class="cal-gutter-header">Time</div>
+              ${maxAllDayCount > 0 ? `
+                <div class="cal-gutter-all-day" style="height: 36px; min-height: 36px; max-height: 36px; line-height: 36px;">All Day</div>
+              ` : ''}
               <div class="cal-gutter-canvas">
                 ${HOURS.map((h, i) => `
                   <div class="cal-gutter-hour" style="top: ${i * 50}px;">
@@ -2630,7 +3007,32 @@
               const totalCount = d.total_commitments ?? (d.timeline?.length || 0);
               const countLabel = `${totalCount} item${totalCount === 1 ? '' : 's'}`;
 
-              const { allDay, timed } = layoutTimedItems(d.timeline || []);
+              const allDay = d._allDay || [];
+              const timed = d._timed || [];
+
+              // Group timed items into collision clusters
+              const clusters = [];
+              let currentCluster = [];
+              let clusterEnd = -1;
+
+              timed.forEach(it => {
+                if (currentCluster.length === 0) {
+                  currentCluster.push(it);
+                  clusterEnd = it._em;
+                } else {
+                  if (it._sm < clusterEnd) {
+                    currentCluster.push(it);
+                    clusterEnd = Math.max(clusterEnd, it._em);
+                  } else {
+                    clusters.push(currentCluster);
+                    currentCluster = [it];
+                    clusterEnd = it._em;
+                  }
+                }
+              });
+              if (currentCluster.length > 0) {
+                clusters.push(currentCluster);
+              }
 
               return `
                 <div class="cal-day-col ${isToday ? 'is-today' : ''}">
@@ -2648,73 +3050,105 @@
                     </div>
                   </div>
 
-                  ${allDay.length ? `
-                    <div class="cal-all-day-lane">
-                      ${allDay.map(it => `
-                        <div class="cal-grid-item is-event" style="position: static; margin-bottom: 2px;" onclick="toggleCalItemExpansion(this, event)">
-                          <div class="cal-item-title">${escapeHtml(it.title || it.course_name)}</div>
-                          <div class="cal-item-time">All Day</div>
-                          <div class="cal-item-expanded-details" style="display: none; margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--rule); font-size: 0.72rem;">
-                            ${it.description ? `<div style="margin-bottom: 4px;">${escapeHtml(it.description)}</div>` : ''}
-                            ${it.location ? `<div>📍 ${escapeHtml(it.location)}</div>` : ''}
-                          </div>
+                  ${maxAllDayCount > 0 ? `
+                    <div class="cal-all-day-lane" style="height: 36px; min-height: 36px; max-height: 36px; padding: 3px 4px; box-sizing: border-box; overflow: hidden;">
+                      ${allDay.length === 0 ? '' : (allDay.length === 1 ? `
+                        <div class="cal-grid-item is-event" style="position: static; height: 28px; min-height: 28px; display: flex; align-items: center; justify-content: space-between; padding: 2px 6px;" onclick="openClusterModal(window._allDayRegistry['${d.day_index}'], '${escapeHtml(d.day_name)}', 'All Day')" title="${escapeHtml(allDay[0].title || allDay[0].course_name)}">
+                          <div class="cal-item-title" style="font-size: 0.74rem;">${escapeHtml(allDay[0].title || allDay[0].course_name)}</div>
+                          <span class="chip chip-gold" style="font-size: 0.62rem; padding: 0 4px;">All Day</span>
                         </div>
-                      `).join("")}
+                      ` : `
+                        <div class="cal-grid-item is-event cal-allday-group" style="position: static; height: 28px; min-height: 28px; display: flex; align-items: center; justify-content: space-between; padding: 2px 6px; cursor: pointer;" onclick="openClusterModal(window._allDayRegistry['${d.day_index}'], '${escapeHtml(d.day_name)}', 'All Day')" title="Click to view all ${allDay.length} all-day events">
+                          <div class="cal-item-title" style="font-size: 0.74rem; font-weight: 600;">📅 ${allDay.length} All-Day Events</div>
+                          <span class="chip chip-gold" style="font-size: 0.62rem; padding: 1px 5px; font-weight: 600;">Expand ▾</span>
+                        </div>
+                      `)}
                     </div>
                   ` : ''}
 
                   <div class="cal-time-canvas">
-                    ${timed.map(item => {
-                      const offsetMin = Math.max(0, item._sm - 480);
-                      const durationMin = Math.max(30, item._em - item._sm);
-                      const topPx = Math.max(0, Math.min(660, (offsetMin / 60) * 50));
-                      const heightPx = Math.max(28, Math.min(700 - topPx, (durationMin / 60) * 50 - 3));
+                    ${clusters.map((cluster, cIdx) => {
+                      const clusterId = "clust_" + d.day_index + "_" + cIdx;
+                      window._calClusters[clusterId] = cluster;
 
-                      const totalCols = item._totalCols || 1;
-                      const colIdx = item._col || 0;
-                      const widthCss = totalCols > 1 ? `calc(${100 / totalCols}% - 4px)` : `calc(100% - 6px)`;
-                      const leftCss = totalCols > 1 ? `calc(${colIdx * (100 / totalCols)}% + 2px)` : `3px`;
+                      const startMin = Math.min(...cluster.map(it => it._sm));
+                      const endMin = Math.max(...cluster.map(it => it._em));
+                      const groupOffset = Math.max(0, startMin - 420);
+                      const groupDuration = Math.max(30, endMin - startMin);
+                      const topPx = Math.max(0, Math.min(760, (groupOffset / 60) * 50));
+                      const heightPx = Math.max(28, Math.min(800 - topPx, (groupDuration / 60) * 50 - 3));
+                      const timeRange = format12hJs(minutesToTime(startMin)) + " – " + format12hJs(minutesToTime(endMin));
 
-                      const timeRange = item.time_range_12h || `${item.start_time_12h || item.start_time || ''} – ${item.end_time_12h || item.end_time || ''}`;
+                      const renderCard = (item, wCss, lCss, customTop = null, customHeight = null) => {
+                        const itOffset = Math.max(0, item._sm - 420);
+                        const itDur = Math.max(30, item._em - item._sm);
+                        const itTop = customTop !== null ? customTop : Math.max(0, Math.min(760, (itOffset / 60) * 50));
+                        const itHeight = customHeight !== null ? customHeight : Math.max(28, Math.min(800 - itTop, (itDur / 60) * 50 - 3));
+                        const itRange = item.time_range_12h || `${item.start_time_12h || item.start_time || ''} – ${item.end_time_12h || item.end_time || ''}`;
 
-                      if (item.type === "class") {
-                        return `
-                          <div class="cal-grid-item is-class" style="top: ${topPx}px; height: ${heightPx}px; width: ${widthCss}; left: ${leftCss};" onclick="toggleCalItemExpansion(this, event)">
-                            <div class="cal-item-title">${escapeHtml(item.course_name)}</div>
-                            <div class="cal-item-time">${escapeHtml(timeRange)}</div>
-                            ${item.location ? `<div class="cal-item-loc">${escapeHtml(item.location)}</div>` : ""}
-                            <div class="cal-item-expanded-details" style="display: none; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--rule); font-size: 0.76rem;">
-                              <div style="font-weight: 600; color: var(--accent); margin-bottom: 2px;">Enrolled Course</div>
-                              ${item.location ? `<div>📍 Location: ${escapeHtml(item.location)}</div>` : ''}
-                              <div style="margin-top: 4px;">
-                                <button type="button" class="btn btn-xs btn-quiet" onclick="openFiltersModal('classes', ${d.day_index})" style="font-size: 0.70rem;">Manage Course</button>
+                        if (item.type === "class") {
+                          return `
+                            <div class="cal-grid-item is-class" style="top: ${itTop}px; height: ${itHeight}px; width: ${wCss}; left: ${lCss};" onclick="toggleCalItemExpansion(this, event)">
+                              <div class="cal-item-title">${escapeHtml(item.course_name)}</div>
+                              <div class="cal-item-time">${escapeHtml(itRange)}</div>
+                              ${item.location ? `<div class="cal-item-loc">${escapeHtml(item.location)}</div>` : ""}
+                              <div class="cal-item-expanded-details" style="display: none; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--rule); font-size: 0.76rem;">
+                                <div style="font-weight: 600; color: var(--accent); margin-bottom: 2px;">Enrolled Course</div>
+                                ${item.location ? `<div>📍 Location: ${escapeHtml(item.location)}</div>` : ''}
+                                <div style="margin-top: 4px;">
+                                  <button type="button" class="btn btn-xs btn-quiet" onclick="openFiltersModal('classes', ${d.day_index})" style="font-size: 0.70rem;">Manage Course</button>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        `;
-                      } else {
-                        const deptColor = item.department_color || (DEPARTMENTS[item.department_id] ? DEPARTMENTS[item.department_id].color : '#4a5b66');
-                        const savedInCal = isEventSaved(item);
-                        const safeLink = item.source_url ? safeWmSourceUrl(item.source_url) : null;
-                        const conflictBadge = item.has_conflict ? `<span style="color: var(--bad); font-weight: 700; font-size: 0.66rem;">⚠️ Overlap</span>` : "";
+                          `;
+                        } else {
+                          const deptColor = item.department_color || (DEPARTMENTS[item.department_id] ? DEPARTMENTS[item.department_id].color : '#4a5b66');
+                          const savedInCal = isEventSaved(item);
+                          const safeLink = item.source_url ? safeWmSourceUrl(item.source_url) : null;
+                          const conflictBadge = item.has_conflict ? `<span style="color: var(--bad); font-weight: 700; font-size: 0.66rem;">⚠️ Overlap</span>` : "";
 
-                        return `
-                          <div class="cal-grid-item is-event ${item.has_conflict ? 'has-conflict' : ''}" style="top: ${topPx}px; height: ${heightPx}px; width: ${widthCss}; left: ${leftCss}; ${item.has_conflict ? '' : `border-left-color: ${deptColor};`}" onclick="toggleCalItemExpansion(this, event)">
-                            <div class="cal-item-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div>
-                            <div class="cal-item-time">${escapeHtml(timeRange)} ${conflictBadge}</div>
-                            ${item.location ? `<div class="cal-item-loc">${escapeHtml(item.location)}</div>` : ""}
-                            <div class="cal-item-expanded-details" style="display: none; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--rule); font-size: 0.76rem;">
-                              ${(item.description || item.summary) ? `<div style="color: var(--ink-soft); margin-bottom: 6px; line-height: 1.35;">${escapeHtml(item.description || item.summary)}</div>` : ''}
-                              <div style="display: flex; gap: 6px; align-items: center; justify-content: space-between; margin-top: 4px; flex-wrap: wrap;">
-                                <button type="button" class="btn btn-xs ${savedInCal ? 'btn-gold' : 'btn-quiet'}" data-event="${escapeHtml(JSON.stringify(item))}" onclick="handleCardSaveToggle(this, event)" style="font-size: 0.70rem; padding: 2px 6px;">
-                                  ${savedInCal ? '✓ On My Calendar' : '+ Add to My Calendar'}
-                                </button>
-                                ${safeLink ? `<a href="${safeLink.href}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="font-size: 0.70rem; color: var(--accent); text-decoration: underline;">Open Link ↗</a>` : ''}
+                          return `
+                            <div class="cal-grid-item is-event ${item.has_conflict ? 'has-conflict' : ''}" style="top: ${itTop}px; height: ${itHeight}px; width: ${wCss}; left: ${lCss}; ${item.has_conflict ? '' : `border-left-color: ${deptColor};`}" onclick="toggleCalItemExpansion(this, event)">
+                              <div class="cal-item-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div>
+                              <div class="cal-item-time">${escapeHtml(itRange)} ${conflictBadge}</div>
+                              ${item.location ? `<div class="cal-item-loc">${escapeHtml(item.location)}</div>` : ""}
+                              <div class="cal-item-expanded-details" style="display: none; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--rule); font-size: 0.76rem;">
+                                ${(item.description || item.summary) ? `<div style="color: var(--ink-soft); margin-bottom: 6px; line-height: 1.35;">${escapeHtml(item.description || item.summary)}</div>` : ''}
+                                <div style="display: flex; gap: 6px; align-items: center; justify-content: space-between; margin-top: 4px; flex-wrap: wrap;">
+                                  <button type="button" class="btn btn-xs ${savedInCal ? 'btn-gold' : 'btn-quiet'}" data-event="${escapeHtml(JSON.stringify(item))}" onclick="handleCardSaveToggle(this, event)" style="font-size: 0.70rem; padding: 2px 6px;">
+                                    ${savedInCal ? '✓ On My Calendar' : '+ Add to My Calendar'}
+                                  </button>
+                                  ${safeLink ? `<a href="${safeLink.href}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="font-size: 0.70rem; color: var(--accent); text-decoration: underline;">Open Link ↗</a>` : ''}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        `;
+                          `;
+                        }
+                      };
+
+                      if (cluster.length === 1) {
+                        return renderCard(cluster[0], "calc(100% - 6px)", "3px");
                       }
+
+                      if (cluster.length === 2) {
+                        return [
+                          renderCard(cluster[0], "calc(48% - 4px)", "2px"),
+                          renderCard(cluster[1], "calc(48% - 4px)", "calc(52% + 2px)")
+                        ].join("");
+                      }
+
+                      // cluster.length >= 3:
+                      // First item in Column 0 (width: calc(48% - 4px), left: 2px)
+                      // Clean overflow card in Column 2 (width: calc(48% - 4px), left: calc(52% + 2px))
+                      const overflowCount = cluster.length - 1;
+                      const primaryCard = renderCard(cluster[0], "calc(48% - 4px)", "2px");
+                      const overflowCard = `
+                        <div class="cal-grid-item cal-overflow-card" style="top: ${topPx}px; height: ${heightPx}px; width: calc(48% - 4px); left: calc(52% + 2px);" onclick="openClusterModal(window._calClusters['${clusterId}'], '${escapeHtml(d.day_name)}', '${escapeHtml(timeRange)}')">
+                          <div class="cal-item-title">+${overflowCount} more events</div>
+                          <div class="cal-item-time">Click to expand (${overflowCount})</div>
+                        </div>
+                      `;
+                      return primaryCard + overflowCard;
                     }).join("")}
                   </div>
                 </div>

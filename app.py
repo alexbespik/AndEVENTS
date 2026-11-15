@@ -4,12 +4,13 @@ import re
 import sqlite3
 import urllib.request
 import asyncio
-from datetime import date, datetime, timedelta
+from contextlib import asynccontextmanager
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException, Query, Request, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from wm_data import ensure_schema, normalize_wm_location
@@ -244,12 +245,6 @@ DB_PATH = CONTENT_ROOT / "schedule.db"
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 CAMPUS_TZ = ZoneInfo("America/New_York")
 
-app = FastAPI(title="&.events — Campus Schedule & Planning Engine")
-
-STATIC_DIR.mkdir(exist_ok=True)
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
@@ -258,6 +253,98 @@ def get_db():
     conn.execute("PRAGMA journal_mode = WAL;")
     conn.execute("PRAGMA foreign_keys = ON;")
     return conn
+
+
+def _run_parser_worker(delay: float = 0.0, timeout: float = 4.0) -> tuple[int, int]:
+    from import_wm_events import discover_and_import
+    worker_conn = get_db()
+    try:
+        res = discover_and_import(worker_conn, delay=delay, timeout=timeout, discover_directory=False)
+        worker_conn.commit()
+        return res
+    finally:
+        worker_conn.close()
+
+
+_PARSER_LOCK = asyncio.Lock()
+
+
+async def _daily_parser_sync_loop():
+    """
+    Background worker periodically synchronizing campus events feed.
+    Enforces 24-hour sync intervals, graceful exception handling, and avoids
+    triggering during testing runs or while an explicit user sync holds the lock.
+    """
+    if os.environ.get("TESTING") == "1":
+        return
+
+    try:
+        # Initial sleep so test runners using TestClient don't trigger crawlers
+        await asyncio.sleep(15)
+        while True:
+            try:
+                conn = get_db()
+                cur = conn.cursor()
+                cur.execute("SELECT value FROM app_meta WHERE key = 'last_parser_sync'")
+                row = cur.fetchone()
+                last_sync_str = row[0] if row else None
+                conn.close()
+
+                needs_sync = False
+                now_dt = datetime.now(CAMPUS_TZ)
+                if not last_sync_str:
+                    needs_sync = True
+                else:
+                    try:
+                        last_sync_dt = datetime.fromisoformat(last_sync_str)
+                        if last_sync_dt.tzinfo is None:
+                            last_sync_dt = last_sync_dt.replace(tzinfo=CAMPUS_TZ)
+                        elapsed = (now_dt - last_sync_dt).total_seconds()
+                        if elapsed >= 86400:
+                            needs_sync = True
+                    except Exception:
+                        needs_sync = True
+
+                if needs_sync and not _PARSER_LOCK.locked():
+                    async with _PARSER_LOCK:
+                        try:
+                            await asyncio.to_thread(_run_parser_worker, 0.0, 6.0)
+                            now_iso = datetime.now(CAMPUS_TZ).isoformat()
+                            wconn = get_db()
+                            wcur = wconn.cursor()
+                            wcur.execute("INSERT OR REPLACE INTO app_meta (key, value) VALUES ('last_parser_sync', ?)", (now_iso,))
+                            wconn.commit()
+                            wconn.close()
+                        except Exception:
+                            pass
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                pass
+
+            await asyncio.sleep(60)
+    except asyncio.CancelledError:
+        pass
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    sync_task = asyncio.create_task(_daily_parser_sync_loop())
+    try:
+        yield
+    finally:
+        sync_task.cancel()
+        try:
+            await sync_task
+        except asyncio.CancelledError:
+            pass
+
+
+app = FastAPI(title="&.events — Campus Schedule & Planning Engine", lifespan=lifespan)
+
+STATIC_DIR.mkdir(exist_ok=True)
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 def time_to_minutes(t_str: str) -> int:
@@ -863,20 +950,6 @@ def get_wm_events(
     return list(events.values())
 
 
-def _run_parser_worker(delay: float = 0.0, timeout: float = 4.0) -> tuple[int, int]:
-    from import_wm_events import discover_and_import
-    worker_conn = get_db()
-    try:
-        res = discover_and_import(worker_conn, delay=delay, timeout=timeout, discover_directory=False)
-        worker_conn.commit()
-        return res
-    finally:
-        worker_conn.close()
-
-
-_PARSER_LOCK = asyncio.Lock()
-
-
 @app.post("/api/parser/run")
 async def run_calendar_parser():
     """
@@ -939,10 +1012,316 @@ def get_parser_status():
     row = cur.fetchone()
     last_sync = row[0] if row else None
     conn.close()
+
+    next_auto_sync = None
+    if last_sync:
+        try:
+            last_dt = datetime.fromisoformat(last_sync)
+            if last_dt.tzinfo is None:
+                last_dt = last_dt.replace(tzinfo=CAMPUS_TZ)
+            next_dt = last_dt + timedelta(hours=24)
+            next_auto_sync = next_dt.isoformat()
+        except Exception:
+            next_auto_sync = None
+
     return {
         "total_events": total_events,
         "last_sync": last_sync,
+        "auto_sync_enabled": True,
+        "sync_interval_hours": 24,
+        "next_auto_sync": next_auto_sync,
     }
+
+
+def _escape_ical_text(text: Optional[str]) -> str:
+    """Escapes text for RFC 5545 iCalendar values."""
+    if not text:
+        return ""
+    text = str(text).replace("\r\n", "\n").replace("\r", "\n")
+    text = text.replace("\\", "\\\\")
+    text = text.replace(";", r"\;")
+    text = text.replace(",", r"\,")
+    text = text.replace("\n", r"\n")
+    return text
+
+
+def _format_wm_vevent(ev: dict, dtstamp: str) -> list[str]:
+    raw_uid = str(ev.get("uid") or "")
+    clean_uid = raw_uid.splitlines()[0].strip() if raw_uid else ""
+    lines = [
+        "BEGIN:VEVENT",
+        f"UID:{clean_uid}",
+        f"DTSTAMP:{dtstamp}",
+        f"SUMMARY:{_escape_ical_text(ev.get('title') or 'Campus Event')}",
+    ]
+    desc = ev.get("description") or ev.get("summary") or ""
+    if desc:
+        lines.append(f"DESCRIPTION:{_escape_ical_text(desc)}")
+    loc = ev.get("location") or ""
+    if loc:
+        lines.append(f"LOCATION:{_escape_ical_text(loc)}")
+    if ev.get("source_url"):
+        clean_url = str(ev["source_url"]).splitlines()[0].strip()
+        if clean_url:
+            lines.append(f"URL:{clean_url}")
+    lines.append("STATUS:CONFIRMED")
+
+    is_all_day = bool(ev.get("is_all_day"))
+    start_at = str(ev.get("start_at") or "")
+    end_at = str(ev.get("end_at") or "") if ev.get("end_at") else ""
+
+    if is_all_day or (len(start_at) == 10 and "T" not in start_at):
+        try:
+            st_d = date.fromisoformat(start_at[:10])
+            if end_at:
+                try:
+                    en_d = date.fromisoformat(end_at[:10])
+                    if en_d <= st_d:
+                        en_d = st_d + timedelta(days=1)
+                except Exception:
+                    en_d = st_d + timedelta(days=1)
+            else:
+                en_d = st_d + timedelta(days=1)
+            lines.append(f"DTSTART;VALUE=DATE:{st_d.strftime('%Y%m%d')}")
+            lines.append(f"DTEND;VALUE=DATE:{en_d.strftime('%Y%m%d')}")
+        except Exception:
+            lines.append(f"DTSTART;VALUE=DATE:{datetime.now(CAMPUS_TZ).strftime('%Y%m%d')}")
+            lines.append(f"DTEND;VALUE=DATE:{(datetime.now(CAMPUS_TZ) + timedelta(days=1)).strftime('%Y%m%d')}")
+    else:
+        try:
+            st_dt = datetime.fromisoformat(start_at.replace("Z", "+00:00"))
+            if st_dt.tzinfo is None:
+                st_dt = st_dt.replace(tzinfo=CAMPUS_TZ)
+            st_utc = st_dt.astimezone(timezone.utc)
+            if end_at:
+                try:
+                    en_dt = datetime.fromisoformat(end_at.replace("Z", "+00:00"))
+                    if en_dt.tzinfo is None:
+                        en_dt = en_dt.replace(tzinfo=CAMPUS_TZ)
+                    en_utc = en_dt.astimezone(timezone.utc)
+                    if en_utc <= st_utc:
+                        en_utc = st_utc + timedelta(hours=1)
+                except Exception:
+                    en_utc = st_utc + timedelta(hours=1)
+            else:
+                en_utc = st_utc + timedelta(hours=1)
+
+            lines.append(f"DTSTART:{st_utc.strftime('%Y%m%dT%H%M%SZ')}")
+            lines.append(f"DTEND:{en_utc.strftime('%Y%m%dT%H%M%SZ')}")
+        except Exception:
+            now_u = datetime.now(timezone.utc)
+            lines.append(f"DTSTART:{now_u.strftime('%Y%m%dT%H%M%SZ')}")
+            lines.append(f"DTEND:{(now_u + timedelta(hours=1)).strftime('%Y%m%dT%H%M%SZ')}")
+
+    lines.append("END:VEVENT")
+    return lines
+
+
+def _format_club_vevent(ev: dict, dtstamp: str) -> list[str]:
+    bydays = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+    day_idx = int(ev.get("day_of_week") or 0) % 7
+    byday = bydays[day_idx]
+
+    now_c = datetime.now(CAMPUS_TZ)
+    days_ahead = (day_idx - now_c.weekday()) % 7
+    target_date = now_c.date() + timedelta(days=days_ahead)
+
+    try:
+        sh, sm = map(int, str(ev.get("start_time") or "12:00").split(":")[:2])
+    except Exception:
+        sh, sm = 12, 0
+    try:
+        eh, em = map(int, str(ev.get("end_time") or "13:00").split(":")[:2])
+    except Exception:
+        eh, em = 13, 0
+
+    st_campus = datetime(target_date.year, target_date.month, target_date.day, sh, sm, tzinfo=CAMPUS_TZ)
+    en_campus = datetime(target_date.year, target_date.month, target_date.day, eh, em, tzinfo=CAMPUS_TZ)
+    if en_campus <= st_campus:
+        en_campus += timedelta(hours=1)
+
+    uid = f"club-{ev['id']}@andedu.events"
+    summary = f"{ev.get('club_name')}: {ev.get('title')}" if ev.get("club_name") else ev.get("title", "Club Meeting")
+
+    lines = [
+        "BEGIN:VEVENT",
+        f"UID:{uid}",
+        f"DTSTAMP:{dtstamp}",
+        f"SUMMARY:{_escape_ical_text(summary)}",
+    ]
+    desc = ev.get("description") or ""
+    if desc:
+        lines.append(f"DESCRIPTION:{_escape_ical_text(desc)}")
+    loc = ev.get("location") or ""
+    if loc:
+        lines.append(f"LOCATION:{_escape_ical_text(loc)}")
+    if ev.get("category"):
+        lines.append(f"CATEGORIES:{_escape_ical_text(ev['category'])}")
+    lines.append("STATUS:CONFIRMED")
+    lines.append(f"DTSTART;TZID=America/New_York:{st_campus.strftime('%Y%m%dT%H%M%S')}")
+    lines.append(f"DTEND;TZID=America/New_York:{en_campus.strftime('%Y%m%dT%H%M%S')}")
+    lines.append(f"RRULE:FREQ=WEEKLY;BYDAY={byday}")
+    lines.append("END:VEVENT")
+    return lines
+
+
+def _format_class_vevent(ev: dict, dtstamp: str) -> list[str]:
+    bydays = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"]
+    day_idx = int(ev.get("day_of_week") or 0) % 7
+    byday = bydays[day_idx]
+
+    now_c = datetime.now(CAMPUS_TZ)
+    days_ahead = (day_idx - now_c.weekday()) % 7
+    target_date = now_c.date() + timedelta(days=days_ahead)
+
+    try:
+        sh, sm = map(int, str(ev.get("start_time") or "10:00").split(":")[:2])
+    except Exception:
+        sh, sm = 10, 0
+    try:
+        eh, em = map(int, str(ev.get("end_time") or "10:50").split(":")[:2])
+    except Exception:
+        eh, em = 10, 50
+
+    st_campus = datetime(target_date.year, target_date.month, target_date.day, sh, sm, tzinfo=CAMPUS_TZ)
+    en_campus = datetime(target_date.year, target_date.month, target_date.day, eh, em, tzinfo=CAMPUS_TZ)
+    if en_campus <= st_campus:
+        en_campus += timedelta(hours=1)
+
+    uid = f"class-{ev['id']}@andedu.events"
+    summary = ev.get("course_name") or "Enrolled Class"
+
+    lines = [
+        "BEGIN:VEVENT",
+        f"UID:{uid}",
+        f"DTSTAMP:{dtstamp}",
+        f"SUMMARY:{_escape_ical_text(summary)}",
+    ]
+    loc = ev.get("location") or ""
+    if loc:
+        lines.append(f"LOCATION:{_escape_ical_text(loc)}")
+    lines.append("CATEGORIES:Education,Academics")
+    lines.append("STATUS:CONFIRMED")
+    lines.append(f"DTSTART;TZID=America/New_York:{st_campus.strftime('%Y%m%dT%H%M%S')}")
+    lines.append(f"DTEND;TZID=America/New_York:{en_campus.strftime('%Y%m%dT%H%M%S')}")
+    lines.append(f"RRULE:FREQ=WEEKLY;BYDAY={byday}")
+    lines.append("END:VEVENT")
+    return lines
+
+
+def _build_vcalendar_payload(vevents_blocks: list[list[str]]) -> str:
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//AndEDU//AndEVENTS//EN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+    ]
+    for ev_lines in vevents_blocks:
+        lines.extend(ev_lines)
+    lines.append("END:VCALENDAR")
+    return "\r\n".join(lines) + "\r\n"
+
+
+@app.get("/api/calendar/export.ics")
+def export_system_calendar(
+    event_id: Optional[int] = Query(None, description="Club event ID"),
+    uid: Optional[str] = Query(None, description="Campus event UID"),
+    class_id: Optional[int] = Query(None, description="User class ID"),
+    scope: Optional[str] = Query(None, description="Export scope: my, all, classes, clubs"),
+):
+    """
+    Exports campus events, student courses, or recurring club meetings as RFC 5545 iCalendar (.ics) files.
+    """
+    if not any([event_id, uid, class_id, scope]):
+        raise HTTPException(
+            status_code=400,
+            detail="At least one export parameter ('event_id', 'uid', 'class_id', or 'scope') must be provided."
+        )
+
+    dtstamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    vevents_blocks = []
+    slug_name = "calendar"
+
+    conn = get_db()
+    try:
+        cur = conn.cursor()
+        if uid:
+            cur.execute("SELECT * FROM wm_events WHERE uid = ?", (uid,))
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail=f"Campus event with UID '{uid}' not found.")
+            ev = dict(row)
+            vevents_blocks.append(_format_wm_vevent(ev, dtstamp))
+            slug_name = re.sub(r"[^a-zA-Z0-9_\-]+", "_", ev.get("title", "event").lower()).strip("_")[:40] or "campus_event"
+
+        elif event_id:
+            cur.execute("SELECT * FROM club_events WHERE id = ?", (event_id,))
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail=f"Club event with ID '{event_id}' not found.")
+            ev = dict(row)
+            vevents_blocks.append(_format_club_vevent(ev, dtstamp))
+            slug_name = re.sub(r"[^a-zA-Z0-9_\-]+", "_", ev.get("title", "event").lower()).strip("_")[:40] or "club_event"
+
+        elif class_id:
+            cur.execute("SELECT * FROM user_classes WHERE id = ?", (class_id,))
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail=f"Class with ID '{class_id}' not found.")
+            ev = dict(row)
+            vevents_blocks.append(_format_class_vevent(ev, dtstamp))
+            slug_name = re.sub(r"[^a-zA-Z0-9_\-]+", "_", ev.get("course_name", "class").lower()).strip("_")[:40] or "class"
+
+        elif scope:
+            clean_scope = scope.lower().strip()
+            if clean_scope == "my":
+                cur.execute("SELECT * FROM user_classes ORDER BY day_of_week ASC, start_time ASC")
+                for r in cur.fetchall():
+                    vevents_blocks.append(_format_class_vevent(dict(r), dtstamp))
+                cur.execute("SELECT * FROM club_events ORDER BY day_of_week ASC, start_time ASC")
+                for r in cur.fetchall():
+                    vevents_blocks.append(_format_club_vevent(dict(r), dtstamp))
+                slug_name = "wm_my_schedule"
+
+            elif clean_scope == "all":
+                cur.execute("SELECT * FROM user_classes ORDER BY day_of_week ASC, start_time ASC")
+                for r in cur.fetchall():
+                    vevents_blocks.append(_format_class_vevent(dict(r), dtstamp))
+                cur.execute("SELECT * FROM club_events ORDER BY day_of_week ASC, start_time ASC")
+                for r in cur.fetchall():
+                    vevents_blocks.append(_format_club_vevent(dict(r), dtstamp))
+                today_iso = datetime.now(CAMPUS_TZ).date().isoformat()
+                cur.execute("SELECT * FROM wm_events WHERE start_at >= ? ORDER BY start_at ASC LIMIT 100", (today_iso,))
+                for r in cur.fetchall():
+                    vevents_blocks.append(_format_wm_vevent(dict(r), dtstamp))
+                slug_name = "wm_campus_schedule"
+
+            elif clean_scope == "classes":
+                cur.execute("SELECT * FROM user_classes ORDER BY day_of_week ASC, start_time ASC")
+                for r in cur.fetchall():
+                    vevents_blocks.append(_format_class_vevent(dict(r), dtstamp))
+                slug_name = "wm_classes"
+
+            elif clean_scope == "clubs":
+                cur.execute("SELECT * FROM club_events ORDER BY day_of_week ASC, start_time ASC")
+                for r in cur.fetchall():
+                    vevents_blocks.append(_format_club_vevent(dict(r), dtstamp))
+                slug_name = "wm_clubs"
+
+            else:
+                raise HTTPException(status_code=400, detail=f"Invalid scope '{scope}'. Supported scopes: my, all, classes, clubs.")
+    finally:
+        conn.close()
+
+    ical_content = _build_vcalendar_payload(vevents_blocks)
+    filename = f"{slug_name}.ics"
+
+    return Response(
+        content=ical_content,
+        media_type="text/calendar; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+    )
 
 
 @app.post("/api/events", status_code=status.HTTP_201_CREATED)

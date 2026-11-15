@@ -269,4 +269,100 @@ Run tests after every change:
 ```bash
 python3 -m unittest discover tests && python3 -m unittest test_wm_data.py && python3 -m unittest test_import_wm_events.py
 ```
-*(All 27 tests must stay green at all times).*
+*(All tests must stay green at all times).*
+
+---
+
+## 7. Design System Rules, Daily Sync, & Calendar Export Contracts
+
+### 7.1 Prominent Design Rule: Top Bar Navigation & Arrangement Tabs
+To eliminate clumsy AI dashboard aesthetics and clunky background grayness:
+- **Floating State (Micro-Elevation)**: Active and hovered states MUST use subtle micro-elevation:
+  `transform: translateY(-1px); transition: transform 120ms var(--ease), color 120ms var(--ease);`
+- **Pure Transparent Background**:
+  Zero background grayness across navigation modes (`.mode`) and arrangement tabs (`.arrangement-tab`).
+  Enforce `background: transparent !important` on hover and active states.
+  Never use sunk containers, rounded pill boxes, or gray container wrappers on top-level tabs.
+- **Pure Cypher Gold Underline Indicator**:
+  Active tabs display a sharp 2px bottom accent rule:
+  ```css
+  .arrangement-tab[aria-pressed="true"]::after,
+  .arrangement-tab.active::after,
+  .mode[aria-pressed="true"]::after,
+  .mode[data-active]::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2px;
+    background: var(--gold);
+    border-radius: 1px;
+  }
+  ```
+- **Accessibility & Motion**:
+  In `@media (prefers-reduced-motion: reduce)`, disable transform elevations:
+  `.mode, .arrangement-tab { transform: none !important; transition: none !important; }`.
+
+---
+
+### 7.2 Automated Daily Background Update Loop
+- **FastAPI Lifespan Manager**:
+  Managed via `@asynccontextmanager async def lifespan(app: FastAPI)` which spawns `_daily_parser_sync_loop()` on app startup and cleanly cancels and awaits it during shutdown.
+- **Test Isolation**:
+  - The loop sleeps for 15 seconds on initial boot so unit tests executing with Starlette `TestClient(app)` execute without spawning network crawlers.
+  - If `os.environ.get("TESTING") == "1"`, the background loop terminates immediately.
+- **24-Hour Synchronization Schedule**:
+  - Periodically wakes every 60 seconds.
+  - Queries `app_meta` for key `last_parser_sync`.
+  - If missing or elapsed seconds `>= 86400` (24 hours):
+    - Acquires `_PARSER_LOCK` (waiting if a manual user sync is currently in-flight).
+    - Runs `await asyncio.to_thread(_run_parser_worker, 0.0, 6.0)`.
+    - Updates `last_parser_sync` with the current ISO timestamp in Eastern Time (`America/New_York`).
+    - Catches all parser errors and network timeouts gracefully to preserve loop longevity.
+- **Status Endpoint Contract (`GET /api/parser/status`)**:
+  Returns:
+  ```json
+  {
+    "total_events": 597,
+    "last_sync": "2026-11-14T20:20:00-05:00",
+    "auto_sync_enabled": true,
+    "sync_interval_hours": 24,
+    "next_auto_sync": "2026-11-15T20:20:00-05:00"
+  }
+  ```
+
+---
+
+### 7.3 System Calendar Export Contract (`GET /api/calendar/export.ics`)
+Exports calendar data as standard RFC 5545 iCalendar (`.ics`) files for native import into Apple Calendar (macOS / iOS), Google Calendar, and Microsoft Outlook.
+
+- **Parameters**:
+  - `event_id`: ID of club meeting from `club_events`
+  - `uid`: UID of dated campus event from `wm_events`
+  - `class_id`: ID of enrolled student lecture from `user_classes`
+  - `scope`: Batch export scope (`my` for enrolled classes + club meetings, `all` for classes + clubs + upcoming campus events, `classes`, or `clubs`)
+- **Validation**:
+  - Returns `HTTP 400 Bad Request` if no valid target parameter is supplied.
+  - Returns `HTTP 404 Not Found` if the requested event, class, or UID does not exist in the database.
+- **RFC 5545 Formatting Rules**:
+  - Strict CRLF line terminations (`\r\n`).
+  - Standard headers: `BEGIN:VCALENDAR`, `VERSION:2.0`, `PRODID:-//AndEDU//AndEVENTS//EN`, `CALSCALE:GREGORIAN`, `METHOD:PUBLISH`.
+  - Text escaping for summary, description, and location (`\\`, `\;`, `\,`, `\n`).
+  - Recurring courses and club meetings calculate next occurrence and attach `RRULE:FREQ=WEEKLY;BYDAY=...`.
+  - Dated campus events use `DTSTART;VALUE=DATE` for all-day events and UTC `Z` timestamps for timed events.
+  - Output header: `Content-Type: text/calendar; charset=utf-8` with `Content-Disposition: attachment; filename="{safe_slug}.ics"`.
+
+---
+
+### 7.4 Non-Lesson Campus Event Notifications & Calendar Integration
+- **Proactive Campus Alerts**:
+  - In `loadNowAndNext()`, candidate events in `starting_soon` and `happening_now` are filtered to strictly non-lesson campus events (`ev.type !== 'class' && !ev.course_name`).
+  - Events starting within 30 minutes (`0 < starts_in_minutes <= 30` or starting now) trigger notifications.
+  - In-app notification delivered via `showToast("🔔 ...", "info")`.
+  - Desktop OS-level notification fired via Web `Notification` API when permission is granted.
+  - Deduplicated in `sessionStorage` (`notif_...`) so each event triggers at most once per active browser session.
+- **Calendar Action Buttons**:
+  - `[📅 Add to System Calendar]` button directly on live event cards and within the detailed event modal (`openEventModal(ev)`).
+  - Google Calendar web link option (`getGoogleCalendarUrl(ev)`) generating instant event creation links with recurrence.
+  - `[📅 Export Calendar (.ics)]` button on the Weekly Planner summary bar to export the student's schedule.

@@ -438,6 +438,53 @@ Classifies events using Google Gemini when `GEMINI_API_KEY` is present; seamless
 
 ---
 
+### 2.4 System Calendar Export Contract
+
+#### `GET /api/calendar/export.ics`
+Exports individual dated campus events (`wm_events`), weekly student course sessions (`user_classes`), or recurring student organization meetings (`club_events`) as standard RFC 5545 iCalendar files (`.ics`) for native import into Apple Calendar, Google Calendar, or Microsoft Outlook.
+
+- **Query Parameters**:
+  - `event_id`: integer (optional, ID of recurring club event from `club_events`)
+  - `uid`: string (optional, UID of dated campus event from `wm_events`)
+  - `class_id`: integer (optional, ID of student class lecture from `user_classes`)
+- **Validation**:
+  - Exactly one of `event_id`, `uid`, or `class_id` must be supplied. If none are provided, returns `HTTP 400 Bad Request`.
+  - If the requested resource is not found, returns `HTTP 404 Not Found`.
+- **Response**:
+  - `Status`: `200 OK`
+  - `Content-Type`: `text/calendar; charset=utf-8`
+  - `Content-Disposition`: `attachment; filename="{sanitized_slug}.ics"`
+  - `Body`: RFC 5545 VCALENDAR payload with CRLF (`\r\n`) line terminations, UTF-8 encoding, escaped text values (`\\`, `\;`, `\,`, `\n`), and valid recurrence rules (`RRULE:FREQ=WEEKLY;BYDAY=...`) for recurring courses/clubs.
+
+---
+
+### 2.5 Automated Ingestion & Parser Status Contracts
+
+#### `GET /api/parser/status`
+Returns metadata regarding crawler health, event counts, synchronization timestamps, and background scheduler status.
+
+- **Response**:
+```json
+{
+  "total_events": 597,
+  "last_sync": "2026-11-14T20:20:00-05:00",
+  "auto_sync_enabled": true,
+  "sync_interval_hours": 24,
+  "next_auto_sync": "2026-11-15T20:20:00-05:00"
+}
+```
+
+#### Daily Background Synchronization Loop (`_daily_sync_background_loop`)
+- Managed by FastAPI `lifespan` context manager.
+- Periodically inspects `app_meta` for key `last_parser_sync`.
+- If key is missing or `(now - last_sync) >= 86400s` (24 hours):
+  - Acquires `_PARSER_LOCK` (avoiding duplicate crawler runs).
+  - Executes `_run_parser_worker(0.0, 6.0)` inside `asyncio.to_thread`.
+  - Atomically writes `last_parser_sync` timestamp to `app_meta` upon completion.
+  - Catches network timeouts, connection errors, and `asyncio.CancelledError` on graceful server shutdown.
+
+---
+
 ## 3. Database Schema & Indexing
 
 ```sql
@@ -563,6 +610,19 @@ In event browsing modes (`Now & Soon` and `Directory`), users can arrange event 
 - **`[ Chronological ]`** (Default): Events ordered by start time, ending soonest, or scheduled timetable order.
 - **`[ 🏢 Group by Department ]`**: Events organized into visual departmental clusters with header banners and counts.
 - **`[ 🔀 Shuffle by Department ]`**: Round-robin interleave across departments, guaranteeing that students encounter an eclectic, interdisciplinary mix of events (CS, Arts, Athletics, Biology, Civics, Life) rather than a monolithic block of one type.
+
+### 4.5 Browser & In-App Non-Lesson Event Notifications
+The notification subsystem delivers proactive alerts for campus, club, and social events without generating alert fatigue from academic class schedules:
+- **Targeting Filter**: Strictly excludes academic classes (`ev.type !== 'class' && !ev.course_name`). Only student organization meetings (`club_events`) and official campus events (`wm_events`) qualify.
+- **Trigger Threshold**: Checks `starting_soon` for events beginning within 15–30 minutes (`0 < starts_in_minutes <= 30`).
+- **Deduplication Engine**: Employs `sessionStorage` keys (`notif_{event_uid_or_id}`) to ensure each event triggers at most once per active browsing session.
+- **Dual Presentation**: Delivers desktop OS-level notifications via Web Notification API (when granted by user) accompanied by in-app non-intrusive toast alerts (`showToast`).
+
+### 4.6 Floating Tabs & Subnav Design Language
+To eliminate clumsy AI dashboard aesthetics and clunky background grayness:
+- **Zero Background Grayness**: Navigation tabs (`.arrangement-tab`, `.modes .mode`) enforce `background: transparent !important`, eliminating heavy pill backgrounds and sunk containers.
+- **Caslon Gold Indicators**: Active states utilize pure Caslon/Cypher gold indicators (`::after` bottom rule with `background: var(--gold)`).
+- **Subtle Elevation**: Active tabs receive a crisp micro-elevation (`transform: translateY(-1px)`) with smooth CSS cubic-bezier transitions (`transition: color 120ms var(--ease), transform 120ms var(--ease)`).
 
 ---
 
