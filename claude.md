@@ -63,6 +63,25 @@
 
 ---
 
+## 📅 MANDATORY REQUIREMENT: EVERY EVENT MUST HAVE BUTTONS TO ADD TO CALENDAR
+
+> [!IMPORTANT]
+> **DO NOT OMIT OR HIDE CALENDAR BUTTONS ON ANY EVENT CARD OR MODAL.**  
+> The user has explicitly emphasized that students must ALWAYS be able to add any event to their schedule with a single click. Every event card across all views (`Who's up?`, `Directory`, `Weekly Planner`, `#eventModal`, and `#clusterModal`) MUST provide clear, prominent buttons:
+>
+> 1. **In-App Schedule Integration (`[ + Add to My Calendar ]` / `[ ✓ On My Calendar ]`)**:
+>    - Saves the event to `user_saved_events` in `localStorage`.
+>    - Immediately places the event into the student's **`★ My Calendar`** view in the Weekly Planner.
+>    - Evaluates real-time conflicts against the student's enrolled courses.
+>    - Toggles state dynamically to `✓ On My Calendar` with immediate visual feedback (`btn-gold`).
+> 2. **Native System Calendar Export (`[ 📅 Add to System Calendar ]`)**:
+>    - Directly invokes `exportToSystemCalendar(ev)` or triggers `GET /api/calendar/export.ics?event_id=...` (or `uid=...`).
+>    - Generates a valid RFC 5545 `.ics` file that automatically opens in macOS Calendar.app, iOS Calendar, or Microsoft Outlook.
+> 3. **Google Calendar Web Link (`[ Google Calendar ↗ ]`)**:
+>    - Deep-links to Google Calendar via `https://calendar.google.com/calendar/render?action=TEMPLATE&text=...` with auto-filled summary, times, and location.
+
+---
+
 ## 1. Executive Project Overview & Mission
 
 `&.events` is a high-performance, single-workspace campus event intelligence engine and academic planning tool built specifically for the **College of William & Mary**. It bridges the gap between student schedules (classes, study blocks) and live campus life (student organizations/RSOs, department talks, athletic events, and public campus calendars).
