@@ -325,9 +325,9 @@
       color: var(--gold-text);
     }
     .section-title {
-      font-family: var(--font-display);
-      font-size: 1.1rem;
-      font-weight: 600;
+      font-family: var(--font-body);
+      font-size: 1.15rem;
+      font-weight: 700;
       color: var(--ink);
       margin: 0 0 var(--space-2) 0;
       display: flex;
@@ -391,7 +391,7 @@
 <body class="app">
   <!-- Masthead matching AndEDU Navbar.jsx -->
   <header class="masthead">
-    <button type="button" class="brand" onclick="switchMode('live')" aria-label="&.events live home">
+    <button type="button" class="brand" onclick="handleBrandLogoClick()" aria-label="&.events live home">
       <span class="brand-monogram" aria-hidden="true">&amp;</span>
       <span class="brand-mark">.events</span>
     </button>
@@ -777,7 +777,7 @@
           <!-- W&M Feeds Section -->
           <div class="panel">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-3); border-bottom: 1px solid var(--rule); padding-bottom: var(--space-2); flex-wrap: wrap; gap: 8px;">
-              <h2 style="font-family: var(--font-display); font-size: 1.15rem; margin: 0;">William &amp; Mary Campus Calendar</h2>
+              <h2 style="font-family: var(--font-body); font-weight: 700; font-size: 1.15rem; margin: 0;">William &amp; Mary Campus Calendar</h2>
               <div style="display: flex; align-items: center; gap: 8px;">
                 <button type="button" id="directoryUpdateBtn" class="btn btn-xs btn-gold" onclick="triggerCalendarParser(this)" title="Re-run public iCalendar feed parser to fetch latest campus events" style="font-size: 0.74rem; display: inline-flex; align-items: center; gap: 5px;">
                   <span class="sync-icon" aria-hidden="true">↻</span>
@@ -794,7 +794,7 @@
           <!-- Student Club Events Section -->
           <div class="panel">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4); border-bottom: 1px solid var(--rule); padding-bottom: var(--space-2);">
-              <h2 style="font-family: var(--font-display); font-size: 1.15rem; margin: 0;">Club meetings</h2>
+              <h2 style="font-family: var(--font-body); font-weight: 700; font-size: 1.15rem; margin: 0;">Club meetings</h2>
               <span id="clubCountBadge" class="status status-ready" style="font-size: 0.75rem;">Active</span>
             </div>
             <div id="eventsContainer" class="stack">
@@ -1335,6 +1335,21 @@
       if (btn) {
         btn.textContent = isHidden ? "Close" : "+ Add Class";
       }
+    }
+
+    function handleBrandLogoClick() {
+      const searchInput = document.getElementById("searchInput");
+      if (searchInput) searchInput.value = "";
+      recommendedOnly = false;
+      const btns = [document.getElementById("recommendedOnlyBtn"), document.getElementById("dirRecommendedOnlyBtn")];
+      btns.forEach(b => {
+        if (b) {
+          b.classList.remove("btn-gold");
+          b.classList.add("btn-quiet");
+        }
+      });
+      switchMode('live');
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
     function handleSearchInput() {
@@ -1897,8 +1912,14 @@
           }
         }
 
-        let happening = data.happening_now || [];
-        let soon = data.starting_soon || [];
+        let happening = (data.happening_now || []).map(ev => ({
+          ...ev,
+          matched_tags: matchClientTags(ev, studentTags)
+        }));
+        let soon = (data.starting_soon || []).map(ev => ({
+          ...ev,
+          matched_tags: matchClientTags(ev, studentTags)
+        }));
 
         if (recommendedOnly) {
           happening = happening.filter(ev => ev.matched_tags && ev.matched_tags.length > 0);
