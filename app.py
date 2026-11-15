@@ -1046,8 +1046,8 @@ def _escape_ical_text(text: Optional[str]) -> str:
 
 
 def _format_wm_vevent(ev: dict, dtstamp: str) -> list[str]:
-    raw_uid = str(ev.get("uid") or "")
-    clean_uid = raw_uid.splitlines()[0].strip() if raw_uid else ""
+    raw_uid = str(ev.get("uid") or "").strip()
+    clean_uid = raw_uid.splitlines()[0].strip() if raw_uid else f"wm-{ev.get('id', 'unknown')}@andedu.events"
     lines = [
         "BEGIN:VEVENT",
         f"UID:{clean_uid}",
