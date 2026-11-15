@@ -1438,10 +1438,12 @@ def get_weekly_schedule(
 
 
 AI_CLASSIFICATION_CACHE: dict[str, dict[str, str]] = {}
+_WORKING_GEMINI_MODEL: Optional[str] = None
 
 
 def _query_gemini_categorization(api_key: str, data: dict[str, Any]) -> Optional[str]:
-    """Helper running in threadpool making outbound Gemini API request with strict timeout and x-goog-api-key header."""
+    """Helper running in threadpool making outbound Gemini API request with multi-model fallback chain."""
+    global _WORKING_GEMINI_MODEL
     try:
         title = str(data.get("title") or "")[:150]
         club = str(data.get("club_name") or "")[:120]
@@ -1465,26 +1467,55 @@ def _query_gemini_categorization(api_key: str, data: dict[str, Any]) -> Optional
             f"Description: {description}\n\n"
             "Reply with ONLY the department ID (e.g., dept-cs)."
         )
-        req_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+
+        models_to_try: list[str] = []
+        if _WORKING_GEMINI_MODEL:
+            models_to_try.append(_WORKING_GEMINI_MODEL)
+        configured = os.environ.get("GEMINI_MODEL", "").strip()
+        if configured and configured not in models_to_try:
+            models_to_try.append(configured)
+
+        fallback_models = [
+            "gemini-3.5-flash-lite",
+            "gemini-3.1-flash-lite",
+            "gemini-2.5-flash",
+            "gemini-2.0-flash-lite",
+            "gemini-1.5-flash",
+        ]
+        for m in fallback_models:
+            if m not in models_to_try:
+                models_to_try.append(m)
+
         req_body = json.dumps({
             "contents": [{"parts": [{"text": prompt}]}]
         }).encode("utf-8")
-        req = urllib.request.Request(
-            req_url,
-            data=req_body,
-            headers={
-                "Content-Type": "application/json",
-                "x-goog-api-key": api_key,
-            },
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=5.0) as resp:
-            if resp.status == 200:
-                resp_data = json.loads(resp.read().decode("utf-8"))
-                text = resp_data["candidates"][0]["content"]["parts"][0]["text"].strip().lower()
-                for dept_id in DEPARTMENTS:
-                    if dept_id in text:
-                        return dept_id
+
+        for model_name in models_to_try:
+            req_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
+            req = urllib.request.Request(
+                req_url,
+                data=req_body,
+                headers={
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": api_key,
+                },
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=3.5) as resp:
+                    if resp.status == 200:
+                        resp_data = json.loads(resp.read().decode("utf-8"))
+                        text = resp_data["candidates"][0]["content"]["parts"][0]["text"].strip().lower()
+                        for dept_id in DEPARTMENTS:
+                            if dept_id in text:
+                                _WORKING_GEMINI_MODEL = model_name
+                                return dept_id
+            except urllib.error.HTTPError as err:
+                if err.code in (404, 400):
+                    continue
+                break
+            except Exception:
+                continue
     except Exception:
         pass
     return None
