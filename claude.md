@@ -40,6 +40,29 @@
 
 ---
 
+## 📸 Visual History & Reference Screenshots (Use Vision!)
+
+> [!TIP]
+> The screenshots shared by the user across the development session are saved in `docs/screenshots/`.  
+> Inspect these image files using your multimodal vision capabilities to understand the user's intent and avoid repeating visual bugs:
+
+1. **`docs/screenshots/wm_path_reference.png`**  
+   - **What it shows**: The gold standard William & Mary Path class registration schedule.
+   - **Key lessons**: Clean horizontal hourly grid lines spanning from 8am–5pm, bold course codes on line 1 (`CSCI 241 02`), course titles on line 2 (`Data Structures`), clean left accent stripe, uncluttered dark theme cards.
+2. **`docs/screenshots/weekly_planner_overview.png`**  
+   - **What it shows**: The "dead" timetable failure where 50+ campus events caused columns to be squashed into illegible 7px slivers (`M..`, `C...`).
+   - **Fix implemented**: `MAX_COLS = 3` collision grouping with primary items + `[+N more events]` overflow badge expanding into `#clusterModal`.
+3. **`docs/screenshots/weekly_planner_allday.png`**  
+   - **What it shows**: 9 all-day museum exhibitions stacked vertically, creating a 350px block that pushed the 8:00 AM timeline down to 5:00 PM.
+   - **Fix implemented**: Compact, collapsible 36px all-day lane (`[ 📅 9 All-Day Events ▾ ]`) with modal expansion, synchronizing gutter and all 7 day canvases at the exact same baseline.
+4. **`docs/screenshots/arrangement_buttons.png`**  
+   - **What it shows**: The user's request for top-bar buttons: remove gray background box slop.
+   - **Design rule**: `background: transparent !important` on hover and active, with floating micro-elevation (`transform: translateY(-1px)`) and pure Cypher Gold underline indicator (`::after { background: var(--gold); height: 2px; }`).
+5. **`docs/screenshots/live_now_soon.png`** & **`docs/screenshots/class_scheduler.png`**  
+   - **What they show**: Early layout regressions with course enrollment and live pulse feed.
+
+---
+
 ## 1. Executive Project Overview & Mission
 
 `&.events` is a high-performance, single-workspace campus event intelligence engine and academic planning tool built specifically for the **College of William & Mary**. It bridges the gap between student schedules (classes, study blocks) and live campus life (student organizations/RSOs, department talks, athletic events, and public campus calendars).
