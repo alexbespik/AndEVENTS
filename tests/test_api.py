@@ -589,6 +589,33 @@ class TestCampusScheduleAPI(unittest.TestCase):
         del_res = client.delete(f"/api/events/{ev_id}")
         self.assertEqual(del_res.status_code, 200)
 
+    def test_13_parser_run_and_status_endpoints(self):
+        """
+        Verify the calendar feed parser trigger and status endpoints.
+        """
+        # 1. Initial status check
+        status_res = client.get("/api/parser/status")
+        self.assertEqual(status_res.status_code, 200)
+        status_data = status_res.json()
+        self.assertIn("total_events", status_data)
+        self.assertGreaterEqual(status_data["total_events"], 0)
+
+        # 2. Trigger parser execution
+        run_res = client.post("/api/parser/run")
+        self.assertEqual(run_res.status_code, 200)
+        run_data = run_res.json()
+        self.assertIn(run_data["status"], ["success", "partial"])
+        self.assertIn("total_events", run_data)
+        self.assertIn("feeds_succeeded", run_data)
+        self.assertIn("feeds_failed", run_data)
+        self.assertIn("message", run_data)
+
+        # 3. Status check after sync reflects updated state
+        after_res = client.get("/api/parser/status")
+        self.assertEqual(after_res.status_code, 200)
+        after_data = after_res.json()
+        self.assertIsNotNone(after_data["last_sync"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -822,6 +822,81 @@ def get_wm_events(
     return list(events.values())
 
 
+def _run_parser_worker(delay: float = 0.1, timeout: float = 6.0) -> tuple[int, int]:
+    from import_wm_events import discover_and_import
+    worker_conn = get_db()
+    try:
+        return discover_and_import(worker_conn, delay=delay, timeout=timeout)
+    finally:
+        worker_conn.close()
+
+
+_PARSER_LOCK = asyncio.Lock()
+
+
+@app.post("/api/parser/run")
+async def run_calendar_parser():
+    """
+    Executes the public calendar feed parser to sync latest William & Mary events.
+    Runs asynchronously in a background thread to prevent blocking the event loop.
+    Enforces a server-side lock so concurrent requests don't spawn duplicate crawlers.
+    """
+    if _PARSER_LOCK.locked():
+        raise HTTPException(status_code=429, detail="A calendar parser synchronization is already running. Please wait a moment.")
+
+    async with _PARSER_LOCK:
+        try:
+            successes, failures = await asyncio.to_thread(_run_parser_worker, 0.1, 6.0)
+        except Exception as exc:
+            return {
+                "status": "partial",
+                "message": f"Parser finished with notice: {exc}",
+                "feeds_succeeded": 0,
+                "feeds_failed": 1,
+                "total_events": 0,
+            }
+
+        conn = get_db()
+        try:
+            cur = conn.cursor()
+            cur.execute("SELECT COUNT(*) FROM wm_events")
+            total_events = cur.fetchone()[0]
+
+            now_iso = datetime.now(CAMPUS_TZ).isoformat()
+            cur.execute("INSERT OR REPLACE INTO app_meta (key, value) VALUES ('last_parser_sync', ?)", (now_iso,))
+            conn.commit()
+        finally:
+            conn.close()
+
+        return {
+            "status": "success",
+            "message": f"Parser completed: {successes} feed(s) synced, {failures} inaccessible. {total_events} campus events active in database.",
+            "feeds_succeeded": successes,
+            "feeds_failed": failures,
+            "total_events": total_events,
+            "synced_at": now_iso,
+        }
+
+
+@app.get("/api/parser/status")
+def get_parser_status():
+    """
+    Returns metadata about the calendar parser state, event count, and last sync timestamp.
+    """
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM wm_events")
+    total_events = cur.fetchone()[0]
+    cur.execute("SELECT value FROM app_meta WHERE key = 'last_parser_sync'")
+    row = cur.fetchone()
+    last_sync = row[0] if row else None
+    conn.close()
+    return {
+        "total_events": total_events,
+        "last_sync": last_sync,
+    }
+
+
 @app.post("/api/events", status_code=status.HTTP_201_CREATED)
 def create_event(payload: EventCreate):
     if payload.start_time >= payload.end_time:

@@ -86,13 +86,13 @@ def _same_host_https(url: str) -> bool:
     )
 
 
-def _get(url: str, delay: float) -> tuple[bytes, str]:
+def _get(url: str, delay: float = 0.0, timeout: float = 20.0) -> tuple[bytes, str]:
     if not is_allowed_feed_url(url):
         raise ValueError(f"refused non-W&M HTTPS URL: {url}")
     if delay:
         time.sleep(delay)
     req = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "text/html,text/calendar,*/*"})
-    with build_opener(SameHostRedirects()).open(req, timeout=20) as response:
+    with build_opener(SameHostRedirects()).open(req, timeout=timeout) as response:
         final_url = response.geturl()
         if not is_allowed_feed_url(final_url):
             raise ValueError(f"refused final URL outside allowed W&M hosts: {final_url}")
@@ -163,13 +163,13 @@ def _feed_links(html: str, base: str) -> list[str]:
     return found
 
 
-def discover_and_import(conn: sqlite3.Connection, delay: float = 1.0) -> tuple[int, int]:
+def discover_and_import(conn: sqlite3.Connection, delay: float = 1.0, timeout: float = 10.0) -> tuple[int, int]:
     """Attempt public directory discovery; return (successful feeds, failures)."""
     successes = failures = 0
     # First, import default discovery feeds
     for slug, name, feed_url in DEFAULT_DISCOVERY_FEEDS:
         try:
-            feed_data, _ = _get(feed_url, delay)
+            feed_data, _ = _get(feed_url, delay=delay, timeout=timeout)
             result = import_calendar(conn, slug, name, _decode(feed_data))
             successes += 1
             print(f"IMPORTED {slug}: {result['seen']} events ({feed_url})")
@@ -178,7 +178,7 @@ def discover_and_import(conn: sqlite3.Connection, delay: float = 1.0) -> tuple[i
             print(f"INACCESSIBLE/UNRECOGNIZED: {slug} feed {feed_url}: {exc}", file=sys.stderr)
 
     try:
-        directory_data, _ = _get(DIRECTORY, delay)
+        directory_data, _ = _get(DIRECTORY, delay=delay, timeout=timeout)
         pages = _calendar_pages(_decode(directory_data), DIRECTORY)
         if not pages:
             print(f"UNRECOGNIZED: no same-host calendar page links found at {DIRECTORY}", file=sys.stderr)
@@ -190,20 +190,17 @@ def discover_and_import(conn: sqlite3.Connection, delay: float = 1.0) -> tuple[i
     print(f"Discovered {len(pages)} candidate calendar pages from {DIRECTORY}.")
     for slug, name, page_url in pages:
         try:
-            page_data, _ = _get(page_url, delay)
+            page_data, _ = _get(page_url, delay=delay, timeout=timeout)
             feeds = _feed_links(_decode(page_data), page_url)
             if not feeds:
                 failures += 1
                 print(f"UNRECOGNIZED: no same-host ICS/export link on {page_url}", file=sys.stderr)
                 continue
-            # One calendar membership represents one canonical ICS feed. If
-            # multiple export links are present, use the first discovered link
-            # and report the rest instead of repeatedly replacing membership.
             feed_url = feeds[0]
             if len(feeds) > 1:
                 print(f"NOTE: {slug} exposes {len(feeds)} export links; using {feed_url}", file=sys.stderr)
             try:
-                feed_data, _ = _get(feed_url, delay)
+                feed_data, _ = _get(feed_url, delay=delay, timeout=timeout)
                 result = import_calendar(conn, slug, name, _decode(feed_data))
                 successes += 1
                 print(f"IMPORTED {slug}: {result['seen']} events ({feed_url})")
