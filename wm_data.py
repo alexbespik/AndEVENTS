@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
-from datetime import date, datetime, timedelta, timezone as dt_timezone
+from datetime import date, datetime, time, timedelta, timezone as dt_timezone
 from typing import Any
 from urllib.parse import urlparse
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -293,7 +293,10 @@ def _parse_datetime(value: str, params: dict[str, str]) -> tuple[str, str, bool]
     return parsed.replace(tzinfo=timezone).isoformat(), tz_name, False
 
 
-def _event_from_properties(properties: dict[str, list[tuple[dict[str, str], str]]]) -> dict[str, Any] | None:
+def _event_from_properties(
+    properties: dict[str, list[tuple[dict[str, str], str]]],
+    strict: bool = True,
+) -> dict[str, Any] | None:
     for name in ("UID", "SUMMARY", "DTSTART", "DTEND", "DURATION", "STATUS"):
         if len(properties.get(name, [])) > 1:
             raise ICalendarError(f"VEVENT contains multiple {name} properties")
@@ -326,7 +329,14 @@ def _event_from_properties(properties: dict[str, list[tuple[dict[str, str], str]
     if end_item:
         end_at, _, end_is_all_day = _parse_datetime(end_item[1], end_item[0])
         if end_is_all_day != is_all_day:
-            raise ICalendarError(f"VEVENT {uid_item[1]!r} DTSTART and DTEND value types do not match")
+            if strict:
+                raise ICalendarError(f"VEVENT {uid_item[1]!r} DTSTART and DTEND value types do not match")
+            if not is_all_day and end_is_all_day:
+                dt_end_date = date.fromisoformat(end_at)
+                end_dt = datetime.combine(dt_end_date, time(23, 59, 59), tzinfo=ZoneInfo(timezone_name))
+                end_at = end_dt.isoformat()
+            elif is_all_day and not end_is_all_day:
+                end_at = end_at[:10]
         if is_all_day:
             if date.fromisoformat(end_at) <= date.fromisoformat(start_at):
                 end_at = (date.fromisoformat(start_at) + timedelta(days=1)).isoformat()
@@ -590,7 +600,7 @@ def _expand_rrule(
         return instances
 
 
-def parse_ical(text: str, now: datetime | None = None) -> list[dict[str, Any]]:
+def parse_ical(text: str, now: datetime | None = None, strict: bool = True) -> list[dict[str, Any]]:
     """Parse VEVENT records from a UTF-8 iCalendar feed.
 
     The parser supports folded lines, quoted parameters, escaped text, all-day
@@ -630,28 +640,48 @@ def parse_ical(text: str, now: datetime | None = None) -> list[dict[str, Any]]:
         if line.upper() == "END:VEVENT":
             if current is None:
                 raise ICalendarError("END:VEVENT without BEGIN:VEVENT")
-            event = _event_from_properties(current)
-            if event is not None:
-                rrule_list = current.get("RRULE", [])
-                if rrule_list:
-                    exdate_items = current.get("EXDATE", [])
-                    expanded = _expand_rrule(event, rrule_list[0][1], exdate_items, now=now)
-                    events.extend(expanded)
-                else:
-                    events.append(event)
+            try:
+                event = _event_from_properties(current, strict=strict)
+                if event is not None:
+                    rrule_list = current.get("RRULE", [])
+                    if rrule_list:
+                        exdate_items = current.get("EXDATE", [])
+                        expanded = _expand_rrule(event, rrule_list[0][1], exdate_items, now=now)
+                        events.extend(expanded)
+                    else:
+                        events.append(event)
+            except ICalendarError:
+                if strict:
+                    raise
             current = None
             continue
         if current is None:
             continue
-        name, params, value = _split_content_line(line)
-        current.setdefault(name, []).append((params, value))
+        try:
+            name, params, value = _split_content_line(line)
+            current.setdefault(name, []).append((params, value))
+        except ICalendarError:
+            if strict:
+                raise
+            if current:
+                last_key = list(current.keys())[-1]
+                last_params, last_val = current[last_key][-1]
+                current[last_key][-1] = (last_params, last_val + " " + line.strip())
 
     if current is not None:
         raise ICalendarError("Unclosed VEVENT block")
 
     uids = [event["uid"] for event in events]
     if len(uids) != len(set(uids)):
-        raise ICalendarError("Feed contains duplicate event UIDs")
+        if strict:
+            raise ICalendarError("Feed contains duplicate event UIDs")
+        seen_uids: set[str] = set()
+        deduped: list[dict[str, Any]] = []
+        for ev in events:
+            if ev["uid"] not in seen_uids:
+                seen_uids.add(ev["uid"])
+                deduped.append(ev)
+        events = deduped
     return events
 
 
@@ -660,6 +690,7 @@ def import_calendar(
     slug: str,
     name: str,
     text: str,
+    strict: bool = False,
 ) -> dict[str, int]:
     """Atomically replace one calendar's membership from a parsed feed.
 
@@ -667,7 +698,7 @@ def import_calendar(
     """
     if not slug.strip():
         raise ValueError("calendar slug must not be blank")
-    events = parse_ical(text)
+    events = parse_ical(text, strict=strict)
     ensure_schema(conn)
     counts = {"seen": len(events), "inserted": 0, "updated": 0, "memberships_added": 0, "memberships_removed": 0}
 

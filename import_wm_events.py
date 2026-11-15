@@ -38,6 +38,19 @@ USER_AGENT = "WMEventsLocalImporter/1.0 (public calendar feed importer)"
 DEFAULT_DISCOVERY_FEEDS = [
     ("tribelink", "TribeLink Campus Events", "https://tribelink.wm.edu/events.ics"),
     ("wm-main", "William & Mary Master Calendar", "https://events.wm.edu/calendar/upcoming_ical/wm"),
+    ("studentengagement", "Student Engagement & Activities", "https://events.wm.edu/calendar/upcoming_ical/studentengagement"),
+    ("libraries", "Swem Library Events & Workshops", "https://events.wm.edu/calendar/upcoming_ical/libraries"),
+    ("athletics", "W&M Tribe Athletics", "https://events.wm.edu/calendar/upcoming_ical/athletics"),
+    ("recsports", "Campus Recreation & Fitness", "https://events.wm.edu/calendar/upcoming_ical/recsports"),
+    ("career", "Cohen Career Center", "https://events.wm.edu/calendar/upcoming_ical/career"),
+    ("wellness", "Health & Wellness", "https://events.wm.edu/calendar/upcoming_ical/wellness"),
+    ("arts", "Arts & Entertainment", "https://events.wm.edu/calendar/upcoming_ical/arts"),
+    ("theatre-performance", "Theatre & Performance", "https://events.wm.edu/calendar/upcoming_ical/theatre-performance"),
+    ("music", "Music Department Events", "https://events.wm.edu/calendar/upcoming_ical/music"),
+    ("student-affairs", "Student Affairs & Campus Life", "https://events.wm.edu/calendar/upcoming_ical/student-affairs"),
+    ("cce", "Civic & Community Engagement", "https://events.wm.edu/calendar/upcoming_ical/cce"),
+    ("computerscience", "Computer Science Colloquia & Events", "https://events.wm.edu/calendar/upcoming_ical/computerscience"),
+    ("academiccalendarug", "Undergraduate Academic Calendar", "https://events.wm.edu/calendar/upcoming_ical/academiccalendarug"),
 ]
 
 

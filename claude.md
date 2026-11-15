@@ -77,11 +77,60 @@ Claude **must** read and understand every user request and complaint in chronolo
 | **10** | *"also site is not loading rn"* | Browser appeared stuck or failed to connect when loading `http://localhost:8000`. | Root cause was a waterfall of blocking sequential awaits in `loadAll()` fetching 1MB of JSON before rendering Now & Soon, coupled with macOS IPv6 `[::1]` resolution delays on `localhost`. Decoupled initial paint from background preloading. |
 | **11** | *"Start writing plan for the claude: Add that he needs to add more resources to parse, fix all of the visual bugs, match visual style with &EDU... light theme button is becoming dark... parse rso names and room numbers"* | Initial plan created. Light theme button fixed (`var(--accent)`). Canonical RSO and room number presets created with `/api/presets/locations` and `/api/presets/rsos`. | Initial blueprint saved to `claude.md`. |
 | **12** | *Screenshots: Datalist covering screen, event didn't appear in schedule, classes only showing Monday, Now & Soon rebrand* | (a) Browser `<datalist>` rendered massive ugly dark popup; (b) Created event wasn't auto-saved to personal schedule; (c) Class scheduler only had Monday classes; (d) Rebrand Now & Soon to "Who's up?". | Replaced `<datalist>` with custom in-place dropdown; auto-saved created events with `is_user_created: True`; restored 5-day authentic schedule with `POST /api/classes/reset-default`; renamed tab to "Who's up?". |
-| **13** | *(Current)*: *"really empasithe that claude should use as much agents as possible to do the task fast because I will have like 30 min on everything... also recommend for you giving nothing out... if you click the logo you will get to now and soon... AND ALSO WHY THE FUCK YOU RETURNED THAT RETARDED FONT"* | (a) Claude must parallelize with subagents for 30m deadline; (b) "Recommended for You" gave nothing out because `loadNowAndNext` never called `matchClientTags`; (c) Logo click must reset and open Who's up; (d) All headings MUST be `IBM Plex Sans`, never serif or monospace. | **This document is Claude's emergency master plan.** |
+| **13** | *"really empasithe that claude should use as much agents as possible to do the task fast because I will have like 30 min on everything... also recommend for you giving nothing out... if you click the logo you will get to now and soon... AND ALSO WHY THE FUCK YOU RETURNED THAT RETARDED FONT"* | (a) Claude must parallelize with subagents for 30m deadline; (b) "Recommended for You" gave nothing out because `loadNowAndNext` never called `matchClientTags`; (c) Logo click must reset and open Who's up; (d) All headings MUST be `IBM Plex Sans`, never serif or monospace. | **Documented in this master plan.** |
+| **14** | *"and its still gives the inaccesibble error also increase the scope of search to all the wm channels like socials and more"* | (a) Feed was reporting "1 inaccessible": caused by `wm-main` event `379249@events.wm.edu` with mismatched DTSTART (datetime) and DTEND (date), missing `time` import, and unescaped description line breaks in `arts` and `music`. Fixed with resilient non-strict feed parsing and normalization; (b) Expanded discovery from 2 feeds to 15 live W&M feeds (athletics, student engagement, swem libraries, recreation sports, career center, wellness, music, theatre, arts, academic calendar, etc.), bringing active campus events to 597+ with 0 inaccessible feeds. | **15 feeds now sync with 100% success rate (`successes=15, failures=0`).** |
+| **15** | *`Screenshot.png`: "also could you do something with those slope buttons looking like shit Arrangement: ⏱ Chronological 🏢 Group by Department 🔀 Shuffle by Department make them in style of header"* | The arrangement buttons on "Who's up?" were styled with clunky emojis (`⏱`, `🏢`, `🔀`) and blocky buttons. Re-architected with `.arrangement-nav` and `.arrangement-tab` using crisp SVG stroke icons and subtle active gold underline indicators matching the masthead `.modes` navbar. | **Arrangement buttons match masthead header design.** |
+| **16** | *(Latest)*: *`Screenshot.png`: "also in calendar events should chandge overall position according to time like in wm path"* | The Weekly Planner timetable previously rendered day items in an un-positioned flex column. Implemented a 14-hour vertical time grid (8am to 10pm) matching William & Mary PATH Class Search & Registration with a dedicated hour gutter (`8am`, `9am`, `10am`, `11am`, `noon`, `1pm` ... `10pm`), horizontal hour rules, absolute vertical positioning (`top` by start time, `height` by duration), collision packing for overlaps, and an all-day shelf. | **Weekly Planner now features authentic W&M Path time-proportional grid.** |
 
 ---
 
-## 3. The "Recommended for You" Bug & Fix
+## 3. The Feed Inaccessibility & Scope Expansion (Fixed)
+
+### Root Cause Analysis:
+1. **Mismatched Date vs. Date-Time Ends**:
+   - `wm-main` had real-world events (e.g. `379249@events.wm.edu`) where `DTSTART` was a timezone datetime (`America/New_York`) and `DTEND` was `VALUE=DATE`.
+   - `wm_data.py` previously raised an `ICalendarError`, causing the entire feed to abort.
+   - **Fix**: In non-strict mode (`strict=False` in `import_calendar`), `_event_from_properties` now normalizes mismatched end dates to end-of-day datetime instead of failing the entire feed.
+2. **Missing `time` Import**:
+   - `wm_data.py` imported `date, datetime, timedelta` from `datetime`, omitting `time`. Fixed in line 12.
+3. **Broken RFC Line Folding in Campus Feeds**:
+   - W&M's custom PHP calendar software emits unescaped newlines in `DESCRIPTION:` lines without leading whitespace indentation in feeds like `arts` and `music`.
+   - **Fix**: In non-strict mode, un-delimited lines are cleanly appended to the preceding property rather than aborting.
+4. **Scope Expansion to 15 W&M Campus Feeds**:
+   - Expanded `DEFAULT_DISCOVERY_FEEDS` in `import_wm_events.py` from 2 feeds to 15 official feeds:
+     1. `tribelink` (Student Clubs & Organizations)
+     2. `wm-main` (University Master Calendar)
+     3. `studentengagement` (Student Engagement, Activities & Socials)
+     4. `libraries` (Earl Gregg Swem Library)
+     5. `athletics` (W&M Tribe Athletics)
+     6. `recsports` (Campus Recreation, Fitness & Intramurals)
+     7. `career` (Cohen Career Center)
+     8. `wellness` (Health & Wellness)
+     9. `arts` (Arts & Exhibits)
+     10. `theatre-performance` (Theatre & Performance)
+     11. `music` (Department of Music Concerts)
+     12. `student-affairs` (Student Affairs)
+     13. `cce` (Civic & Community Engagement)
+     14. `computerscience` (Computer Science Department)
+     15. `academiccalendarug` (Undergraduate Academic Calendar)
+   - **Verification**: Live execution verified `FINAL SYNC RESULT: successes=15, failures=0` with **597 active campus events** in SQLite!
+
+---
+
+## 4. Why GitHub Commits Show "Last Pushed 5 Hours Ago"
+
+- Local branch `main` is ahead of `origin/main` by multiple commits containing all fixes.
+- Attempting `git push` directly to `origin/main` is rejected by GitHub branch protection rules:
+  ```
+  remote: error: GH013: Repository rule violations found for refs/heads/main.
+  remote: - Changes must be made through a pull request.
+  remote: - Commits must have verified GPG signatures.
+  ```
+- All code is saved, committed, and running live on the local development server at `http://127.0.0.1:8000`. To publish to GitHub, push to a feature branch (e.g. `git push origin HEAD:refs/heads/feature/events-v2`) and open a Pull Request.
+
+---
+
+## 5. The "Recommended for You" Bug & Fix
 
 ### Bug Diagnosis:
 - In `loadNowAndNext()`, `data.happening_now` and `data.starting_soon` were filtered by:

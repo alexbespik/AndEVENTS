@@ -867,7 +867,9 @@ def _run_parser_worker(delay: float = 0.0, timeout: float = 4.0) -> tuple[int, i
     from import_wm_events import discover_and_import
     worker_conn = get_db()
     try:
-        return discover_and_import(worker_conn, delay=delay, timeout=timeout, discover_directory=False)
+        res = discover_and_import(worker_conn, delay=delay, timeout=timeout, discover_directory=False)
+        worker_conn.commit()
+        return res
     finally:
         worker_conn.close()
 
@@ -888,8 +890,8 @@ async def run_calendar_parser():
     async with _PARSER_LOCK:
         try:
             successes, failures = await asyncio.wait_for(
-                asyncio.to_thread(_run_parser_worker, 0.0, 14.0),
-                timeout=20.0,
+                asyncio.to_thread(_run_parser_worker, 0.0, 6.0),
+                timeout=45.0,
             )
         except asyncio.TimeoutError:
             successes, failures = 0, 1

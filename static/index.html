@@ -709,16 +709,19 @@
           <!-- View Arrangement Controls on Now & Soon -->
           <div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-top: var(--space-3); margin-bottom: var(--space-2); flex-wrap: wrap;">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 0.76rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;">Arrangement:</span>
-              <div class="btn-group" role="tablist" aria-label="Event arrangement" style="display: inline-flex; border: 1px solid var(--rule); border-radius: var(--radius-sm); overflow: hidden;">
-                <button type="button" id="arrangeChronoBtn" class="btn btn-xs btn-gold" onclick="setNowSoonArrangement('chrono')" style="border-radius: 0; border: none; font-size: 0.76rem;">
-                  ⏱ Chronological
+              <span style="font-size: 0.74rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em;">Arrangement:</span>
+              <div class="arrangement-nav" role="tablist" aria-label="Event arrangement">
+                <button type="button" id="arrangeChronoBtn" class="arrangement-tab active" aria-pressed="true" onclick="setNowSoonArrangement('chrono')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  <span>Chronological</span>
                 </button>
-                <button type="button" id="arrangeGroupBtn" class="btn btn-xs btn-quiet" onclick="setNowSoonArrangement('grouped')" style="border-radius: 0; border: none; font-size: 0.76rem;">
-                  🏢 Group by Department
+                <button type="button" id="arrangeGroupBtn" class="arrangement-tab" aria-pressed="false" onclick="setNowSoonArrangement('grouped')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                  <span>Group by Department</span>
                 </button>
-                <button type="button" id="arrangeShuffleBtn" class="btn btn-xs btn-quiet" onclick="setNowSoonArrangement('shuffled')" style="border-radius: 0; border: none; font-size: 0.76rem;">
-                  🔀 Shuffle by Department
+                <button type="button" id="arrangeShuffleBtn" class="arrangement-tab" aria-pressed="false" onclick="setNowSoonArrangement('shuffled')">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg>
+                  <span>Shuffle by Department</span>
                 </button>
               </div>
             </div>
@@ -1953,9 +1956,18 @@
         const bChrono = document.getElementById("arrangeChronoBtn");
         const bGroup = document.getElementById("arrangeGroupBtn");
         const bShuffle = document.getElementById("arrangeShuffleBtn");
-        if (bChrono) bChrono.className = nowSoonArrangement === "chrono" ? "btn btn-xs btn-gold" : "btn btn-xs btn-quiet";
-        if (bGroup) bGroup.className = nowSoonArrangement === "grouped" ? "btn btn-xs btn-gold" : "btn btn-xs btn-quiet";
-        if (bShuffle) bShuffle.className = nowSoonArrangement === "shuffled" ? "btn btn-xs btn-gold" : "btn btn-xs btn-quiet";
+        if (bChrono) {
+          bChrono.classList.toggle("active", nowSoonArrangement === "chrono");
+          bChrono.setAttribute("aria-pressed", nowSoonArrangement === "chrono" ? "true" : "false");
+        }
+        if (bGroup) {
+          bGroup.classList.toggle("active", nowSoonArrangement === "grouped");
+          bGroup.setAttribute("aria-pressed", nowSoonArrangement === "grouped" ? "true" : "false");
+        }
+        if (bShuffle) {
+          bShuffle.classList.toggle("active", nowSoonArrangement === "shuffled");
+          bShuffle.setAttribute("aria-pressed", nowSoonArrangement === "shuffled" ? "true" : "false");
+        }
 
         const chronoEl = document.getElementById("chronoSections");
         const arrangedEl = document.getElementById("arrangedEventsContainer");
@@ -2523,68 +2535,102 @@
         const container = document.getElementById("timetableContainer");
         if (!container) return;
 
+        const HOURS = [
+          { hour: 8, label: "8am" },
+          { hour: 9, label: "9am" },
+          { hour: 10, label: "10am" },
+          { hour: 11, label: "11am" },
+          { hour: 12, label: "noon" },
+          { hour: 13, label: "1pm" },
+          { hour: 14, label: "2pm" },
+          { hour: 15, label: "3pm" },
+          { hour: 16, label: "4pm" },
+          { hour: 17, label: "5pm" },
+          { hour: 18, label: "6pm" },
+          { hour: 19, label: "7pm" },
+          { hour: 20, label: "8pm" },
+          { hour: 21, label: "9pm" },
+          { hour: 22, label: "10pm" }
+        ];
+
+        function layoutTimedItems(items) {
+          const allDay = [];
+          const timed = [];
+          items.forEach(it => {
+            if (it.is_all_day || !it.start_time || it.start_time === "All Day") {
+              allDay.push(it);
+            } else {
+              timed.push(it);
+            }
+          });
+
+          timed.forEach(it => {
+            let sm = 8 * 60;
+            if (it.start_time && it.start_time.includes(":")) {
+              const parts = it.start_time.split(":");
+              sm = (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+            }
+            let em = sm + 50;
+            if (it.end_time && it.end_time.includes(":")) {
+              const parts = it.end_time.split(":");
+              em = (parseInt(parts[0], 10) || 0) * 60 + (parseInt(parts[1], 10) || 0);
+              if (em <= sm) em = sm + 50;
+            }
+            it._sm = sm;
+            it._em = em;
+          });
+
+          timed.sort((a, b) => a._sm - b._sm || (b._em - b._sm) - (a._em - a._sm));
+
+          const columns = [];
+          timed.forEach(it => {
+            let placed = false;
+            for (let c = 0; c < columns.length; c++) {
+              const last = columns[c][columns[c].length - 1];
+              if (last._em <= it._sm) {
+                columns[c].push(it);
+                it._col = c;
+                placed = true;
+                break;
+              }
+            }
+            if (!placed) {
+              it._col = columns.length;
+              columns.push([it]);
+            }
+          });
+
+          timed.forEach(it => {
+            const overlaps = timed.filter(other => !(other._em <= it._sm || other._sm >= it._em));
+            const maxCol = overlaps.reduce((max, cur) => Math.max(max, (cur._col ?? 0) + 1), 1);
+            it._totalCols = maxCol;
+          });
+
+          return { allDay, timed };
+        }
+
         container.innerHTML = `
           <div class="cal-grid">
+            <!-- Left Time Gutter matching W&M Path -->
+            <div class="cal-time-gutter" aria-hidden="true">
+              <div class="cal-gutter-header">Time</div>
+              <div class="cal-gutter-canvas">
+                ${HOURS.map((h, i) => `
+                  <div class="cal-gutter-hour" style="top: ${i * 50}px;">
+                    ${h.label}
+                  </div>
+                `).join("")}
+              </div>
+            </div>
+
+            <!-- Day Columns -->
             ${processedDays.map(d => {
               const isToday = !!d.is_today;
               const todayBadge = isToday ? `<span class="cal-today-pill">Today</span>` : "";
               const totalCount = d.total_commitments ?? (d.timeline?.length || 0);
               const countLabel = `${totalCount} item${totalCount === 1 ? '' : 's'}`;
 
-              const timeline = d.timeline || [];
-              let timelineContent = "";
-
-              if (!timeline.length) {
-                timelineContent = `
-                  <div class="cal-empty">
-                    <span class="cal-empty-text">No commitments</span>
-                    <div style="display: flex; gap: 4px; margin-top: 4px;">
-                      <button type="button" class="btn btn-quiet btn-xs" onclick="openFiltersModal('classes', ${d.day_index})" style="font-size: 0.72rem;">+ Class</button>
-                      <button type="button" class="btn btn-quiet btn-xs" onclick="openCreateEventDay(${d.day_index})" style="font-size: 0.72rem;">+ Event</button>
-                    </div>
-                  </div>
-                `;
-              } else {
-                timelineContent = timeline.map(item => {
-                  const timeRange = item.is_all_day ? "All Day" : (item.time_range_12h || `${item.start_time_12h || item.start_time || ''} – ${item.end_time_12h || item.end_time || ''}`);
-                  if (item.type === "class") {
-                    return `
-                      <div class="cal-item is-class">
-                        <div class="cal-item-title">${escapeHtml(item.course_name)}</div>
-                        <div class="cal-item-time">${escapeHtml(timeRange)}</div>
-                        ${item.location ? `<div class="cal-item-loc">${escapeHtml(item.location)}</div>` : ""}
-                      </div>
-                    `;
-                  } else {
-                    const conflictBadge = item.has_conflict
-                      ? `<div class="cal-conflict-badge">⚠️ Overlaps ${escapeHtml(item.conflicting_course || "class")}</div>`
-                      : "";
-                    const deptColor = item.department_color || (DEPARTMENTS[item.department_id] ? DEPARTMENTS[item.department_id].color : '#4a5b66');
-                    const savedInCal = isEventSaved(item);
-                    const safeLink = item.source_url ? safeWmSourceUrl(item.source_url) : null;
-                    return `
-                      <div class="cal-item is-event ${item.has_conflict ? 'has-conflict' : ''}" style="${item.has_conflict ? '' : `border-left-color: ${deptColor};`} cursor: pointer;" onclick="toggleCalItemExpansion(this, event)">
-                        <div class="cal-item-head">
-                          <span class="cal-dept-dot" style="background: ${deptColor};"></span>
-                          <span class="cal-item-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</span>
-                        </div>
-                        <div class="cal-item-time">${escapeHtml(timeRange)}</div>
-                        ${item.location ? `<div class="cal-item-loc">${escapeHtml(item.location)}</div>` : ""}
-                        ${conflictBadge}
-                        <div class="cal-item-expanded-details" style="display: none; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--rule); font-size: 0.76rem;">
-                          ${(item.description || item.summary) ? `<div style="color: var(--ink-soft); margin-bottom: 6px; line-height: 1.35;">${escapeHtml(item.description || item.summary)}</div>` : ''}
-                          <div style="display: flex; gap: 6px; align-items: center; justify-content: space-between; margin-top: 4px; flex-wrap: wrap;">
-                            <button type="button" class="btn btn-xs ${savedInCal ? 'btn-gold' : 'btn-quiet'}" data-event="${escapeHtml(JSON.stringify(item))}" onclick="handleCardSaveToggle(this, event)" style="font-size: 0.70rem; padding: 2px 6px;">
-                              ${savedInCal ? '✓ On My Calendar' : '+ Add to My Calendar'}
-                            </button>
-                            ${safeLink ? `<a href="${safeLink.href}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="font-size: 0.70rem; color: var(--accent); text-decoration: underline;">Open Link ↗</a>` : ''}
-                          </div>
-                        </div>
-                      </div>
-                    `;
-                  }
-                }).join("");
-              }
+              const { allDay, timed } = layoutTimedItems(d.timeline || []);
 
               return `
                 <div class="cal-day-col ${isToday ? 'is-today' : ''}">
@@ -2601,8 +2647,75 @@
                       </div>
                     </div>
                   </div>
-                  <div class="cal-day-timeline">
-                    ${timelineContent}
+
+                  ${allDay.length ? `
+                    <div class="cal-all-day-lane">
+                      ${allDay.map(it => `
+                        <div class="cal-grid-item is-event" style="position: static; margin-bottom: 2px;" onclick="toggleCalItemExpansion(this, event)">
+                          <div class="cal-item-title">${escapeHtml(it.title || it.course_name)}</div>
+                          <div class="cal-item-time">All Day</div>
+                          <div class="cal-item-expanded-details" style="display: none; margin-top: 4px; padding-top: 4px; border-top: 1px dashed var(--rule); font-size: 0.72rem;">
+                            ${it.description ? `<div style="margin-bottom: 4px;">${escapeHtml(it.description)}</div>` : ''}
+                            ${it.location ? `<div>📍 ${escapeHtml(it.location)}</div>` : ''}
+                          </div>
+                        </div>
+                      `).join("")}
+                    </div>
+                  ` : ''}
+
+                  <div class="cal-time-canvas">
+                    ${timed.map(item => {
+                      const offsetMin = Math.max(0, item._sm - 480);
+                      const durationMin = Math.max(30, item._em - item._sm);
+                      const topPx = Math.max(0, Math.min(660, (offsetMin / 60) * 50));
+                      const heightPx = Math.max(28, Math.min(700 - topPx, (durationMin / 60) * 50 - 3));
+
+                      const totalCols = item._totalCols || 1;
+                      const colIdx = item._col || 0;
+                      const widthCss = totalCols > 1 ? `calc(${100 / totalCols}% - 4px)` : `calc(100% - 6px)`;
+                      const leftCss = totalCols > 1 ? `calc(${colIdx * (100 / totalCols)}% + 2px)` : `3px`;
+
+                      const timeRange = item.time_range_12h || `${item.start_time_12h || item.start_time || ''} – ${item.end_time_12h || item.end_time || ''}`;
+
+                      if (item.type === "class") {
+                        return `
+                          <div class="cal-grid-item is-class" style="top: ${topPx}px; height: ${heightPx}px; width: ${widthCss}; left: ${leftCss};" onclick="toggleCalItemExpansion(this, event)">
+                            <div class="cal-item-title">${escapeHtml(item.course_name)}</div>
+                            <div class="cal-item-time">${escapeHtml(timeRange)}</div>
+                            ${item.location ? `<div class="cal-item-loc">${escapeHtml(item.location)}</div>` : ""}
+                            <div class="cal-item-expanded-details" style="display: none; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--rule); font-size: 0.76rem;">
+                              <div style="font-weight: 600; color: var(--accent); margin-bottom: 2px;">Enrolled Course</div>
+                              ${item.location ? `<div>📍 Location: ${escapeHtml(item.location)}</div>` : ''}
+                              <div style="margin-top: 4px;">
+                                <button type="button" class="btn btn-xs btn-quiet" onclick="openFiltersModal('classes', ${d.day_index})" style="font-size: 0.70rem;">Manage Course</button>
+                              </div>
+                            </div>
+                          </div>
+                        `;
+                      } else {
+                        const deptColor = item.department_color || (DEPARTMENTS[item.department_id] ? DEPARTMENTS[item.department_id].color : '#4a5b66');
+                        const savedInCal = isEventSaved(item);
+                        const safeLink = item.source_url ? safeWmSourceUrl(item.source_url) : null;
+                        const conflictBadge = item.has_conflict ? `<span style="color: var(--bad); font-weight: 700; font-size: 0.66rem;">⚠️ Overlap</span>` : "";
+
+                        return `
+                          <div class="cal-grid-item is-event ${item.has_conflict ? 'has-conflict' : ''}" style="top: ${topPx}px; height: ${heightPx}px; width: ${widthCss}; left: ${leftCss}; ${item.has_conflict ? '' : `border-left-color: ${deptColor};`}" onclick="toggleCalItemExpansion(this, event)">
+                            <div class="cal-item-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</div>
+                            <div class="cal-item-time">${escapeHtml(timeRange)} ${conflictBadge}</div>
+                            ${item.location ? `<div class="cal-item-loc">${escapeHtml(item.location)}</div>` : ""}
+                            <div class="cal-item-expanded-details" style="display: none; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--rule); font-size: 0.76rem;">
+                              ${(item.description || item.summary) ? `<div style="color: var(--ink-soft); margin-bottom: 6px; line-height: 1.35;">${escapeHtml(item.description || item.summary)}</div>` : ''}
+                              <div style="display: flex; gap: 6px; align-items: center; justify-content: space-between; margin-top: 4px; flex-wrap: wrap;">
+                                <button type="button" class="btn btn-xs ${savedInCal ? 'btn-gold' : 'btn-quiet'}" data-event="${escapeHtml(JSON.stringify(item))}" onclick="handleCardSaveToggle(this, event)" style="font-size: 0.70rem; padding: 2px 6px;">
+                                  ${savedInCal ? '✓ On My Calendar' : '+ Add to My Calendar'}
+                                </button>
+                                ${safeLink ? `<a href="${safeLink.href}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" style="font-size: 0.70rem; color: var(--accent); text-decoration: underline;">Open Link ↗</a>` : ''}
+                              </div>
+                            </div>
+                          </div>
+                        `;
+                      }
+                    }).join("")}
                   </div>
                 </div>
               `;
