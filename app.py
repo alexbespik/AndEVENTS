@@ -638,6 +638,7 @@ def get_now_and_next(
             ev["status_label"] = f"Starts in {ev_start - curr_mins}m"
             upcoming_today.append(ev)
 
+    seen_event_keys = set()
     for r in all_wm_rows:
         try:
             r["categories"] = json.loads(r["categories"]) if isinstance(r["categories"], str) else (r["categories"] or [])
@@ -653,11 +654,21 @@ def get_now_and_next(
                     continue
             except Exception:
                 continue
+
+            dedup_key = (r["title"].strip().lower(), str(r["start_at"])[:10])
+            if dedup_key in seen_event_keys:
+                continue
+            seen_event_keys.add(dedup_key)
+
             r["status_label"] = "All Day Today"
             r["is_wm_event"] = True
             r["has_conflict"] = False
             r["conflicting_course"] = None
             r["matched_tags"] = match_tags(r, student_tags)
+            r["start_time_12h"] = "All Day"
+            r["end_time_12h"] = ""
+            r["time_range_12h"] = "All Day"
+            r["date_display"] = ev_start_d.strftime("%a, %b %-d")
             enrich_department(r)
             happening_now.append(r)
             wm_processed.append(r)
@@ -673,8 +684,22 @@ def get_now_and_next(
             if not (is_active or is_soon):
                 continue
 
+            dedup_key = (
+                re.sub(r"[^a-z0-9]", "", r["title"].lower()),
+                st.strftime("%Y-%m-%d %H:%M"),
+            )
+            if dedup_key in seen_event_keys:
+                continue
+            seen_event_keys.add(dedup_key)
+
             r["is_wm_event"] = True
             r["matched_tags"] = match_tags(r, student_tags)
+            st_12h = format_12h(st.strftime("%H:%M"))
+            en_12h = format_12h(en.strftime("%H:%M"))
+            r["start_time_12h"] = st_12h
+            r["end_time_12h"] = en_12h
+            r["time_range_12h"] = f"{st_12h} – {en_12h}"
+            r["date_display"] = st.strftime("%a, %b %-d")
             enrich_department(r)
 
             # Conflict check with today's classes
@@ -795,6 +820,13 @@ def get_wm_events(
                     if ends.tzinfo is not None:
                         ends = ends.astimezone(CAMPUS_TZ)
 
+                    st_12h = format_12h(starts.strftime("%H:%M"))
+                    en_12h = format_12h(ends.strftime("%H:%M"))
+                    event["start_time_12h"] = st_12h
+                    event["end_time_12h"] = en_12h
+                    event["time_range_12h"] = f"{st_12h} – {en_12h}"
+                    event["date_display"] = starts.strftime("%a, %b %-d")
+
                     if starts.date() == ends.date():
                         event_start = starts.strftime("%H:%M")
                         event_end = ends.strftime("%H:%M")
@@ -809,6 +841,14 @@ def get_wm_events(
                                 break
                 except (TypeError, ValueError):
                     pass
+            elif event["is_all_day"]:
+                event["start_time_12h"] = "All Day"
+                event["time_range_12h"] = "All Day"
+                try:
+                    d_obj = date.fromisoformat(str(event["start_at"])[:10])
+                    event["date_display"] = d_obj.strftime("%a, %b %-d")
+                except Exception:
+                    event["date_display"] = str(event["start_at"])[:10]
 
             enrich_department(event)
             events[uid] = event
@@ -822,11 +862,11 @@ def get_wm_events(
     return list(events.values())
 
 
-def _run_parser_worker(delay: float = 0.1, timeout: float = 6.0) -> tuple[int, int]:
+def _run_parser_worker(delay: float = 0.0, timeout: float = 4.0) -> tuple[int, int]:
     from import_wm_events import discover_and_import
     worker_conn = get_db()
     try:
-        return discover_and_import(worker_conn, delay=delay, timeout=timeout)
+        return discover_and_import(worker_conn, delay=delay, timeout=timeout, discover_directory=False)
     finally:
         worker_conn.close()
 
@@ -846,7 +886,12 @@ async def run_calendar_parser():
 
     async with _PARSER_LOCK:
         try:
-            successes, failures = await asyncio.to_thread(_run_parser_worker, 0.1, 6.0)
+            successes, failures = await asyncio.wait_for(
+                asyncio.to_thread(_run_parser_worker, 0.0, 4.0),
+                timeout=8.0,
+            )
+        except asyncio.TimeoutError:
+            successes, failures = 0, 1
         except Exception as exc:
             return {
                 "status": "partial",

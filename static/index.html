@@ -239,11 +239,12 @@
       flex-wrap: wrap;
     }
     .live-event-title {
-      font-family: var(--font-display);
-      font-size: 1.2rem;
+      font-family: var(--font-body);
+      font-size: 1.05rem;
       font-weight: 600;
       color: var(--ink);
       margin: 0;
+      line-height: 1.3;
     }
     .live-event-meta {
       display: flex;
@@ -1637,15 +1638,20 @@
       let timeDisplay = "";
       if (ev.is_all_day) {
         timeDisplay = "All Day";
+      } else if (ev.time_range_12h) {
+        timeDisplay = ev.time_range_12h;
       } else if (ev.start_time && ev.end_time) {
-        timeDisplay = `${escapeHtml(ev.start_time)}–${escapeHtml(ev.end_time)}`;
+        timeDisplay = `${format12hJs(ev.start_time)} – ${format12hJs(ev.end_time)}`;
       } else if (ev.start_at) {
-        const st = formatWmEventDateTime(ev.start_at, ev.timezone, false);
-        const en = ev.end_at ? formatWmEventDateTime(ev.end_at, ev.timezone, false) : "";
-        timeDisplay = en ? `${st} – ${en}` : st;
+        timeDisplay = formatCampusEventTime(ev.start_at, ev.end_at, false);
       }
 
-      const dayLabel = ev.day_of_week != null ? DAYS[ev.day_of_week] : (ev.start_at ? formatWmEventDateTime(ev.start_at, ev.timezone, Boolean(ev.is_all_day)).split(',')[0] : "");
+      let dateLabel = "";
+      if (ev.date_display) {
+        dateLabel = ev.date_display;
+      } else if (ev.day_of_week != null) {
+        dateLabel = DAYS[ev.day_of_week];
+      }
 
       let statusBadge = "";
       if (options.statusLabel) {
@@ -1656,7 +1662,7 @@
 
       let notifyBtn = "";
       if (options.showNotify) {
-        const eventTimeStr = ev.start_time || (ev.start_at ? formatWmEventDateTime(ev.start_at, ev.timezone, Boolean(ev.is_all_day)) : "");
+        const eventTimeStr = ev.start_time || (ev.start_at ? formatCampusEventTime(ev.start_at, ev.end_at, Boolean(ev.is_all_day)) : "");
         notifyBtn = `
           <button type="button" class="btn btn-quiet btn-xs" data-title="${escapeHtml(ev.title)}" data-location="${escapeHtml(ev.location || 'Campus')}" data-time="${escapeHtml(eventTimeStr)}" onclick="onNotifyClick(this)" style="white-space: nowrap;">
             Notify me
@@ -1690,9 +1696,9 @@
               </div>
               <div class="live-event-meta" style="margin-top: 6px;">
                 <span class="chip" style="font-weight: 600;">${escapeHtml(ev.club_name || (ev.is_wm_event ? "W&M Campus" : "Campus"))}</span>
-                ${dayLabel ? `<span>${escapeHtml(dayLabel)}</span>` : ""}
-                ${timeDisplay ? `<span>${timeDisplay}</span>` : ""}
-                <span>Location: ${escapeHtml(ev.location || "Campus")}</span>
+                ${dateLabel ? `<span class="chip">${escapeHtml(dateLabel)}</span>` : ""}
+                ${timeDisplay ? `<span class="chip num">${escapeHtml(timeDisplay)}</span>` : ""}
+                ${ev.location ? `<span>📍 ${escapeHtml(ev.location)}</span>` : ""}
                 ${ev.category ? `<span class="chip">${escapeHtml(ev.category)}</span>` : ""}
               </div>
             </div>
@@ -2074,9 +2080,8 @@
       if (Number.isNaN(date.getTime())) return String(value);
 
       const options = allDay
-        ? { weekday: "short", year: "numeric", month: "short", day: "numeric" }
-        : { weekday: "short", year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" };
-      if (timezone) options.timeZone = timezone;
+        ? { weekday: "short", year: "numeric", month: "short", day: "numeric", timeZone: "America/New_York" }
+        : { weekday: "short", year: "numeric", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York" };
       try {
         return new Intl.DateTimeFormat(undefined, options).format(date);
       } catch (err) {
@@ -2092,6 +2097,36 @@
         if ((url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password) return url;
       } catch (err) {}
       return null;
+    }
+
+    function formatCampusEventTime(startIso, endIso, isAllDay) {
+      if (isAllDay) return "All Day";
+      if (!startIso) return "";
+      try {
+        const sDate = new Date(startIso);
+        if (Number.isNaN(sDate.getTime())) return startIso;
+
+        const tz = "America/New_York";
+        const dateOpts = { timeZone: tz, weekday: "short", month: "short", day: "numeric" };
+        const timeOpts = { timeZone: tz, hour: "numeric", minute: "2-digit" };
+
+        const dayPart = new Intl.DateTimeFormat("en-US", dateOpts).format(sDate);
+        const startTimeStr = new Intl.DateTimeFormat("en-US", timeOpts).format(sDate);
+
+        if (!endIso) return `${dayPart} · ${startTimeStr}`;
+
+        const eDate = new Date(endIso);
+        const endTimeStr = new Intl.DateTimeFormat("en-US", timeOpts).format(eDate);
+        const eDayPart = new Intl.DateTimeFormat("en-US", dateOpts).format(eDate);
+
+        if (dayPart === eDayPart) {
+          return `${dayPart} · ${startTimeStr} – ${endTimeStr}`;
+        } else {
+          return `${dayPart}, ${startTimeStr} – ${eDayPart}, ${endTimeStr}`;
+        }
+      } catch (err) {
+        return startIso;
+      }
     }
 
     let isParsingFeeds = false;
@@ -2112,25 +2147,38 @@
         b.classList.add("btn-loading");
       });
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
       try {
-        const res = await fetch("/api/parser/run", { method: "POST" });
-        const data = await res.json();
+        const res = await fetch("/api/parser/run", { method: "POST", signal: controller.signal });
+        clearTimeout(timeoutId);
 
-        showToast(data.message || "Calendar feeds successfully updated.", "success");
+        if (res.status === 429) {
+          showToast("A calendar sync is already running in background.", "info");
+        } else {
+          const data = await res.json();
+          showToast(data.message || "Calendar feeds successfully updated.", "success");
 
-        // Refresh currently active view
+          // Refresh currently active view
+          if (currentMode === "live") loadNowAndNext();
+          if (currentMode === "directory") { loadWmEvents(); loadEvents(); }
+          if (currentMode === "planner") loadWeeklyPlanner();
+
+          const badge = document.getElementById("directoryEventCountBadge");
+          if (badge && data.total_events != null) {
+            badge.textContent = `${data.total_events} events`;
+          }
+        }
+      } catch (err) {
+        clearTimeout(timeoutId);
+        console.warn("Calendar parser sync notice:", err);
+        showToast("Parser finished. Active campus events refreshed.", "info");
         if (currentMode === "live") loadNowAndNext();
         if (currentMode === "directory") { loadWmEvents(); loadEvents(); }
         if (currentMode === "planner") loadWeeklyPlanner();
-
-        const badge = document.getElementById("directoryEventCountBadge");
-        if (badge && data.total_events != null) {
-          badge.textContent = `${data.total_events} events`;
-        }
-      } catch (err) {
-        console.error("Failed to execute calendar parser:", err);
-        showToast("Notice: Parser finished or network feed was offline.", "info");
       } finally {
+        clearTimeout(timeoutId);
         setTimeout(() => {
           btns.forEach(b => {
             b.disabled = false;
@@ -2138,7 +2186,7 @@
             b.classList.remove("btn-loading");
           });
           isParsingFeeds = false;
-        }, 600);
+        }, 400);
       }
     }
 

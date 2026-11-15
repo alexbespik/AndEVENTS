@@ -163,10 +163,15 @@ def _feed_links(html: str, base: str) -> list[str]:
     return found
 
 
-def discover_and_import(conn: sqlite3.Connection, delay: float = 1.0, timeout: float = 10.0) -> tuple[int, int]:
-    """Attempt public directory discovery; return (successful feeds, failures)."""
+def discover_and_import(
+    conn: sqlite3.Connection,
+    delay: float = 0.5,
+    timeout: float = 6.0,
+    discover_directory: bool = False,
+) -> tuple[int, int]:
+    """Attempt public feed sync; crawl directory only if discover_directory is True."""
     successes = failures = 0
-    # First, import default discovery feeds
+    # First, import default discovery feeds (master calendar & tribelink)
     for slug, name, feed_url in DEFAULT_DISCOVERY_FEEDS:
         try:
             feed_data, _ = _get(feed_url, delay=delay, timeout=timeout)
@@ -176,6 +181,9 @@ def discover_and_import(conn: sqlite3.Connection, delay: float = 1.0, timeout: f
         except Exception as exc:
             failures += 1
             print(f"INACCESSIBLE/UNRECOGNIZED: {slug} feed {feed_url}: {exc}", file=sys.stderr)
+
+    if not discover_directory:
+        return successes, failures
 
     try:
         directory_data, _ = _get(DIRECTORY, delay=delay, timeout=timeout)
@@ -257,7 +265,7 @@ def main(argv: list[str] | None = None) -> int:
             failures += 1
             print(f"INACCESSIBLE/UNRECOGNIZED: {path}: {exc}", file=sys.stderr)
     if args.discover:
-        live_successes, live_failures = discover_and_import(conn, args.delay)
+        live_successes, live_failures = discover_and_import(conn, args.delay, discover_directory=True)
         successes += live_successes
         failures += live_failures
     conn.commit()
