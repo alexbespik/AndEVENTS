@@ -743,6 +743,12 @@ def get_now_and_next(
             except Exception:
                 continue
 
+            # Multi-day exhibitions or programs spanning more than 1 day belong in the Directory,
+            # not the immediate "Happening right now" feed.
+            if (ev_end_d - ev_start_d).days > 1 or ev_start_d != today_d:
+                wm_processed.append(r)
+                continue
+
             dedup_key = (r["title"].strip().lower(), str(r["start_at"])[:10])
             if dedup_key in seen_event_keys:
                 continue
@@ -803,12 +809,13 @@ def get_now_and_next(
 
             if is_active:
                 if (en.date() - st.date()).days >= 1:
-                    r["status_label"] = "Ongoing"
+                    # Multi-day ongoing event - do not flood the immediate live hourly pulse
+                    pass
                 else:
                     m_left = max(0, int((en - now_dt).total_seconds() / 60))
                     r["status_label"] = f"In Session · {m_left}m left"
                     r["minutes_remaining"] = m_left
-                happening_now.append(r)
+                    happening_now.append(r)
             elif is_soon:
                 m_start = max(0, int((st - now_dt).total_seconds() / 60))
                 r["status_label"] = f"Starts in {m_start}m"

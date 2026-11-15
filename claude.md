@@ -18,6 +18,7 @@
 > - **Agent 3 (`tester`)**: Continuous test runner (`python3 -m unittest discover tests && python3 -m unittest test_wm_data.py && python3 -m unittest test_import_wm_events.py`).
 > - **Agent 4 (`reviewer` / Vision)**: Take/inspect screenshots using vision models to verify pixel-perfection against `&.edu`.
 > - **Agent 5 (`coder` / Mobile)**: **Fix Phone View** (Mobile layout overhaul for phones <= 640px/480px: responsive 7-day timetable horizontal scroll/day tabs, edge-to-edge bottom-sheet modals, 44px thumb touch targets, and input zoom prevention).
+> - **Agent 6 (`coder` / Backend)**: **Strict Temporal Scoping for Happening Right Now** (Ensure `/api/now-and-next` strictly serves single-day events actively in session right now or starting in next 3 hours of today, strictly excluding multi-day/multi-month exhibitions).
 
 ---
 
@@ -125,7 +126,8 @@ Claude **must** read and understand every user request and complaint in chronolo
 | **15** | *`Screenshot.png`: "also could you do something with those slope buttons looking like shit Arrangement: ⏱ Chronological 🏢 Group by Department 🔀 Shuffle by Department make them in style of header"* | The arrangement buttons on "Who's up?" were styled with clunky emojis (`⏱`, `🏢`, `🔀`) and blocky buttons. Re-architected with `.arrangement-nav` and `.arrangement-tab` using crisp SVG stroke icons and subtle active gold underline indicators matching the masthead `.modes` navbar. | **Arrangement buttons match masthead header design.** |
 | **16** | *`Screenshot.png`: "also in calendar events should chandge overall position according to time like in wm path"* | The Weekly Planner timetable previously rendered day items in an un-positioned flex column. Implemented a 14-hour vertical time grid (8am to 10pm) matching William & Mary PATH Class Search & Registration with a dedicated hour gutter (`8am`, `9am`, `10am`, `11am`, `noon`, `1pm` ... `10pm`), horizontal hour rules, absolute vertical positioning (`top` by start time, `height` by duration), collision packing for overlaps, and an all-day shelf. | **Weekly Planner now features authentic W&M Path time-proportional grid.** |
 | **17** | *"also add to the claude tasks chandge the update button to be looking good"* | The update button in the masthead and directory looked like a raw utility box with an ugly unicode `↻` glyph. Needs refined SVG iconography, smooth spinning transitions, subtle gold micro-elevation, and zero background grayness. | **Documented in Task D below and implemented with `.btn-update`, dual-arrow SVG icons, and smooth CSS spinning transitions.** |
-| **18** | *(Latest)*: *"add in THE CLAUDE LIST that he needs to fix phone view"* | Mobile/phone view requires dedicated responsive polish: masthead header wrapping, horizontal overflow handling in the 7-day Weekly Planner timetable (scroll snap or day toggle tabs), touch target sizing (44px min), full-width responsive modals on narrow screens (<= 640px), and readable single-column event feeds. | **Documented in Task E and the urgent parallel agent mandate for Claude's mobile layout overhaul.** |
+| **18** | *"add in THE CLAUDE LIST that he needs to fix phone view"* | Mobile/phone view requires dedicated responsive polish: masthead header wrapping, horizontal overflow handling in the 7-day Weekly Planner timetable (scroll snap or day toggle tabs), touch target sizing (44px min), full-width responsive modals on narrow screens (<= 640px), and readable single-column event feeds. | **Documented in Task E and the urgent parallel agent mandate for Claude's mobile layout overhaul.** |
+| **19** | *(Latest)*: *"also add to the claude issues that happaning right now tab should show only the now and next few hours stuff not a fuking week ahead"* | The "Happening right now" section in "Who's up?" (`/api/now-and-next`) was dumping all-day multi-week and multi-month museum exhibitions (e.g. June to February exhibits) into `happening_now`! "Who's up?" MUST strictly show only events actively in session right now or starting in the next few hours (<= 3h) of TODAY. Multi-day exhibitions belong in Directory or an exhibitions shelf, never polluting the live immediate pulse. | **Documented in Task F and fixed in `app.py` temporal filters.** |
 
 ---
 
@@ -366,6 +368,26 @@ The entire application must feel like an authentic, first-class native iOS/Andro
    - Replace `<datalist>` or standard OS dropdown overlaps with mobile-safe, full-width touch select menus.
    - Ensure inputs use `font-size: 16px` minimum to prevent iOS Safari from automatically zooming in on input focus.
    - Prevent horizontal page bounce/shake with `overflow-x: hidden` on viewport wrappers.
+
+### Task F (Agent 6): Strict Temporal Scoping for "Happening Right Now" / "Who's up?"
+The user explicitly mandated: *"happening right now tab should show only the now and next few hours stuff not a fucking week ahead"*.
+
+#### Root Cause of the Bug
+In `app.py#L737-L762`, campus events flagged `is_all_day` whose date interval encompassed today (`ev_start_d <= today_d < ev_end_d`) were appended directly into `happening_now`.  
+Because campus museums and galleries host multi-month exhibitions (e.g. "Photography From 1870 to Tomorrow: June 2 to Feb 1", "Founding the Alma Mater: Feb 7 to Dec 31"), **over 15 multi-month exhibitions running for months were showing up inside "Happening right now" on a Saturday night!**
+
+#### Strict Temporal Rules for "Happening Right Now"
+1. **Actively In Session (`happening_now`)**:
+   - Must be actively in session **RIGHT NOW TODAY**:
+     - Single-day timed events: `st <= now_dt < en` and `st.date() == today_d`.
+     - Single-day all-day events: `is_all_day == True` and `(ev_end_d - ev_start_d).days <= 1` and `ev_start_d == today_d`.
+   - **EXCLUDE ALL MULTI-DAY EVENTS**: If an event spans multiple days (`(ev_end_d - ev_start_d).days > 1` or `(en.date() - st.date()).days >= 1`), it is an ongoing exhibition or program. It **MUST NEVER** be placed in `happening_now` or `starting_soon`. It belongs in the `Directory` tab.
+2. **Starting Soon (`starting_soon`)**:
+   - Strictly events starting within the next few hours (<= 3 hours) **TODAY**:
+     - `st > now_dt and (st - now_dt).total_seconds() <= 3 * 3600 and st.date() == today_d`.
+   - Never show tomorrow's events, next week's events, or distant future dates in "Starting Soon".
+3. **Frontend Validation in `loadNowAndNext()`**:
+   - Filter out any event where `date_display` or `start_at` does not match today's date or is a multi-day span, guaranteeing that "Who's up?" remains a hyper-focused live pulse of what a student can walk into *right now* or *in the next few hours*.
 
 ---
 
